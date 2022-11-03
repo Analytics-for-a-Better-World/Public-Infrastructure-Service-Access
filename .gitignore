@@ -1,0 +1,15 @@
+# Local input folder
+input/*
+
+# Model files
+model_files/*
+
+# Results
+results/*
+
+# Virtual environment
+venv
+
+cache
+
+src/__pycache__/
