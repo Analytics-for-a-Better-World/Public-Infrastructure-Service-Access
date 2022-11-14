@@ -84,7 +84,7 @@ class RoadNetworkLayer():
         )
         patch = PolygonPatch(bounding_poly, fc="#59b9f2", ec="none", alpha=0.6, zorder=-1)
         ax.add_patch(patch)
-        plt.show()
+        #plt.show()
 
     def calculate_isochrone_isodistance_Mapbox(self):
         pass
