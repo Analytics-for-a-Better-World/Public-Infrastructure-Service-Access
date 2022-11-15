@@ -536,25 +536,20 @@ sql = ["sqlalchemy (>=1.3)"]
 
 [[package]]
 name = "gadm"
-version = "0.0.1"
-description = "Helpers for accessing and loading data from the Database of Global Administrative Areas (GADM)"
+version = "0.0.3"
+description = "package to get boundaries data from GADM,  the database of global Administrative Areas."
 category = "main"
 optional = false
 python-versions = "*"
-develop = false
 
 [package.dependencies]
-fiona = "*"
+geopandas = ">=0.9.0"
+pycountry = ">=22.3.5"
 requests = "*"
-
-[package.extras]
-docs = ["sphinx", "sphinx-rtd-theme"]
-
-[package.source]
-type = "git"
-url = "https://github.com/loicdtx/pygadm.git"
-reference = "HEAD"
-resolved_reference = "83daa650ac5014fc5fe34380df65184aac4ad42e"
+tqdm = "*"
+types-requests = "*"
+types-setuptools = "*"
+typing-extensions = "*"
 
 [[package]]
 name = "geopandas"
@@ -1855,6 +1850,23 @@ optional = false
 python-versions = ">= 3.7"
 
 [[package]]
+name = "tqdm"
+version = "4.64.1"
+description = "Fast, Extensible Progress Meter"
+category = "main"
+optional = false
+python-versions = "!=3.0.*,!=3.1.*,!=3.2.*,!=3.3.*,>=2.7"
+
+[package.dependencies]
+colorama = {version = "*", markers = "platform_system == \"Windows\""}
+
+[package.extras]
+dev = ["py-make (>=0.1.0)", "twine", "wheel"]
+notebook = ["ipywidgets (>=6)"]
+slack = ["slack-sdk"]
+telegram = ["requests"]
+
+[[package]]
 name = "traitlets"
 version = "5.5.0"
 description = ""
@@ -1885,6 +1897,33 @@ all = ["colorama (>=0.4.3,<0.5.0)", "rich (>=10.11.0,<13.0.0)", "shellingham (>=
 dev = ["autoflake (>=1.3.1,<2.0.0)", "flake8 (>=3.8.3,<4.0.0)", "pre-commit (>=2.17.0,<3.0.0)"]
 doc = ["cairosvg (>=2.5.2,<3.0.0)", "mdx-include (>=1.4.1,<2.0.0)", "mkdocs (>=1.1.2,<2.0.0)", "mkdocs-material (>=8.1.4,<9.0.0)", "pillow (>=9.3.0,<10.0.0)"]
 test = ["black (>=22.3.0,<23.0.0)", "coverage (>=6.2,<7.0)", "isort (>=5.0.6,<6.0.0)", "mypy (==0.910)", "pytest (>=4.4.0,<8.0.0)", "pytest-cov (>=2.10.0,<5.0.0)", "pytest-sugar (>=0.9.4,<0.10.0)", "pytest-xdist (>=1.32.0,<4.0.0)", "rich (>=10.11.0,<13.0.0)", "shellingham (>=1.3.0,<2.0.0)"]
+
+[[package]]
+name = "types-requests"
+version = "2.28.11.4"
+description = "Typing stubs for requests"
+category = "main"
+optional = false
+python-versions = "*"
+
+[package.dependencies]
+types-urllib3 = "<1.27"
+
+[[package]]
+name = "types-setuptools"
+version = "65.5.0.3"
+description = "Typing stubs for setuptools"
+category = "main"
+optional = false
+python-versions = "*"
+
+[[package]]
+name = "types-urllib3"
+version = "1.26.25.3"
+description = "Typing stubs for urllib3"
+category = "main"
+optional = false
+python-versions = "*"
 
 [[package]]
 name = "typing-extensions"
@@ -2032,7 +2071,7 @@ python-versions = "*"
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.10"
-content-hash = "d0a76ed24a995d6d05e64602247b0819ed0a96bc210a00cfd4e88c3d5ee92493"
+content-hash = "64d1cc09a5413de200ccaf278db9762271fec0922b9ae8aed84120b1f94be1f8"
 
 [metadata.files]
 affine = [
@@ -2400,7 +2439,10 @@ frictionless = [
     {file = "frictionless-4.40.8-py2.py3-none-any.whl", hash = "sha256:87b71da5ba5f694b2091aabc6f705cf1c00bb44395964735d57aec00a89c555f"},
     {file = "frictionless-4.40.8.tar.gz", hash = "sha256:324061d754525adfe8f6be56af12660a40966c0c4e01eccfc993dc82b9e9e623"},
 ]
-gadm = []
+gadm = [
+    {file = "gadm-0.0.3-py3-none-any.whl", hash = "sha256:4bbd405ee6fec63b45036db4b2609cbeb33c53478f233c933d1a236252374673"},
+    {file = "gadm-0.0.3.tar.gz", hash = "sha256:a54ce4cf3111f8e73dc430db6dccedf68ed1c63868709e54af5a5bf2f93251e8"},
+]
 geopandas = [
     {file = "geopandas-0.12.0-py3-none-any.whl", hash = "sha256:8890f3912e9e69383258d48e6fe311a2a541c62c096202e3da5a227e4c979331"},
     {file = "geopandas-0.12.0.tar.gz", hash = "sha256:1980a5de8b3bc5a5e7db216f021c275bdf7b87c55400834baa65eadb88693925"},
@@ -3612,6 +3654,10 @@ tornado = [
     {file = "tornado-6.2-cp37-abi3-win_amd64.whl", hash = "sha256:e5f923aa6a47e133d1cf87d60700889d7eae68988704e20c75fb2d65677a8e4b"},
     {file = "tornado-6.2.tar.gz", hash = "sha256:9b630419bde84ec666bfd7ea0a4cb2a8a651c2d5cccdbdd1972a0c859dfc3c13"},
 ]
+tqdm = [
+    {file = "tqdm-4.64.1-py2.py3-none-any.whl", hash = "sha256:6fee160d6ffcd1b1c68c65f14c829c22832bc401726335ce92c52d395944a6a1"},
+    {file = "tqdm-4.64.1.tar.gz", hash = "sha256:5f4f682a004951c1b450bc753c710e9280c5746ce6ffedee253ddbcbf54cf1e4"},
+]
 traitlets = [
     {file = "traitlets-5.5.0-py3-none-any.whl", hash = "sha256:1201b2c9f76097195989cdf7f65db9897593b0dfd69e4ac96016661bb6f0d30f"},
     {file = "traitlets-5.5.0.tar.gz", hash = "sha256:b122f9ff2f2f6c1709dab289a05555be011c87828e911c0cf4074b85cb780a79"},
@@ -3619,6 +3665,18 @@ traitlets = [
 typer = [
     {file = "typer-0.7.0-py3-none-any.whl", hash = "sha256:b5e704f4e48ec263de1c0b3a2387cd405a13767d2f907f44c1a08cbad96f606d"},
     {file = "typer-0.7.0.tar.gz", hash = "sha256:ff797846578a9f2a201b53442aedeb543319466870fbe1c701eab66dd7681165"},
+]
+types-requests = [
+    {file = "types-requests-2.28.11.4.tar.gz", hash = "sha256:d4f342b0df432262e9e326d17638eeae96a5881e78e7a6aae46d33870d73952e"},
+    {file = "types_requests-2.28.11.4-py3-none-any.whl", hash = "sha256:bdb1f9811e53d0642c8347b09137363eb25e1a516819e190da187c29595a1df3"},
+]
+types-setuptools = [
+    {file = "types-setuptools-65.5.0.3.tar.gz", hash = "sha256:17769171f5f2a2dc69b25c0d3106552a5cda767bbf6b36cb6212b26dae5aa9fc"},
+    {file = "types_setuptools-65.5.0.3-py3-none-any.whl", hash = "sha256:9254c32b0cc91c486548e7d7561243b5bd185402a383e93c6691e1b9bc8d86e2"},
+]
+types-urllib3 = [
+    {file = "types-urllib3-1.26.25.3.tar.gz", hash = "sha256:1807b87b8ee1ae0226813ba2c52330eff20fb2bf6359b1de24df08eb3090e442"},
+    {file = "types_urllib3-1.26.25.3-py3-none-any.whl", hash = "sha256:a188c24fc61a99658c8c324c8dd7419f5b91a0d89df004e5f576869122c1db55"},
 ]
 typing-extensions = [
     {file = "typing_extensions-4.4.0-py3-none-any.whl", hash = "sha256:16fa4864408f655d35ec496218b85f79b3437c829e93320c7c9215ccfd92489e"},

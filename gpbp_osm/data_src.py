@@ -60,11 +60,13 @@ def raster_to_df(raster_fpath: str, mask_polygon: MultiPolygon) -> pd.DataFrame:
     return df
 
 
-def world_pop_data(country: str, geometry: MultiPolygon) -> pd.DataFrame:
+def world_pop_data(country_iso3: str, geometry: MultiPolygon) -> pd.DataFrame:
     """
     Get latest worldpop data for an area defined by the MultiPolygon geometry
     """
-    worldpop_url = f"https://www.worldpop.org/rest/data/pop/wpgpunadj/?iso3={country}"
+    worldpop_url = (
+        f"https://www.worldpop.org/rest/data/pop/wpgpunadj/?iso3={country_iso3}"
+    )
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }  # User-Agent is required to get API response
@@ -82,7 +84,7 @@ def world_pop_data(country: str, geometry: MultiPolygon) -> pd.DataFrame:
     return df
 
 
-def fb_pop_data(country: str, geometry: MultiPolygon) -> pd.DataFrame:
+def fb_pop_data(country_iso3: str, geometry: MultiPolygon) -> pd.DataFrame:
     """
     Get 2020 facebook data for an area defined by the MultiPolygon geometry
     """
@@ -92,7 +94,9 @@ def fb_pop_data(country: str, geometry: MultiPolygon) -> pd.DataFrame:
         )
     except:
         pass
-    resource = Resource.search_in_hdx(f"name:{country.lower()}_general_2020_csv.zip")
+    resource = Resource.search_in_hdx(
+        f"name:{country_iso3.lower()}_general_2020_csv.zip"
+    )
     url = resource[0]["download_url"]
     filehandle, _ = urllib.request.urlretrieve(url)
     print("Data downloaded")
@@ -101,7 +105,31 @@ def fb_pop_data(country: str, geometry: MultiPolygon) -> pd.DataFrame:
     df = df.query(f"{bounds[0]} <= longitude <= {bounds[2]}")
     df = df.query(f"{bounds[1]} <= latitude <= {bounds[3]}")
     print("Loading data to dataframe")
-    df = df.rename(columns={f"{country.lower()}_general_2020": "population"})
+    df = df.rename(columns={f"{country_iso3.lower()}_general_2020": "population"})
+    return df
+
+
+def rwi_data(country_name: str, geometry: MultiPolygon) -> pd.DataFrame:
+    """
+    Get Facebook Relative Wealth index data defined by the MultiPolygon geometry
+    """
+    try:
+        Configuration.create(
+            hdx_site="prod", user_agent="Get_RWI_Data", hdx_read_only=True
+        )
+    except:
+        pass
+    resource = Resource.search_in_hdx(
+        f"name:{country_name.lower()}_relative_wealth_index.csv"
+    )
+    url = resource[0]["download_url"]
+    filehandle, _ = urllib.request.urlretrieve(url)
+    print("Data downloaded")
+    df = pd.read_csv(filehandle)
+    bounds = list(map(lambda x: round(x, 6), geometry.bounds))
+    df = df.query(f"{bounds[0]} <= longitude <= {bounds[2]}")
+    df = df.query(f"{bounds[1]} <= latitude <= {bounds[3]}")
+    print("Loading data to dataframe")
     return df
 
 

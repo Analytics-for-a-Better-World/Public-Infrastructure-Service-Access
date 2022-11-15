@@ -9,5 +9,6 @@
 		"python.testing.autoTestDiscoverOnSaveEnabled": true,
 		"python.formatting.provider": "black",
 		"editor.formatOnSave": true,
+		"jupyter.kernels.filter": [],
 	}
 }
