@@ -10,6 +10,8 @@ results/*
 # Virtual environment
 venv
 
+config.py
+
 cache
 
 src/__pycache__/

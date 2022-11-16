@@ -1,7 +1,7 @@
 import numpy as np
 from shapely.geometry import MultiPolygon
 import geopandas as gpd
-from geopandas.tools import sjoin
+import pandas as pd
 
 
 def generate_grid_in_polygon(
@@ -25,3 +25,22 @@ def generate_grid_in_polygon(
     grid = gpd.clip(grid, geometry)
 
     return grid
+
+
+def group_population(pop_df: pd.DataFrame, nof_digits: int) -> gpd.GeoDataFrame:
+    population = pop_df
+    population["longitude"] = population["longitude"].round(nof_digits)
+    population["latitude"] = population["latitude"].round(nof_digits)
+
+    population = (
+        population.groupby(["longitude", "latitude"])["population"]
+        .sum()
+        .reset_index()
+        .reset_index()
+    )
+    population["population"] = population["population"].round(2)
+    population.columns = ["ID", "longitude", "latitude", "population"]
+    population = population.set_geometry(
+        gpd.points_from_xy(population.longitude, population.latitude)
+    )
+    return population
