@@ -3,13 +3,15 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import osmnx as ox
 from descartes import PolygonPatch
-from shapely.geometry import Point
+from shapely.geometry import Point, Polygon
 
 from gadm import GADMDownloader
 
 from .constants import FACILITIES_SRC, POPULATION_SRC, RWI_SRC
 from .utils import generate_grid_in_polygon
 import pycountry
+import requests
+import json
 
 
 class AdmArea:
@@ -67,46 +69,54 @@ class AdmArea:
 
 
 class RoadNetworkLayer:
-    def __init__(self):
-        pass
+    def __init__(self, geometry, network_type):
+        self.geometry = geometry
+        self.network_type = network_type
+        self.road_network = ox.graph_from_polygon(self.geometry, self.network_type, retain_all=False)
 
     def calculate_isochrone_isodistance_OSM(
-        self, trip_length, country, adm_area_name, level, network_type, distance_type
-    ) -> None:
+        self, coord_pair, trip_length, distance_type
+    ) -> Polygon:
 
-        adm_area = AdmArea(country, level)
-        adm_area.get_adm_area(adm_area_name)
-        G = ox.graph_from_polygon(adm_area.geometry, network_type, retain_all=False)
+        G = self.road_network
 
-        gdf_nodes = ox.graph_to_gdfs(G, edges=False)
-        x, y = gdf_nodes["geometry"].unary_union.centroid.xy
-        center_node = ox.distance.nearest_nodes(G, x[0], y[0])
+        hwy_speeds = {'residential': 35,
+                      'secondary': 50,
+                      'tertiary': 60}
+        G = ox.add_edge_speeds(G, hwy_speeds)
 
-        # For isochrones distance="time", for isodistances distance = "distance"
-        # TODO: convert distance to time if distance_type is time, depends on network_type
+        G_speed = ox.add_edge_travel_times(G)
 
+        road_node = ox.distance.nearest_nodes(G, coord_pair[0], coord_pair[1])
+
+        # For isochrones distance="time", for isodistances distance = "length"
         subgraph = nx.ego_graph(
-            G, center_node, radius=trip_length, distance=distance_type
+            G, road_node, radius=trip_length, distance=distance_type
         )
         node_points = [
             Point((data["x"], data["y"])) for node, data in subgraph.nodes(data=True)
         ]
         bounding_poly = gpd.GeoSeries(node_points).unary_union.convex_hull
 
-        # Plot
-        fig, ax = ox.plot_graph(
-            G,
-            show=False,
-            close=False,
-            edge_color="#999999",
-            edge_alpha=0.2,
-            node_size=0,
-        )
-        patch = PolygonPatch(
-            bounding_poly, fc="#59b9f2", ec="none", alpha=0.6, zorder=-1
-        )
-        ax.add_patch(patch)
-        #plt.show()
+        return bounding_poly
 
-    def calculate_isochrone_isodistance_Mapbox(self):
-        pass
+    def calculate_isochrone_isodistance_Mapbox(self, coord_pair : tuple[float, float],
+                                               route_profile : str, distance_type: str,
+                                               distance_values : list[int], access_token: str):
+        base_url = "https://api.mapbox.com/isochrone/v1/mapbox/"
+        if distance_type == "time":
+            contour_type = "contours_minutes"
+        elif distance_type == "distance":
+            contour_type = "contours_meters"
+        request = f"{base_url}{route_profile}{coord_pair[0]}," \
+                  f"{coord_pair[1]}?{contour_type}={','.join(list(map(str, distance_values)))}" \
+                  f"&polygons=true&denoise=1&access_token={access_token}"
+        try:
+            request_pack = json.loads(requests.get(request).content)
+        except:
+            print("Something went wrong")
+        features = request_pack["features"]
+        bounding_polys = [Polygon(feature['geometry']['coordinates']) for feature in features]
+        return bounding_polys
+
+
