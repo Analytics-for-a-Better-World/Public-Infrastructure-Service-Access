@@ -4,6 +4,8 @@ import requests
 from typing import Any
 from shapely.geometry import Polygon, MultiPolygon, Point
 import geopandas as gpd
+import pandas as pd
+from .utils import group_population
 
 import networkx as nx
 import osmnx as ox
@@ -54,7 +56,6 @@ def calculate_isopolygons_Mapbox(
         f"{coord_pair[1]}?{contour_type}={','.join(list(map(str, distance_values)))}"
         f"&polygons=true&denoise=1&access_token={MAPBOX_API_ACCESS_TOKEN}"
     )
-    print(request)
     try:
         request_pack = json.loads(requests.get(request).content)
     except:
@@ -69,7 +70,36 @@ def calculate_isopolygons_Mapbox(
     return iso_dict
 
 
+def get_isopolygons_gdf(
+    fac_gdf: gpd.GeoDataFrame,
+    route_profile: str,
+    distance_type: str,
+    distance_values: list[int],
+    dist_value: str,
+):
+
+    iso_gdf = fac_gdf
+    iso_gdf["geometry"] = fac_gdf.geometry.apply(
+        lambda x: calculate_isopolygons_Mapbox(
+            list(x.centroid.coords)[0], route_profile, distance_type, distance_values
+        )[dist_value]
+    )
+    iso_gdf = iso_gdf.set_geometry(col="geometry")
+    return iso_gdf
+
+
 def population_served(
-    iso_gdf: gpd.GeoDataFrame, pop_gdf: gpd.GeoDataFrame, resolution: float = 0.01
+    iso_gdf: gpd.GeoDataFrame,
+    pop_df: pd.DataFrame,
+    index_col_fac: str,
+    index_col_pop: str,
+    nof_digits: int = 3,
 ) -> dict:
-    pass
+    # Group population
+    pop_gdf = group_population(pop_df=pop_df, nof_digits=nof_digits)
+    pop_gdf = pop_gdf.set_crs(iso_gdf.crs)
+    # Find households within isopolygons
+    serve_gdf = gpd.sjoin(pop_gdf, iso_gdf, how="right", predicate="within")
+    serve_gdf = serve_gdf.dropna()
+    serve_dict = serve_gdf.groupby(index_col_fac)[index_col_pop].apply(list).to_dict()
+    return serve_dict
