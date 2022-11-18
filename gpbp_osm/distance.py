@@ -78,7 +78,7 @@ def get_isopolygons_gdf(
     dist_value: str,
 ):
 
-    iso_gdf = fac_gdf
+    iso_gdf = fac_gdf.copy()
     iso_gdf["geometry"] = fac_gdf.geometry.apply(
         lambda x: calculate_isopolygons_Mapbox(
             list(x.centroid.coords)[0], route_profile, distance_type, distance_values
@@ -99,7 +99,7 @@ def population_served(
     pop_gdf = group_population(pop_df=pop_df, nof_digits=nof_digits)
     pop_gdf = pop_gdf.set_crs(iso_gdf.crs)
     # Find households within isopolygons
-    serve_gdf = gpd.sjoin(pop_gdf, iso_gdf, how="right", predicate="within")
+    serve_gdf = pop_gdf.sjoin(iso_gdf, how="right", predicate="within")
     serve_gdf = serve_gdf.dropna()
     serve_dict = serve_gdf.groupby(index_col_fac)[index_col_pop].apply(list).to_dict()
     return serve_dict

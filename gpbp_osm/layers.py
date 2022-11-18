@@ -1,5 +1,5 @@
 from gadm import GADMDownloader
-
+import osmnx as ox
 from .constants import FACILITIES_SRC, POPULATION_SRC, RWI_SRC
 from .utils import generate_grid_in_polygon
 import pycountry
@@ -14,6 +14,8 @@ class AdmArea:
         self.pop_df = None
         self.grid_gdf = None
         self.rwi_df = None
+        self.iso_gdf = None
+        self.road_network = None
         self._get_country_data()
 
     def _get_country_data(self) -> None:
@@ -49,6 +51,11 @@ class AdmArea:
         if self.geometry is None:
             raise Exception("Geometry is not defined")
         self.pop_df = POPULATION_SRC[method](self.country.alpha_3, self.geometry)
+
+    def get_road_network(self, network_type: str) -> None:
+        self.road_network = ox.graph_from_polygon(
+            self.geometry, network_type=network_type
+        )
 
     def get_rwi(self, method: str) -> None:
         if self.geometry is None:

@@ -2,7 +2,11 @@ import folium
 from folium.plugins import HeatMap
 import pandas as pd
 import geopandas as gpd
+import numpy as np
 from shapely.geometry import MultiPolygon
+
+from matplotlib import cm
+from matplotlib.colors import to_hex
 
 
 def plot_facilities(loc_gdf: gpd.GeoDataFrame) -> folium.Map:
@@ -58,14 +62,20 @@ def plot_population(pop_df: pd.DataFrame) -> folium.Map:
     return folium_map
 
 
-def plot_isochrone(isochrone: MultiPolygon):
-    start_coords = list(isochrone.centroid.coords)[0][::-1]
+def plot_isochrones(isochrones: list[MultiPolygon]):
+    start_coords = list(isochrones[0].centroid.coords)[0][::-1]
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=10,
         tiles="Stamen Terrain",
     )
-    geo_j = gpd.GeoSeries(isochrone).to_json()
-    folium.GeoJson(data=geo_j).add_to(folium_map)
+    colors = cm.rainbow(np.linspace(0, 1, len(isochrones)))
+    colors = list(map(to_hex, list(colors)))
+    geo_j = gpd.GeoSeries(isochrones).to_json()
+    style_function = lambda x: {
+        "fillColor": colors[int(x["id"])],
+        "line_color": colors[int(x["id"])],
+    }
+    folium.GeoJson(data=geo_j, style_function=style_function).add_to(folium_map)
     folium.Marker(location=start_coords)
     return folium_map
