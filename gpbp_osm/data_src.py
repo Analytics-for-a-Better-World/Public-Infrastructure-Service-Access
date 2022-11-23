@@ -11,6 +11,7 @@ import requests
 import osmnx as ox
 from hdx.api.configuration import Configuration
 from hdx.data.resource import Resource
+import pyrosm
 
 # from layers import AdmArea
 from shapely.geometry import Polygon, MultiPolygon
@@ -137,7 +138,7 @@ def rwi_data(country_name: str, geometry: MultiPolygon) -> pd.DataFrame:
 
 
 def osm_facilities(
-    adm_name: str, geometry: MultiPolygon, tags: dict
+    adm_name: str, geometry: MultiPolygon, tags: dict, pbf_file: bool = False
 ) -> gpd.GeoDataFrame:
     """
     Retrieve facilities specified by the tags parameter
@@ -160,3 +161,13 @@ def osm_facilities(
         geometry=gdf.geometry.values,
     )
     return gdf
+
+
+def download_osm_pbf_data(
+    area: str, data_directory: str = "../data/", refresh: bool = False
+) -> str:
+    filepath = pyrosm.get_data(area, directory=data_directory, update=refresh)
+    if filepath:
+        return filepath
+    else:
+        print("No data resources found")

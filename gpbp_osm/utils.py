@@ -28,7 +28,7 @@ def generate_grid_in_polygon(
 
 
 def group_population(pop_df: pd.DataFrame, nof_digits: int) -> gpd.GeoDataFrame:
-    population = pop_df
+    population = pop_df.copy()
     population["longitude"] = population["longitude"].round(nof_digits)
     population["latitude"] = population["latitude"].round(nof_digits)
 
