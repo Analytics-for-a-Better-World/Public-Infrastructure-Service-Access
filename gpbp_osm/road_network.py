@@ -16,12 +16,47 @@ def get_length_edge(x):
     return dist.meters
 
 
-def get_nodes_and_edges(
-    edges: gpd.GeoDataFrame, rounding: int = 5, graph_type: str = "pandana"
+def get_road_geometries_overpass(
+    geometry: MultiPolygon, network_type: str = "drive", timeout: int = 2000
+):
+    bounds = geometry.bounds
+    # Query needs latitude first
+    bounds = (bounds[1], bounds[0], bounds[3], bounds[2])
+    main_road_types = [
+        "primary",
+        "secondary",
+        "tertiary",
+        "residential",
+        "road",
+    ]
+    if network_type == "driving":
+        values = main_road_types + ["motorway", "trunk"]
+    elif network_type == "walking":
+        values = main_road_types + ["path", "footway", "pedestrian"]
+    elif network_type == "cycling":
+        values = main_road_types + ["path", "cycleway"]
+    else:
+        raise Exception("Invalid network type")
+
+    query = overpass.ql_query(bounds, tag="highway", values=values, timeout=timeout)
+    response = overpass.request(query)
+    geofeatures = overpass.as_geojson(response, "linestring")
+    gdf = gpd.GeoDataFrame.from_features(geofeatures)
+    return gdf
+
+
+def get_road_network_overpass(
+    geometry: MultiPolygon,
+    network_type: str = "driving",
+    timeout: int = 2000,
+    rounding: int = 5,
+    graph_type: str = "pandana",
 ):
     """Use geopandas to read line shapefile and compile all paths and nodes in a line file based on a rounding tolerance.
-    edges_gdf: geodataframe with end to end connectivity
+    geometry: geometry of the area to get road network
     rounding: tolerance parameter for coordinate precision"""
+    print("Building network")
+    edges = get_road_geometries_overpass(geometry, network_type, timeout)
     edges["from_x"] = edges["geometry"].apply(lambda x: round(x.coords[0][0], rounding))
     edges["from_y"] = edges["geometry"].apply(lambda x: round(x.coords[0][1], rounding))
     edges["to_x"] = edges["geometry"].apply(lambda x: round(x.coords[-1][0], rounding))
@@ -66,37 +101,13 @@ def get_nodes_and_edges(
             twoway=True,
         )
     elif graph_type == "networkx":
-        network = nx.MultiDiGraph()
-        nx.from_pandas_edgelist(
+        network = nx.from_pandas_edgelist(
             df=edges_attr,
             source="node_start",
             target="node_end",
-            edge_attr="length",
+            edge_attr=["length", "maxspeed", "geometry"],
             create_using=nx.MultiDiGraph,
             edge_key="index",
         )
+        network.graph["crs"] = "EPSG:4326"
     return nodes, edges_attr, network
-
-
-def get_roads_overpass(
-    geometry: MultiPolygon, road_types: list[str] = None, timeout: int = 1000
-):
-    bounds = geometry.bounds
-    # Query needs latitude first
-    bounds = (bounds[1], bounds[0], bounds[3], bounds[2])
-    values = [
-        "motorway",
-        "trunk",
-        "primary",
-        "secondary",
-        "tertiary",
-        "residential",
-        "road",
-    ]
-    if road_types is not None:
-        values = road_types
-    query = overpass.ql_query(bounds, tag="highway", values=values, timeout=timeout)
-    response = overpass.request(query)
-    geofeatures = overpass.as_geojson(response, "linestring")
-    gdf = gpd.GeoDataFrame.from_features(geofeatures)
-    return gdf
