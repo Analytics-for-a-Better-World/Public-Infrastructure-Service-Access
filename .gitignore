@@ -30,6 +30,6 @@ build/
 *.egg-info/
 
 examples/test_ntbk.ipynb
-examples/gpbp_showcame.ipynb
+#examples/gpbp_showcame.ipynb
 
 data
