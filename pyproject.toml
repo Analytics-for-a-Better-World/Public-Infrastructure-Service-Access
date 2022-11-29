@@ -31,6 +31,10 @@ pyrobuf = "^0.9.3"
 pygeos = "0.12"
 pyrosm = "^0.6.1"
 shapely = "^1.8.5.post1"
+numpy = "^1.23.5"
+tables = "^3.7.0"
+pandana = {git = "https://github.com/UDST/pandana", rev = "09b51c4bed6c9067955fdb47789859510230c9cd"}
+osmxtract = "^0.0.1"
 
 
 [tool.poetry.group.dev.dependencies]
