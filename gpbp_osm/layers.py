@@ -1,8 +1,11 @@
 from gadm import GADMDownloader
 import osmnx as ox
 from .constants import FACILITIES_SRC, POPULATION_SRC, RWI_SRC
-from .utils import generate_grid_in_polygon
+from .utils import generate_grid_in_polygon, group_population
+from .distance import population_served
+from .road_network import get_road_network_overpass
 import pycountry
+import pandas as pd
 
 
 class AdmArea:
@@ -58,6 +61,10 @@ class AdmArea:
             self.geometry, network_type=network_type
         )
 
+    # self.road_network = get_road_network_overpass(
+    #   self.geometry, network_type=network_type
+    # )
+
     def get_rwi(self, method: str) -> None:
         if self.geometry is None:
             raise Exception("Geometry is not defined")
@@ -65,3 +72,48 @@ class AdmArea:
 
     def compute_potential_fac(self, spacing: float) -> None:
         self.grid_gdf = generate_grid_in_polygon(spacing, self.geometry)
+
+    def prepare_optimization_data(
+        self,
+        distance_type,
+        distance_values,
+        mode_of_transport,
+        strategy,
+        population_resolution: int = 5,
+    ):
+        if self.pop_df is None:
+            raise Exception("Population data not available")
+        if self.fac_gdf is None:
+            raise Exception("Facility data not available")
+        if self.grid_gdf is None:
+            raise Exception("Potential locations not computed")
+        pop_gdf = group_population(self.pop_df, population_resolution)
+        pop_count = pop_gdf.population.values
+        total_fac = pd.concat([self.fac_gdf, self.grid_gdf], ignore_index=True)
+        total_fac = (
+            total_fac.drop(columns=["ID"]).reset_index().rename(columns={"index": "ID"})
+        )
+        cutoff_idx = int(self.fac_gdf["ID"].max()) + 1
+        current = {}
+        current[distance_type] = population_served(
+            pop_gdf,
+            total_fac[0:cutoff_idx],
+            "facilities",
+            distance_type,
+            distance_values,
+            mode_of_transport,
+            strategy,
+            self.road_network,
+        )
+        potential = {}
+        potential[distance_type] = population_served(
+            pop_gdf,
+            total_fac[cutoff_idx:],
+            "facilities",
+            distance_type,
+            distance_values,
+            mode_of_transport,
+            strategy,
+            self.road_network,
+        )
+        return pop_count, current, potential

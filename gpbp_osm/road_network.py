@@ -50,7 +50,7 @@ def get_road_network_overpass(
     network_type: str = "driving",
     timeout: int = 2000,
     rounding: int = 5,
-    graph_type: str = "pandana",
+    graph_type: str = "networkx",
 ):
     """Use geopandas to read line shapefile and compile all paths and nodes in a line file based on a rounding tolerance.
     geometry: geometry of the area to get road network
@@ -110,4 +110,6 @@ def get_road_network_overpass(
             edge_key="index",
         )
         network.graph["crs"] = "EPSG:4326"
-    return nodes, edges_attr, network
+        nx.set_node_attributes(network, nodes["lon"], "x")
+        nx.set_node_attributes(network, nodes["lat"], "y")
+    return network

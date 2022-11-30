@@ -156,10 +156,10 @@ def osm_facilities(
             lon.append(data["geometry"].centroid.x)
             lat.append(data["geometry"].centroid.y)
     gdf = gpd.GeoDataFrame(
-        index=osmids,
-        data={"longitude": lon, "latitude": lat},
+        data={"osmid": osmids, "longitude": lon, "latitude": lat},
         geometry=gdf.geometry.values,
     )
+    gdf = gdf.reset_index().rename(columns={"index": "ID"})
     return gdf
 
 

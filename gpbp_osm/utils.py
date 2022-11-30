@@ -23,6 +23,7 @@ def generate_grid_in_polygon(
         geometry=gpd.points_from_xy(mesh[0].flatten(), mesh[1].flatten()),
     )
     grid = gpd.clip(grid, geometry)
+    grid = grid.reset_index(drop=True).reset_index().rename(columns={"index": "ID"})
 
     return grid
 
