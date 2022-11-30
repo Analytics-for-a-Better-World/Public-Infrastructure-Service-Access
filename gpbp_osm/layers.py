@@ -32,6 +32,7 @@ class AdmArea:
         else:
             print(f"Extracting geometry for {self.country.name}")
             self.geometry = self.country_gdf.geometry.values[0]
+            self.adm_name = self.country.name
 
     def get_adm_area(self, adm_name: str) -> None:
         self.adm_name = adm_name
