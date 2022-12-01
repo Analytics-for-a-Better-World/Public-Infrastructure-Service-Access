@@ -3,7 +3,7 @@ import osmnx as ox
 from .constants import FACILITIES_SRC, POPULATION_SRC, RWI_SRC
 from .utils import generate_grid_in_polygon, group_population
 from .distance import population_served
-from .road_network import get_road_network_overpass
+#from .road_network import get_road_network_overpass
 import pycountry
 import pandas as pd
 

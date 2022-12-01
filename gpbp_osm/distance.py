@@ -213,4 +213,8 @@ def population_served(
                 .apply(list)
                 .to_dict()
             )
-    return serve_dict
+    serve_df = pd.DataFrame(index=fac_gdf["ID"].values, data=serve_dict).applymap(
+        lambda d: list(map(int, d)) if isinstance(d, list) else []
+    )
+    serve_df = serve_df.reset_index().rename(columns={"index": "Cluster_ID"})
+    return serve_df
