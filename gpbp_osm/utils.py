@@ -21,6 +21,7 @@ def generate_grid_in_polygon(
     grid = gpd.GeoDataFrame(
         data={"longitude": mesh[0].flatten(), "latitude": mesh[1].flatten()},
         geometry=gpd.points_from_xy(mesh[0].flatten(), mesh[1].flatten()),
+        crs="EPSG:4326",
     )
     grid = gpd.clip(grid, geometry)
     grid = grid.reset_index(drop=True).reset_index().rename(columns={"index": "ID"})

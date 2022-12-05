@@ -3,6 +3,7 @@ import geopy.distance
 import pandana
 import networkx as nx
 import pandas as pd
+import numpy as np
 import geopandas as gpd
 from shapely.geometry import MultiPolygon
 
@@ -48,11 +49,13 @@ def get_road_geometries_overpass(
 def get_road_network_overpass(
     geometry: MultiPolygon,
     network_type: str = "driving",
+    road_speeds: dict = None,
+    default_speed: int = None,
     timeout: int = 2000,
     rounding: int = 5,
     graph_type: str = "networkx",
 ):
-    """Use geopandas to read line shapefile and compile all paths and nodes in a line file based on a rounding tolerance.
+    """
     geometry: geometry of the area to get road network
     rounding: tolerance parameter for coordinate precision"""
     print("Building network")
@@ -89,6 +92,28 @@ def get_road_network_overpass(
     )
 
     edges_attr = edges_attr.reset_index()
+    edges_attr["edge_key"] = 0
+
+    def apply_road_speeds(df_name, road_types_dict, road_type_col, speed_col):
+        if df_name[speed_col] is not None:
+            try:
+                speed = float(df_name[speed_col])
+            except:
+                speed = None
+            return speed
+        df_method = float(df_name[road_type_col])
+        return road_types_dict.get(df_method, None)
+
+    edges_attr["maxspeed"] = edges_attr.apply(
+        lambda row: apply_road_speeds(row, road_speeds, "highway", "maxspeed"), axis=1
+    )
+    edges_attr["maxspeed"] = edges_attr["maxspeed"].fillna(default_speed)
+    edges_attr["travel_time"] = edges_attr["length"] / (
+        edges_attr["maxspeed"] * 1000 / 60
+    )
+    edges_attr[["node_start", "node_end"]] = edges_attr[
+        ["node_start", "node_end"]
+    ].astype(np.int_)
 
     # Road Network Data in Nodes and Edges nodes as a Pandana Network
     if graph_type == "pandana":
@@ -97,7 +122,7 @@ def get_road_network_overpass(
             nodes["lat"],
             edges_attr["node_start"],
             edges_attr["node_end"],
-            edges_attr[["length"]],
+            edges_attr[["length", "travel_time"]],
             twoway=True,
         )
     elif graph_type == "networkx":
@@ -105,9 +130,8 @@ def get_road_network_overpass(
             df=edges_attr,
             source="node_start",
             target="node_end",
-            edge_attr=["length", "maxspeed", "geometry"],
+            edge_attr=["length", "maxspeed", "geometry", "travel_time"],
             create_using=nx.MultiDiGraph,
-            edge_key="index",
         )
         network.graph["crs"] = "EPSG:4326"
         nx.set_node_attributes(network, nodes["lon"], "x")

@@ -9,7 +9,7 @@ def GetPyomoSolver(solverName, timeLimit=None, mipGap=None):
     if solverName == "cbc":
         solver = pyo.SolverFactory(
             solverName,
-            executable=r"D:\joaquimg\Dropbox\Python\solvers\cbc master\bin\cbc.exe",
+            executable=r"D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\cbc.exe",
         )
         solver.options["threads"] = 8
     elif solverName == "cplex":
@@ -21,6 +21,12 @@ def GetPyomoSolver(solverName, timeLimit=None, mipGap=None):
             solverName,
             executable=r"D:\joaquimg\Dropbox\Python\solvers\cbc master\bin\glpsol.exe",
         )
+    elif solverName == "highs":
+        solver = pyo.SolverFactory(
+            solverName,
+            executable=r"D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\highs.exe",
+        )
+
     else:
         solver = pyo.SolverFactory(solverName)
     if timeLimit:

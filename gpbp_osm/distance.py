@@ -1,14 +1,16 @@
-from .config import MAPBOX_API_ACCESS_TOKEN
+from gpbp_osm.config import MAPBOX_API_ACCESS_TOKEN
 import json
 import requests
 from typing import Any, Union
 from shapely.geometry import Polygon, MultiPolygon, Point, LineString
 import geopandas as gpd
 import pandas as pd
+import numpy as np
 
 import networkx as nx
 import pandana
 import osmnx as ox
+import time
 
 
 def _get_poly_nx(G: nx.MultiDiGraph, road_node, dist_value, distance_type):
@@ -27,12 +29,24 @@ def _get_poly_nx(G: nx.MultiDiGraph, road_node, dist_value, distance_type):
         edge_lookup = G.get_edge_data(n_fr, n_to)[0].get("geometry", LineString([f, t]))
         edge_lines.append(edge_lookup)
     edges_gdf = gpd.GeoSeries(edge_lines)
-    return nodes_gdf, edges_gdf
+    print(nodes_s.dtype)
+    return nodes_s, edges_gdf
 
 
-# TODO :
+# TODO : complains about input type
 def _get_poly_pandana(G: pandana.Network, road_node, dist_value, distance_type):
-    nodes_gdf = G.nodes_in_range(road_node, dist_value, distance_type)
+    array = np.array([road_node], dtype=np.int_)
+    nodes_gdf = G.nodes_in_range(array, dist_value, distance_type)
+    nodes_gdf["geometry"] = nodes_gdf.apply(
+        lambda row: Point(row["x"], row["y"], axis=1)
+    )
+    edge_lines = []
+    for _, row in G.edges.iterrows():
+        f = nodes_gdf.loc[row["from"]].geometry
+        t = nodes_gdf.loc[row["to"]].geometry
+        edge_lines.append(LineString([f, t]))
+    edges_gdf = gpd.GeoSeries(edge_lines)
+    return nodes_gdf, edges_gdf
 
 
 def calculate_isopolygons_graph(
@@ -41,8 +55,6 @@ def calculate_isopolygons_graph(
     distance_type: str,
     distance_values: list[int],
     road_network: Any,
-    road_speeds: dict = None,
-    default_speed: int = None,
     edge_buff: float = 0.0005,
     node_buff: float = 0.001,
 ) -> dict:
@@ -61,37 +73,55 @@ def calculate_isopolygons_graph(
         road_nodes = ox.distance.nearest_nodes(G, X, Y)
         is_networkx = True
     elif isinstance(G, pandana.Network):
+        raise Exception("Not implemented yet")
         road_nodes = G.get_node_ids(X, Y, mapping_distance=None)
+        road_nodes = road_nodes.astype(np.intc)
     else:
         raise Exception("Invalid network type")
-
-    # Add travel time in seconds edge attribute to network
-    # TODO: add travel time attribute for pandana
-    if distance_type == "travel_time":
-        G = ox.add_edge_speeds(G, hwy_speeds=road_speeds, fallback=default_speed)
-        G = ox.add_edge_travel_times(G)
 
     # Construct isopolygon for each distance value
     for dist_value in distance_values:
         isochrone_polys["ID_" + str(dist_value)] = []
         if is_networkx:
             get_poly_func = _get_poly_nx
-        else:
-            get_poly_func = _get_poly_pandana
+        #        else:
+        #            get_poly_func = _get_poly_pandana
         for road_node in road_nodes:
-            nodes_gdf, edges_gdf = get_poly_func(
-                G, road_node, dist_value, distance_type
+            subgraph = nx.ego_graph(
+                G, road_node, radius=dist_value, distance=distance_type
             )
-            n = nodes_gdf.buffer(node_buff).geometry
-            e = edges_gdf.buffer(edge_buff).geometry
-            all_gs = list(n) + list(e)
-            new_iso = gpd.GeoSeries(all_gs).unary_union
-            new_iso = Polygon(new_iso.exterior)
-            isochrone_polys["ID_" + str(dist_value)].append(new_iso)
-        if is_scalar:
-            isochrone_polys["ID_" + str(dist_value)] = isochrone_polys[str(dist_value)][
-                0
+
+            node_points = [
+                Point((data["x"], data["y"]))
+                for node, data in subgraph.nodes(data=True)
             ]
+            nodes_gdf = gpd.GeoDataFrame(
+                {"id": list(subgraph.nodes)}, geometry=node_points
+            )
+            nodes_gdf = nodes_gdf.set_index("id")
+
+            edge_lines = []
+            for n_fr, n_to in subgraph.edges():
+                f = nodes_gdf.loc[n_fr].geometry
+                t = nodes_gdf.loc[n_to].geometry
+                edge_lookup = G.get_edge_data(n_fr, n_to)[0].get(
+                    "geometry", LineString([f, t])
+                )
+                edge_lines.append(edge_lookup)
+            edges_gdf = gpd.GeoSeries(edge_lines)
+            try:
+                n = nodes_gdf.buffer(node_buff).geometry
+                e = edges_gdf.buffer(edge_buff).geometry
+                all_gs = list(n) + list(e)
+                new_iso = gpd.GeoSeries(all_gs).unary_union
+                new_iso = Polygon(new_iso.exterior)
+                isochrone_polys["ID_" + str(dist_value)].append(new_iso)
+                if is_scalar:
+                    isochrone_polys["ID_" + str(dist_value)] = isochrone_polys[
+                        "ID_" + str(dist_value)
+                    ][0]
+            except:
+                print(road_node)
 
     return isochrone_polys
 
@@ -102,6 +132,7 @@ def calculate_isopolygons_Mapbox(
     route_profile: str,
     distance_type: str,
     distance_values: list[int],
+    access_token: str = None,
 ):
     is_scalar = False
     if not (hasattr(X, "__iter__") and hasattr(Y, "__iter__")):
@@ -109,18 +140,27 @@ def calculate_isopolygons_Mapbox(
         X = [X]
         Y = [Y]
     iso_dict = {"ID_" + str(dist_value): [] for dist_value in distance_values}
+
+    if access_token is None:
+        raise Exception("Access token not provided")
+
     base_url = "https://api.mapbox.com/isochrone/v1/"
     if distance_type == "travel_time":
         contour_type = "contours_minutes"
     elif distance_type == "length":
         contour_type = "contours_meters"
-    for coord_pair in list(zip(X, Y)):
+    for idx, coord_pair in enumerate(list(zip(X, Y))):
         request = (
             f"{base_url}mapbox/{route_profile}/{coord_pair[0]},"
             f"{coord_pair[1]}?{contour_type}={','.join(list(map(str, distance_values)))}"
             f"&polygons=true&denoise=1&access_token={MAPBOX_API_ACCESS_TOKEN}"
         )
-
+        # Check if reached 300 api calls
+        if (idx + 1) % 300 == 0:
+            # Sleep for 1 minute
+            print("Reached mapbox api request limit. Waiting for one minute...")
+            time.sleep(300)
+            print("Starting requests again")
         try:
             request_pack = json.loads(requests.get(request).content)
             features = request_pack["features"]
@@ -140,9 +180,6 @@ def calculate_isopolygons_Mapbox(
     return iso_dict
 
 
-# TODO:
-
-
 def population_served(
     pop_gdf: pd.DataFrame,
     fac_gdf: gpd.GeoDataFrame,
@@ -151,9 +188,8 @@ def population_served(
     distance_values: list[int],
     route_mode: str,
     strategy: str,
+    access_token: str = None,
     road_network: Any = None,
-    road_speeds: dict = None,
-    default_speed: int = None,
 ) -> dict:
     # TODO: route mode is useful only for mapbox if we take network as variable
     pop_gdf = pop_gdf.copy()
@@ -166,6 +202,7 @@ def population_served(
             route_mode,
             distance_type,
             distance_values,
+            access_token=access_token,
         )
         dist_df = pd.DataFrame.from_dict(dist_dict)
         iso_gdf = pd.concat(
@@ -183,8 +220,6 @@ def population_served(
             distance_type,
             distance_values,
             road_network,
-            road_speeds,
-            default_speed,
         )
         dist_df = pd.DataFrame.from_dict(dist_dict)
         iso_gdf = pd.concat(
