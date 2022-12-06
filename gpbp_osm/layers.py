@@ -1,5 +1,6 @@
 from gadm import GADMDownloader
 import osmnx as ox
+import networkx as nx
 from gpbp_osm.constants import FACILITIES_SRC, POPULATION_SRC, RWI_SRC
 from gpbp_osm.utils import generate_grid_in_polygon, group_population
 from gpbp_osm.distance import population_served
@@ -84,6 +85,11 @@ class AdmArea:
             self.road_network, fallback=default_speed
         )
         self.road_network = ox.add_edge_travel_times(self.road_network)
+        time = nx.get_edge_attributes(self.road_network, "travel_time")
+        time_min = dict(
+            zip(list(time.keys()), list(map(lambda x: round(x / 60, 2), time.values())))
+        )
+        nx.set_edge_attributes(self.road_network, time_min, "travel_time")
 
     def get_rwi(self, method: str) -> None:
         if self.geometry is None:

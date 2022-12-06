@@ -29,8 +29,7 @@ def _get_poly_nx(G: nx.MultiDiGraph, road_node, dist_value, distance_type):
         edge_lookup = G.get_edge_data(n_fr, n_to)[0].get("geometry", LineString([f, t]))
         edge_lines.append(edge_lookup)
     edges_gdf = gpd.GeoSeries(edge_lines)
-    print(nodes_s.dtype)
-    return nodes_s, edges_gdf
+    return nodes_gdf, edges_gdf
 
 
 # TODO : complains about input type
@@ -211,9 +210,6 @@ def population_served(
     elif strategy == "osm":
         if road_network == None:
             raise Exception("OSM strategy needs a road network")
-        # OSM accepts time in seconds
-        if distance_type == "travel_time":
-            distance_value = distance_value * 60
         dist_dict = calculate_isopolygons_graph(
             iso_gdf.longitude.to_list(),
             iso_gdf.latitude.to_list(),

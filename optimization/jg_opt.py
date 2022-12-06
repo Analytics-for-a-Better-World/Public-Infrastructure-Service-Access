@@ -5,8 +5,14 @@ import gurobipy as gb
 import pyomo.environ as pyo
 
 
-def GetPyomoSolver(solverName, timeLimit=None, mipGap=None):
-    if solverName == "cbc":
+def GetPyomoSolver(solverName, timeLimit=None, mipGap=None, solver_path=None):
+    if solver_path:
+        try:
+            solver = pyo.SolverFactory("cbc", executable=solver_path)
+        except Exception as e:
+            return e
+        solver.options["threads"] = 8
+    elif solverName == "cbc":
         solver = pyo.SolverFactory(
             solverName,
             executable=r"D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\cbc.exe",
@@ -26,6 +32,7 @@ def GetPyomoSolver(solverName, timeLimit=None, mipGap=None):
             solverName,
             executable=r"D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\highs.exe",
         )
+        solver.options["threads"] = 8
 
     else:
         solver = pyo.SolverFactory(solverName)
@@ -57,6 +64,7 @@ def OpenOptimize(
     mipGap=1e-8,
     trace=False,
     solver="cbc",
+    solver_path=None,
 ):
     """Solves the weighted maximum coverage problem with the solver specified, see https://en.wikipedia.org/wiki/Maximum_coverage_problem
 
@@ -109,7 +117,8 @@ def OpenOptimize(
     def in_the_budget(M):
         return M.nof_open_facilities <= M.budget
 
-    solver = GetPyomoSolver(solver, maxTimeInSeconds, mipGap)
+    solver = GetPyomoSolver(solver, maxTimeInSeconds, mipGap, solver_path)
+    print(solver)
 
     for p in budget_list:
         M.budget = p
