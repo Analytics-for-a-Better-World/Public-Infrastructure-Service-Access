@@ -25,11 +25,12 @@ instance/
 .coverage
 htmlcov/
 
-dist/
 build/
 *.egg-info/
 
 examples/test_ntbk.ipynb
 #examples/gpbp_showcame.ipynb
+
+Public-Infrastructure-Location-Optimiser.code-workspace
 
 data

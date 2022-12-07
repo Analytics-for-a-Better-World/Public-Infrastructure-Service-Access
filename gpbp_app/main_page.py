@@ -3,8 +3,8 @@ import streamlit as st
 from streamlit_folium import st_folium
 import pandas as pd
 import numpy as np
-from gpbp_osm.layers import AdmArea
-import gpbp_osm.visualisation
+from gpbp.layers import AdmArea
+import gpbp.visualisation
 from optimization import jg_opt
 from functools import partial
 import pycountry
@@ -87,7 +87,7 @@ with tab2:
 
         if osm_button:
             st.session_state.adm_area.get_facilities("osm", {"building": "hospital"})
-            st.session_state.fac_map_obj = gpbp_osm.visualisation.plot_facilities(
+            st.session_state.fac_map_obj = gpbp.visualisation.plot_facilities(
                 st.session_state.adm_area.fac_gdf
             )
         fac_map = st_folium(

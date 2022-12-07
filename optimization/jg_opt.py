@@ -118,7 +118,6 @@ def OpenOptimize(
         return M.nof_open_facilities <= M.budget
 
     solver = GetPyomoSolver(solver, maxTimeInSeconds, mipGap, solver_path)
-    print(solver)
 
     for p in budget_list:
         M.budget = p
