@@ -1,3 +1,6 @@
+import sys
+sys.path.insert(0, "..")
+
 import os
 import streamlit as st
 from streamlit_folium import st_folium
@@ -129,6 +132,13 @@ with tab3:
         # st.session_state.pop_map_obj = gpbp_osm.visualisation.plot_population_heatmap(
         #    st.session_state.adm_area.pop_df
         # )
+        st.metric(
+            "Number of households",
+            st.session_state.adm_area.pop_df.shape[0]
+            if st.session_state.adm_area is not None
+            and st.session_state.adm_area.pop_df is not None
+            else 0,
+        )        
         if (
             st.session_state.adm_area.pop_df is not None
             and st.session_state.adm_area.fac_gdf is not None
