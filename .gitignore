@@ -10,6 +10,27 @@ results/*
 # Virtual environment
 venv
 
+config.py
+
 cache
 
 src/__pycache__/
+
+*.pyc
+__pycache__/
+
+instance/
+
+.pytest_cache/
+.coverage
+htmlcov/
+
+build/
+*.egg-info/
+
+examples/test_ntbk.ipynb
+#examples/gpbp_showcame.ipynb
+
+Public-Infrastructure-Location-Optimiser.code-workspace
+
+data
