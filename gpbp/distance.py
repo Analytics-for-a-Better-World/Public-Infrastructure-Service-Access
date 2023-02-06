@@ -48,8 +48,8 @@ def _get_poly_pandana(G: pandana.Network, road_node, dist_value, distance_type):
 
 
 def calculate_isopolygons_graph(
-    X: Union[float, list[float]],
-    Y: Union[float, list[float]],
+    X: Any,
+    Y: Any,
     distance_type: str,
     distance_values: list[int],
     road_network: Any,
@@ -125,8 +125,8 @@ def calculate_isopolygons_graph(
 
 
 def calculate_isopolygons_Mapbox(
-    X: Union[float, list[float]],
-    Y: Union[float, list[float]],
+    X: Any,
+    Y: Any,
     route_profile: str,
     distance_type: str,
     distance_values: list[int],

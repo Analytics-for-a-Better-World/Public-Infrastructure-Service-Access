@@ -253,7 +253,7 @@ with tab5:
                     ),
                     mode_of_transport=st.session_state.route_profile,
                     strategy=st.session_state.strategy,
-                    access_token=st.session_state.mapbox_access,
+                    mapbox_access_token=st.session_state.mapbox_access,
                     population_resolution=st.session_state.population_resolution,
                 )
             if os.path.exists(st.session_state.opt_solver_path):
