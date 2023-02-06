@@ -1,4 +1,4 @@
-# Public-Infrastructure-Location-Optimiser
+# Public Infrastructure Service Access
 
 ## Installation
 1. Clone the repository
@@ -8,16 +8,16 @@
   This will create a virtual environment and install all the necessary library dependencies.
   - If you **do not** choose to use poetry we first recommend creating a virtual environment and
   then install the package and necessary dependencies by installing the **.whl** file in the **dist** folder. So in a terminal, while you are located in the repository folder, execute the following:
-    - ```bash python -m venv venv`` to create the virtual environment
-    - ```bash venv\Scripts\Activate.ps1`` to activate it
-    - ```bash cd dist`` to enter the dist folder
+    - ```bash python -m venv venv``` to create the virtual environment
+    - ```bash venv\Scripts\Activate.ps1``` to activate it
+    - ```bash cd dist``` to enter the dist folder
     - ```bash pip install gpbp-0.1.0-py3-none-any.whl``` to install the package
 
 ## Usage
 1. Some example usage can be seen in the ```examples/gpbp_showcase.ipynb``` notebook
 2. When in the ```gpbp_app``` folder you can run a [Streamlit](https://streamlit.io/) app to use
 the package using an interface. Specifically, while you are located in the repository folder, execute the following:
-  - ```bash cd gpbp_app`` to enter the application folder
+  - ```bash cd gpbp_app``` to enter the application folder
   - ```bash streamlit run main_page.py``` to run the app, which will automatically open a browser window
 
 ## References
