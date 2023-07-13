@@ -340,37 +340,43 @@ def draw_lines( df, x=None, y=None, bgcolor='white',
         fig.write_image(file_name)#, engine='orca' )
     return fig
 
-def GetAccessibilityFromData( tot_access_list, pop_with_district, rwi_district ):
+def GetAccessibilityFromData( tot_access_list, pop_with_district, rwi_district, province_column='Province Name' ):
     pop_current_access = pop_with_district[pop_with_district['ID'].isin(set(tot_access_list))]
-    access_pop = pop_current_access.groupby(['DISTRICT','Province'])['population'].sum().reset_index()
+    access_pop = pop_current_access.groupby(['DISTRICT',province_column])['population'].sum().reset_index()
 
-    access_pop.columns = ['District','Province','People_Access']
-    total_pop = pop_with_district.groupby(['DISTRICT','Province'])['population'].sum().reset_index()
-    total_pop.columns = ['District','Province','Total_Pop']
+    access_pop.columns = ['District',province_column,'People_Access']
+    total_pop = pop_with_district.groupby(['DISTRICT',province_column])['population'].sum().reset_index()
+    total_pop.columns = ['District',province_column,'Total_Pop']
 
-    current_accessibility = pd.merge(access_pop,total_pop,on=['District','Province'])
+    current_accessibility = pd.merge(access_pop,total_pop,on=['District',province_column])
     current_accessibility['pc'] = current_accessibility['People_Access']/current_accessibility['Total_Pop']
     current_accessibility['%'] = (current_accessibility['pc']*100).round().astype(int)
 
-    return pd.merge(current_accessibility,rwi_district,on=['District','Province']).sort_values(by=['Province','District'])
+    return pd.merge(current_accessibility,rwi_district,on=['District',province_column]).sort_values(by=[province_column,'District'])
 
 def ShowRWIxAccess( accessibility_frame, color_discrete_map,
                    width=800, height=500, 
                    font_family='lmodern',font_size=13,
-                   title='',
+                   xrange = [-.55, 1.1],
+                   yrange = [-10, 110], 
+                   showlegend=True,
+                   title=None,
                    html_name=None,
                    file_name=None, 
                    trendline=None, trendline_scope='trace', trendline_color_override=None ):
     fig = px.scatter(accessibility_frame,x='Median RWI',y='%',
-                 hover_name='District',size='Total_Pop',color='Province',
+                 hover_name='District',size='Total_Pop',color='Province Name',
                  width=width,height=height,title=title,
                  color_discrete_map=color_discrete_map,trendline=trendline,trendline_scope=trendline_scope,trendline_color_override=trendline_color_override)
-    fig.update_xaxes(title='Median Relative Wealth Index')
-    fig.update_yaxes(title='% of population with access')
+    fig.update_xaxes(title=None)#'Median Relative Wealth Index')
+    fig.update_yaxes(title=None)#'% of population with access')
+    fig.update_xaxes(range=xrange)
+    fig.update_yaxes(range=yrange)
     fig.update_layout(plot_bgcolor='white',
                       font_family=font_family,
                       font_size=font_size,
                       margin = dict(l=0, r=0, t=30, b=0))
+    fig.update_traces(showlegend=showlegend)
     if file_name:
         fig.write_image(file_name)#, engine='orca')
     if html_name:
