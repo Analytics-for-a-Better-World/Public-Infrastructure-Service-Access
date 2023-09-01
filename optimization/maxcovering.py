@@ -20,133 +20,76 @@ doi="10.1007/BF01942293",
 url="https://doi.org/10.1007/BF01942293"
 }
 
-This module includes mathematical optimization solvers and heuristics. 
+This module includes mathematical optimization solvers and heuristics.
 
-Although this is now a very well-known problem and there are several open source implementations 
-(one example being https://github.com/cyang-kth/maximum-coverage-location) we implemented here 
-following the research conducted during the following master theses: 
+Although this is now a very well-known problem and there are several
+open source implementations
+(example https://github.com/cyang-kth/maximum-coverage-location)
+we implemented here the research conducted during the following
+master theses:
 
 An Optimization Tool for Facility Location in Developing Countries
-Casestudy for Timor-Leste by Joyce Antonissen, U. Tilburg, 2020
+Case study for Timor-Leste by Joyce Antonissen, U. Tilburg, 2020
 
 Solving Large Maximum Covering Location Problems with a GRASP Heuristic
-Case-study for stroke facility allocation in Vietnam by Fleur Theulen, U. Tilburg, 2022
+Case-study for stroke facility allocation in Vietnam
+by Fleur Theulen, U. Tilburg, 2022
 
-The mathematical optimization models are related to the work of Joyce, but while she used a 
-double index formulation for the budgeted version of the problem, we use a much more scalable 
-single index formulation. This is implemented directly in gurobipy to allow very fast model 
-building and optimization with the gurobi solver and also in pyomo to allow optimization with 
-any solver supported by pyomo, including many open source solvers. 
+The mathematical optimization models are related to the work of Joyce, but
+while she used a double index formulation for the budgeted version of the
+problem, we use a much more scalable single index formulation.
 
-The greedy and LocalSearch heuristics are faster and more scalable re-implementations of those by Fleur.
+This is implemented directly in gurobipy to allow very fast model building and
+optimization with the gurobi solver and also in pyomo to allow optimization
+with any solver supported by pyomo, including many open source solvers.
 
-Also includes an heuristic from Church and ReVelle that is not part of Fleur's thesis. 
+The greedy and LocalSearch heuristics are faster and more scalable
+re-implementations of those by Fleur.
+
+Also includes an heuristic from Church and ReVelle that is not part of Fleur's
+thesis.
 
 Is still lacks a number of heuristics from Fleur:
- - that 'adaptive' version of LocalSearch that tries to avoid hopeless attempts. 
+ - 'adaptive' version of LocalSearch that tries to avoid hopeless attempts.
  - GRASP
  - path relinking
 
-Besides functions documented with docstrings, this model also exports the following:
+Besides functions documented with docstring, this model also exports the
+following:
 
-gurobicode : dict leading to verbose description of the termination codes of gurobi
+verbose_gurobi_code : dict to description of the termination codes of gurobi
 """
 
 from time import perf_counter as pc
 import copy
 import numpy as np
-import pandas as pd
 import gurobipy as gb
 import pyomo.environ as pyo
 
-gurobicode = { gb.GRB.LOADED : 'loaded',
-gb.GRB.OPTIMAL : 'optimal',
-gb.GRB.INFEASIBLE : 'infeasible',
-gb.GRB.INF_OR_UNBD : 'inf_or_unbd',
-gb.GRB.UNBOUNDED  : 'unbounded',
-gb.GRB.CUTOFF : 'cutoff',
-gb.GRB.ITERATION_LIMIT  : 'iteration_limit',
-gb.GRB.NODE_LIMIT : 'node_limit',
-gb.GRB.TIME_LIMIT : 'time_limit',
-gb.GRB.SOLUTION_LIMIT : 'solution_limit',
-gb.GRB.INTERRUPTED : 'interrupted',
-gb.GRB.NUMERIC : 'numeric',
-gb.GRB.SUBOPTIMAL : 'suboptimal',
-gb.GRB.INPROGRESS : 'inprogress',
-gb.GRB.USER_OBJ_LIMIT : 'user_obj_limit'}
+# own modules
+import optdata as od
 
-# helper functions
+verbose_gurobi_code = {gb.GRB.LOADED: 'loaded',
+                       gb.GRB.OPTIMAL: 'optimal',
+                       gb.GRB.INFEASIBLE: 'infeasible',
+                       gb.GRB.INF_OR_UNBD: 'infeasible or unbounded',
+                       gb.GRB.UNBOUNDED: 'unbounded',
+                       gb.GRB.CUTOFF: 'cutoff',
+                       gb.GRB.ITERATION_LIMIT: 'iteration limit',
+                       gb.GRB.NODE_LIMIT: 'node limit',
+                       gb.GRB.TIME_LIMIT: 'time limit',
+                       gb.GRB.SOLUTION_LIMIT: 'solution limit',
+                       gb.GRB.INTERRUPTED: 'interrupted',
+                       gb.GRB.NUMERIC: 'numeric',
+                       gb.GRB.SUBOPTIMAL: 'suboptimal',
+                       gb.GRB.INPROGRESS: 'in progress',
+                       gb.GRB.USER_OBJ_LIMIT: 'user objective limit'}
 
-def all_in( list_of_lists: list[list] ) -> np.ndarray: 
-    """
-    Returns a numpy array of unique elements from a list of lists
-
-    Parameters:
-        list_of_lists (list[list]): A list of lists
-
-    Returns:
-        numpy.ndarray: A numpy array of unique elements
-    """
-    return np.unique( np.concatenate( list_of_lists ) )
-
-def CreateIndexMapping(all_facs: dict, household: list, covered: set = set()) \
-        -> tuple[np.array, np.array, dict, dict]:
-    """
-    CreateIndexMapping creates a mapping between the indices of 
-    the households and the facilities.
-
-    Parameters:
-    all_facs (dict): A dictionary of facilities and their associated indices.
-    household (list): A list of households.
-    covered (set): A set of indices that are already covered.
-
-    Returns:
-    I (np.array): An array of indices of households.
-    J (np.array): An array of indices of facilities.
-    IJ (dict): A dictionary of households to the facilities that they reach.
-    JI (dict): A dictionary of facilities to the households in their catchment area.
-    """
-    not_covered = np.setdiff1d(np.arange(len(household)),covered,assume_unique=True)
-    JI = { j : np.setdiff1d(i,covered,assume_unique=True) for j,i in all_facs.items() }
-    JI = { j : i for j,i in JI.items() if len(i) }
-    IJ = { i : [] for i in not_covered }
-    for j,I in JI.items():
-        for i in I:
-            if i in IJ.keys():
-                IJ[i].append(j)
-    IJ = { i : np.unique(j) for i,j in IJ.items() if len(j) }
-    I = np.unique( list(IJ.keys()) )
-    J = np.unique( np.concatenate(list(IJ.values())) )
-    return I, J, IJ, JI
-
-
-def CheckSanityIndexMapping(I: list, J: list, IJ: dict, JI: dict, w: list) -> bool:
-    """
-    Checks if the index mapping is valid.
-
-    Parameters:
-    I (list): List of households
-    J (list): List of potential facilities
-    IJ (dict): Mapping from households to potential facilities
-    JI (dict): Mapping from potential facilities to households
-    w (list): List of weights
-
-    Returns:
-    bool: True if the index mapping is valid, fires an assertion otherwise
-    """
-    assert set(I).issuperset( set(IJ.keys()) ), 'household out of bounds'
-    assert set(J).issuperset( set(JI.keys()) ), 'potential facility out of bounds'
-    assert set(J).issuperset( all_in( list( IJ.values() ) ) ), \
-            'potential facility out of bounds'    
-    assert set(I).issuperset( all_in( list( JI.values() ) ) ), \
-            'household out of bounds'    
-    assert set( all_in( list( JI.values() ) ) ).issubset( set(range(len(w)))), \
-            'potential facility out of bounds'
-    return True
 
 # Optimizing with Pyomo, see https://mobook.github.io/MO-book/intro.html
-def GetPyomoSolver(solverName: str, timeLimit: float = None, mipGap: float = None) \
-        -> pyo.SolverFactory:
+def GetPyomoSolver(solverName: str,
+                   timeLimit: float = None,
+                   mipGap: float = None) -> pyo.SolverFactory:
     """
     This function returns a Pyomo solver object based on the solver name.
     Sets the time limit and mip gap if provided.
@@ -156,9 +99,10 @@ def GetPyomoSolver(solverName: str, timeLimit: float = None, mipGap: float = Non
     solverName : str
         Name of the solver to be used.
     timeLimit : float, optional
-        Time limit for the solver, by default None leading to solving until optimal.
+        Time limit for the solver (default None) in seconds.
     mipGap : float, optional
-        MIP gap for the solver, by default None: the default specific to each solver.
+        MIP gap for the solver. The default (None) uses the default specific
+        to each solver.
 
     Returns
     -------
@@ -168,42 +112,50 @@ def GetPyomoSolver(solverName: str, timeLimit: float = None, mipGap: float = Non
     # change if needed!!!
     solver_path = r'D:\joaquimg\Dropbox\Python\solvers\new cbc master\bin'
     if solverName == 'cbc':
-        solver  = pyo.SolverFactory(solverName,executable=solver_path+r'\cbc.exe')
+        solver = pyo.SolverFactory(solverName,
+                                   executable=solver_path+r'\cbc.exe')
         solver.options['threads'] = 8
-    elif solverName == 'cplex':         
+    elif solverName == 'cplex':
         solver = pyo.SolverFactory('cplex_direct')
-    elif solverName == 'gurobi':         
+    elif solverName == 'gurobi':
         solver = pyo.SolverFactory('gurobi_direct')
     elif solverName == 'glpk':
-        solver  = pyo.SolverFactory(solverName,executable=solver_path+r'\glpsol.exe' )
+        solver = pyo.SolverFactory(solverName,
+                                   executable=solver_path+r'\glpsol.exe')
     else:
         solver = pyo.SolverFactory(solverName)
     if timeLimit:
         if solverName == 'cplex':
             solver.options['timelimit'] = timeLimit
-        elif solverName == 'cbc':         
+        elif solverName == 'cbc':
             solver.options['sec'] = np.ceil(timeLimit)
-        elif solverName == 'gurobi':           
+        elif solverName == 'gurobi':
             solver.options['TimeLimit'] = timeLimit
     if mipGap:
         if solverName == 'cplex':
             solver.options['mipgap'] = mipGap
-        elif solverName == 'cbc':         
+        elif solverName == 'cbc':
             solver.options['allowableGap'] = mipGap
-        elif solverName == 'gurobi':           
+        elif solverName == 'gurobi':
             solver.options['MipGap'] = mipGap
     return solver
 
-def PyomoOptimize(w: list, I: list, J: list, IJ: dict, budget_list: list, parsimonious: bool = True, \
-                maxTimeInSeconds: int = 5*60, mipGap: float = 1e-8, trace: bool = False, already_open: list = [], \
-                solver: str = 'cbc', progress: callable = lambda iterable: iterable) -> pd.DataFrame:
+
+def OptimizeWithPyomo(w: list, I: list,  # noqa: E741
+                      J: list, IJ: dict, budget_list: list,
+                      parsimonious: bool = True, maxTimeInSeconds: int = 5*60,
+                      mipGap: float = 1e-8, trace: bool = False,
+                      already_open: list = [], solver: str = 'cbc',
+                      progress: callable = lambda iterable: iterable) \
+                          -> dict[int, dict[str, any]]:
     """
-    Instantiates and solves the weighted maximal covering problem with the solver specified for the data provided.
+    Instantiates and solves the weighted maximal covering problem with the
+    solver specified for the data provided.
 
     Parameters
     ----------
     w : list
-        List of sizes of each household 
+        List of sizes of each household.
     I : list
         List of indices of households.
     J : list
@@ -212,8 +164,11 @@ def PyomoOptimize(w: list, I: list, J: list, IJ: dict, budget_list: list, parsim
         Dictionary of households to the locations within reach.
     budget_list : list
         List of budgets to optimize for.
+        These limit the number of facilities to select, in addition to those
+        (if any) listed in already_open.
     parsimonious : bool, optional
-        Whether to optimize minimize the number of open facilities needed to reach the optimal coverage (default is True).
+        Whether to optimize minimize the number of open facilities needed to
+        reach the optimal coverage (default is True).
     maxTimeInSeconds : int, optional
         Maximum time in seconds to run the optimization (default is 5*60).
     mipGap : float, optional
@@ -225,98 +180,113 @@ def PyomoOptimize(w: list, I: list, J: list, IJ: dict, budget_list: list, parsim
     solver : str, optional
         Solver to use for optimization (default is 'cbc').
     progress : callable, optional
-        Callable (function) to use for progress tracking (default is the identity).
+        Callable (function) to use for progress tracking (default is the
+        identity).
 
     Returns
     -------
-    result : pandas.DataFrame
-        DataFrame containing the optimization results with one row per budget in budget_list 
-        and columns 'value','solution','modeling','solving','termination','upper'
+    result : dict[int, dict[str, any]]
+        dict of dicts containing the optimization results at the outer level
+        one entry per budget in budget_list and the inner level 'value',
+        'solution','modeling','solving', 'termination','upper'
     """
-    
+
     # ensure that all facilities already open are given to a variable
-    J = list( set(J) | set(already_open) )
-        
-    result = pd.DataFrame( index=budget_list, columns=['value','solution','modeling','solving','termination','upper'] )
-    
+    J = list(set(J) | set(already_open))
+
+    result = dict()
+
     start = pc()
-    
+
     M = pyo.ConcreteModel('max_coverage')
-    
-    M.I = pyo.Set(initialize=I)
+
+    M.I = pyo.Set(initialize=I)  # noqa: E741
     M.J = pyo.Set(initialize=J)
-    
+
     M.budget = pyo.Param(mutable=True, default=0)
-    
-    M.X = pyo.Var( M.J, domain=pyo.Binary )
-    M.Y = pyo.Var( M.I, domain=pyo.Binary )
-    
+
+    M.X = pyo.Var(M.J, domain=pyo.Binary)
+    M.Y = pyo.Var(M.I, domain=pyo.Binary)
+
     for j in already_open:
         M.X[j].fix(1)
-    
-    @M.Expression()
-    def nof_open_facilities( M ):
-        return pyo.quicksum( M.X[j] for j in M.J )
 
     @M.Expression()
-    def weighted_coverage( M ):
-        return pyo.quicksum( w[i]*M.Y[i] for i in M.I )
-    
-    coef_x = -1/(max(budget_list)+1) if parsimonious else 0 
+    def nof_open_facilities(M):
+        return pyo.quicksum(M.X[j] for j in M.J)
+
+    @M.Expression()
+    def weighted_coverage(M):
+        return pyo.quicksum(w[i]*M.Y[i] for i in M.I)
+
+    coef_x = -1/(max(budget_list)+1) if parsimonious else 0
 
     @M.Objective(sense=pyo.maximize)
     def coverage(M):
         return M.weighted_coverage + M.nof_open_facilities * coef_x
-    
+
     @M.Constraint(M.I)
-    def serve_if_open(M,i):
-        return M.Y[i] <= pyo.quicksum( M.X[j] for j in IJ[i] )
-    
+    def serve_if_open(M, i):
+        return M.Y[i] <= pyo.quicksum(M.X[j] for j in IJ[i])
+
     @M.Constraint()
     def in_the_budget(M):
         return M.nof_open_facilities <= M.budget
-    
-    solver = GetPyomoSolver(solver,maxTimeInSeconds,mipGap)
-    
+
+    solver = GetPyomoSolver(solver, maxTimeInSeconds, mipGap)
+
     for p in progress(budget_list):
-        M.budget = p 
-        result.at[p,'modeling'] = pc()-start
+        M.budget = p + len(already_open)
+        modeling = pc()-start
         start = pc()
-        solver_result = solver.solve(M,tee=trace)
-        result.at[p,'solving']     = pc()-start
-        result.at[p,'value']       = int(np.ceil(M.weighted_coverage()-np.finfo(np.float16).eps))
-        result.at[p,'solution']    = [j for j in J if pyo.value(M.X[j]) >= .5]
-        result.at[p,'termination'] = solver_result.solver.termination_condition
-        result.at[p,'upper']       = max( [abs(int(np.round(solver_result.problem.lower_bound+np.finfo(np.float16).eps))),
-                                           abs(int(np.round(solver_result.problem.upper_bound+np.finfo(np.float16).eps))) ] )
+        solver_result = solver.solve(M, tee=trace)
+        result[p] = dict(
+            modeling=modeling,
+            solving=pc()-start,
+            value=M.weighted_coverage(),
+            solution=[j for j in J if pyo.value(M.X[j]) >= .5],
+            termination=solver_result.solver.termination_condition,
+            upper=solver_result.problem.upper_bound)
         start = pc()
-                 
+
     return result
+
 
 # a simple closure
 def make_pyomo_optimizer_using(this_solver: str) -> callable:
     """
-    A simple closure to a function instantiating the specified this_solver able to solve an instance to be defined.
+    A simple closure to a function instantiating the specified this_solver
+    able to solve an instance to be defined.
 
     Parameters
     ----------
         this_solver (str): the name of the solver to use.
-    """    
-    def optimizer(w, I, J, IJ, budget_list, parsimonious=True, maxTimeInSeconds=5*60, mipGap=1e-8, trace=False, already_open=[]):
-        return PyomoOptimize(w, I, J, IJ, budget_list, parsimonious, maxTimeInSeconds, mipGap, trace, already_open, this_solver)
+    """
+    def optimizer(w, I,  # noqa: E741
+                  J, IJ, budget_list, parsimonious=True,
+                  maxTimeInSeconds=5*60, mipGap=1e-8, trace=False,
+                  already_open=[]):
+        return OptimizeWithPyomo(w, I, J, IJ, budget_list, parsimonious,
+                                 maxTimeInSeconds, mipGap, trace, already_open,
+                                 this_solver)
     return optimizer
 
 
-def OptimizeWithGurobipy(w: list, I: list, J: list, IJ: dict, budget_list: list, parsimonious: bool = True, \
-                maxTimeInSeconds: int = 5*60, mipGap: float = 1e-8, trace: bool = False, already_open: list = [], \
-                progress: callable = lambda iterable: iterable) -> pd.DataFrame:
+def OptimizeWithGurobipy(w: list, I: list,  # noqa: E741
+                         J: list, IJ: dict,
+                         budget_list: list, parsimonious: bool = True,
+                         maxTimeInSeconds: int = 5*60, mipGap: float = 1e-8,
+                         trace: bool = False, already_open: list = [],
+                         progress: callable = lambda iterable: iterable) \
+                             -> dict[int, dict[str, any]]:
     """
-    Instantiates and solves the weighted maximal covering problem with the solver specified for the data provided.
+    Instantiates the weighted maximal covering problem using gurobipy for the
+    data provided and solves it with gurobi .
 
     Parameters
     ----------
     w : list
-        List of sizes of each household 
+        List of sizes of each household.
     I : list
         List of indices of households.
     J : list
@@ -324,76 +294,85 @@ def OptimizeWithGurobipy(w: list, I: list, J: list, IJ: dict, budget_list: list,
     IJ : dict
         Dictionary of households to the locations within reach.
     budget_list : list
-        List of budgets to optimize for.
+        List of budgets to optimize for. These limit the number of facilities
+        to select, in addition to those (if any) listed in already_open.
     parsimonious : bool, optional
-        Whether to optimize minimize the number of open facilities needed to reach the optimal coverage (default is True).
-    maxTimeInSeconds (float, optional): 
-        Max solve time. Defaults to 5*60. See https://www.gurobi.com/documentation/9.5/refman/timelimit.html 
-    mipGap ([type], optional): 
-        Max MIP gap. Defaults to 1e-8. See https://www.gurobi.com/documentation/9.5/refman/mipgap2.html
-    trace (bool, optional): 
-        Show solve log. Defaults to False. See https://www.gurobi.com/documentation/9.5/refman/outputflag.html
+        Whether to optimize minimize the number of open facilities needed to
+        reach the optimal coverage (default is True).
+    maxTimeInSeconds (float, optional):
+        Max solve time. Defaults to 5*60.
+        See https://www.gurobi.com/documentation/9.5/refman/timelimit.html
+    mipGap ([type], optional):
+        Max MIP gap. Defaults to 1e-8.
+        See https://www.gurobi.com/documentation/9.5/refman/mipgap2.html
+    trace (bool, optional):
+        Show solve log. Defaults to False.
+        See https://www.gurobi.com/documentation/9.5/refman/outputflag.html
     already_open : list, optional
         List of facilities that are already open (default is []).
     progress : callable, optional
-        Callable (function) to use for progress tracking (default is the identity).
+        Callable (function) to use for progress tracking (default is the
+        identity).
 
     Returns
     -------
-    result : pandas.DataFrame
-        DataFrame containing the optimization results with one row per budget in budget_list 
-        and columns 'value','solution','modeling','solving','termination','upper'
-    """    
-    
+    result : dict[int, dict[str, any]]
+        dict of dicts containing the optimization results at the outer level
+        one entry per budget in budget_list and the inner level 'value',
+        'solution','modeling','solving','termination','upper'
+    """
+
     # ensure that all facilities already open are given to a variable
-    J = list( set(J) | set(already_open) )
-    
-    result = pd.DataFrame( index=budget_list, columns=['value','solution','modeling','solving','termination','upper'] )
-    
+    J = list(set(J) | set(already_open))
+
+    result = dict()
     start = pc()
-    
+
     M = gb.Model('max_coverage')
     M.ModelSense = gb.GRB.MAXIMIZE
-    
-    M.Params.OutputFlag = trace 
-    M.Params.MIPGap     = mipGap
-    M.Params.TimeLimit  = maxTimeInSeconds
-    
+
+    M.Params.OutputFlag = trace
+    M.Params.MIPGap = mipGap
+    M.Params.TimeLimit = maxTimeInSeconds
+
     if parsimonious:
         X = M.addVars(J, obj=-1/(max(budget_list)+1), vtype=gb.GRB.BINARY)
     else:
         X = M.addVars(J, vtype=gb.GRB.BINARY)
     Y = M.addVars(I, obj=w[I], vtype=gb.GRB.BINARY)
-    
-    for j in set(already_open).intersection(set(J)):
+
+    for j in already_open:
         X[j].lb = X[j].ub = 1
-    
-    M.addConstrs( (Y[i] <= (gb.quicksum(X[j] for j in IJ[i]))) for i in I )
-    budget = M.addLConstr( X.sum() >= 0)
-    
+
+    M.addConstrs((Y[i] <= (gb.quicksum(X[j] for j in IJ[i]))) for i in I)
+    budget = M.addLConstr(X.sum() >= 0)
+
     for p in progress(budget_list):
         M.remove(budget)
-        budget = M.addLConstr( X.sum() <= p)
-        result.at[p,'modeling'] = pc()-start
+        budget = M.addLConstr(X.sum() <= p + len(already_open))
+        modeling = pc()-start
         start = pc()
         M.optimize()
-        result.at[p,'solving']     = pc()-start
-        result.at[p,'value']       = int(np.ceil(M.objVal))
-        result.at[p,'solution']    = [j for j in J if X[j].x >= .5]
-        result.at[p,'termination'] = gurobicode[M.status]
-        result.at[p,'upper']       = int(np.floor(M.ObjBound))
+        result[p] = dict(modeling=modeling,
+                         solving=pc()-start,
+                         value=M.objVal,
+                         solution=[j for j in J if X[j].x >= .5],
+                         termination=verbose_gurobi_code[M.status],
+                         upper=M.ObjBound)
         start = pc()
-                 
-    return result
-    
-# Heuristics
 
-def Greedy(w: np.ndarray, IJ: dict, JI: dict, nof_facilities: np.uint, budget_list: list, \
-            progress: callable = lambda iterable: iterable) -> pd.DataFrame:
+    return result
+
+
+# Heuristics
+def Greedy(w: np.ndarray, IJ: dict, JI: dict, nof_facilities: np.uint,
+           budget_list: list, progress: callable = lambda iterable: iterable) \
+               -> dict[int, dict[str, any]]:
     """
-    Fleur's Greedy algorithm for the weighted budgeted maximal covering facility location problem.
-    Note that this is the GA (Greedy Addition) algorithm described by Church and ReVelle 
-    
+    Fleur's Greedy algorithm for the weighted budgeted maximal covering
+    facility location problem. Note that this is the GA (Greedy Addition)
+    algorithm described by Church and ReVelle
+
     Parameters
     ----------
     w : np.ndarray
@@ -407,54 +386,59 @@ def Greedy(w: np.ndarray, IJ: dict, JI: dict, nof_facilities: np.uint, budget_li
     budget_list : list
         List of budgets.
     progress : callable, optional
-        Callable (function) to use for progress tracking (default is the identity).
+        Callable (function) to use for progress tracking (default is the
+        identity).
     Returns
     -------
-    result : pd.DataFrame
-        DataFrame containing the value, solution, increments, solving and coverage for each budget.
+    result : dict[int, dict[str, any]]
+        dict of dicts containing the 'value', 'solution', 'increments',
+        'solving' and 'coverage' for each budget.
     """
-    
-    result = pd.DataFrame( index=sorted(budget_list), columns=['value','solution','increments','solving','coverage'] )
 
+    result = dict()
     start = pc()
     greedy_selected, greedy_added = [], []
-    
-    nof_households = len(w)    
+
+    nof_households = len(w)
     coverage = np.zeros(nof_households, dtype=np.uint16)
     greedy_val = -np.ones(nof_facilities, dtype=int)
-    
+
     may_change = np.array(list(JI.keys()))
     i = prev = -1
-    for p in progress(result.index):
-        for i in range(prev+1,min(p,nof_facilities)):
-            greedy_val[may_change] = [ w[JI[j][coverage[JI[j]] == 0]].sum() for j in may_change ]
+    for p in progress(sorted(budget_list)):
+        for i in range(prev+1, min(p, nof_facilities)):
+            greedy_val[may_change] = [w[JI[j][coverage[JI[j]] == 0]].sum()
+                                      for j in may_change]
             select = np.argmax(greedy_val)
             if greedy_val[select] <= 0:
                 break
-            
+
             coverage[JI[select]] += 1
             greedy_selected.append(select)
             greedy_added.append(greedy_val[select])
-            
+
             # Greedy only changes if coverage overlap with selected facility
             may_change = np.unique(np.concatenate([IJ[i] for i in JI[select]]))
         prev = i
-        
-        result.at[p,'solving']     = pc()-start
-        result.at[p,'value']       = sum(greedy_added)
-        result.at[p,'solution']    = greedy_selected.copy()
-        result.at[p,'increments']  = greedy_added.copy()
-        result.at[p,'coverage']    = coverage.copy()
+
+        result[p] = dict(solving=pc()-start,
+                         value=sum(greedy_added),
+                         solution=greedy_selected.copy(),
+                         increments=greedy_added.copy(),
+                         coverage=coverage.copy())
         start = pc()
-        
+
     return result
 
-def LocalSearch(solution: list, coverage: np.ndarray, objective: int, J: list, JI: dict, household: list) \
-                -> tuple[list, list, int, list, list, float]:
+
+def LocalSearch(solution: list, coverage: np.ndarray, objective: int, J: list,
+                JI: dict, household: list) \
+                    -> tuple[list, list, int, list, list, float]:
     """
-    This function performs a local search algorithm to optimize coverage by 
-    attempting to swap one open for one closed facility for as long as that increases coverage.
-    
+    This function performs a local search algorithm to optimize coverage by
+    attempting to swap one open for one closed facility for as long as that
+    increases coverage.
+
     Parameters
     ----------
     solution : list
@@ -484,14 +468,14 @@ def LocalSearch(solution: list, coverage: np.ndarray, objective: int, J: list, J
     final_time : float
         The total time taken to reach the optimized solution.
     """
-    
+
     sol = copy.copy(solution)
     cov = copy.copy(coverage)
     obj = objective
     times, objectives = [0], [obj]
-    
+
     candidates = np.setdiff1d(J, sol, assume_unique=True)
-    
+
     start = pc()
     while True:
         modified = False
@@ -515,88 +499,26 @@ def LocalSearch(solution: list, coverage: np.ndarray, objective: int, J: list, J
             cov[rsi] += 1
         if not modified:
             break
-        
+
     final_time = pc() - start
     times.append(final_time), objectives.append(obj)
-    
+
     return sol, obj, cov, objectives, times, final_time
 
-def IcrementalSolutions( existing_facs: pd.DataFrame, 
-                         potential_facs: pd.DataFrame, 
-                         population: np.array, 
-                         max_number_additional_facilities: int, 
-                         optimize: callable = OptimizeWithGurobipy, 
-                         parsimonious: bool = True, 
-                         maxTimeInSeconds: int = 60, 
-                         mipGap: float = 1e-15 ) -> pd.DataFrame:
-    """
-    This function finds the incremental solutions for the given existing facilities, potential facilities, population, and maximum number of additional facilities.
-    It uses the optimize function to solve the optimization problem and returns the incremental solutions in a dataframe.
-    
-    Parameters
-    ----------
-    existing_facs : pd.DataFrame
-        Dataframe containing existing facilities
-    potential_facs : pd.DataFrame 
-        Dataframe containing potential facilities
-    population : np.array 
-        Array containing population
-    max_number_additional_facilities : int
-        Maximum number of additional facilities
-    optimize : callable
-        Optimization function to be used, defaults to OptimizeWithGurobipy
-    parsimonious : bool
-        Boolean value to indicate if the solution to be found by optimize should have the minimum number of facilities that achieve the maximal coverage, defaults to True
-    maxTimeInSeconds : int
-        Maximum time in seconds for optimization in optimize, defaults to 60
-    mipGap : float
-        maximum MIP gap for optimization in optimize, defaults to 1e-15
-    
-    Returns
-    -------
-    greedy : pd.DataFrame
-        Dataframe containing the incremental solutions, facility per facility, that recreate that optimal one for max_number_additional_facilities adding one facility a the time
-    """
-    
-    covered = all_in( existing_facs.pop_with_access )
-    household = population.astype(np.uint).values
-    percent_covered = household[covered].sum()/household.sum()
-    covered_set = set(covered)
-    
-    # Solve optimally once: for  the highest budget
-    I, J, IJ, JI = CreateIndexMapping( potential_facs.pop_with_access, household, covered=all_in( existing_facs.pop_with_access ) )
-    optimization = optimize(household,I,J,IJ,[max_number_additional_facilities],parsimonious=parsimonious,maxTimeInSeconds=maxTimeInSeconds,mipGap=mipGap)
-    optimization['nof'] = [ len(s) for s in optimization.solution ] 
-    
-    coverage = ( optimization.value / household.sum() + percent_covered ).to_frame()
-    coverage['served'] = [ np.unique( list(covered_set.union(all_in(potential_facs.loc[s].pop_with_access.values))) ) for s in optimization.solution.values ]
-    coverage['validation'] = [ household[s].sum()/household.sum() for s in coverage.served.values ]
-    
-    # Open the optimal solution in greedy steps
-    best = optimization.loc[optimization.index[-1]].solution
-    served = coverage.loc[coverage.index[-1]].served
-    
-    bestJI = { j : JI[j] for j in best }
-    bestIJ = { i : [] for i in served }
-    for j,I in bestJI.items():
-        for i in I:
-            bestIJ[i].append(j)
-    bestIJ = { i : np.unique(j) for i,j in bestIJ.items() if len(j) }
-    greedy = Greedy(household,bestIJ,bestJI,len(potential_facs)+len(existing_facs),np.arange(0,max_number_additional_facilities,1))
-    
-    # Complement the data
-    greedy['served'] = [covered] + [ np.unique( list(covered_set.union(set(all_in(potential_facs.loc[s].pop_with_access.values))) ) ) for s in greedy.solution[1:].values ]
-    greedy['coverage'] = [ household[s].sum()/household.sum() for s in greedy.served.values ]
-    
-    return greedy
 
-def GreedyLS(w: np.ndarray, IJ: dict, JI: dict, nof_facilities: np.uint, budget_list: list, \
-            progress: callable = lambda iterable: iterable) -> pd.DataFrame:
-    
+def GreedyLS(w: np.ndarray,
+             IJ: dict,
+             JI: dict,
+             nof_facilities: np.uint,
+             budget_list: list,
+             progress: callable = lambda iterable: iterable
+             ) -> dict[int, dict[str, any]]:
+
     """
-    A first implementation of the GAS (Greedy Addition with substitution) algorithm described by Church and ReVelle 
+    A first implementation of the GAS (Greedy Addition with Substitution)
+    algorithm described by Church and ReVelle.
     Note that the performance of this algorithm may still be improved.
-    
+
     Parameters
     ----------
     w : np.ndarray
@@ -610,58 +532,61 @@ def GreedyLS(w: np.ndarray, IJ: dict, JI: dict, nof_facilities: np.uint, budget_
     budget_list : list
         List of budgets.
     progress : callable, optional
-        Callable (function) to use for progress tracking (default is the identity).
+        Callable (function) to use for progress tracking (default is the
+        identity).
     Returns
     -------
-    result : pd.DataFrame
-        DataFrame containing the value, solution, increments, solving and coverage for each budget.
+    result : dict[int, dict[str, any]]
+        dict of dicts containing the 'value', 'solution', 'increments',
+        'solving' and 'coverage' for each budget.
     """
-    
-    def GetCoverage( facilities, nof_homes, JI ):
-        coverage = np.zeros(nof_homes, dtype=np.dtype('u1')) #Smallest unsigned datatype for int: takes 1 byte
+
+    def GetCoverage(facilities, nof_homes, JI):
+        # 'u1' is the smallest unsigned datatype for int: takes 1 byte
+        coverage = np.zeros(nof_homes, dtype=np.dtype('u1'))
         for j in facilities:
             coverage[JI[j]] += 1
         return coverage
-    
-    def GetSolutionValue( solution, household, JI ):
-        if solution:
-            return household[all_in([JI[s] for s in solution])].sum()
-        return 0
-    
-    result = pd.DataFrame( index=sorted(budget_list), columns=['value','solution','solving','coverage'] )
 
+    def GetSolutionValue(solution, household, JI):
+        if solution:
+            return household[od.all_in([JI[s] for s in solution])].sum()
+        return 0
+
+    result = dict()
     start = pc()
     solution, greedy_added = [], []
-    
-    nof_households = len(w)    
+
+    nof_households = len(w)
     coverage = np.zeros(nof_households, dtype=np.uint16)
     greedy_val = -np.ones(nof_facilities, dtype=int)
-    
+
     J = list(JI.keys())
-    
-    i = prev = -1
-    for p in progress(result.index):
+
+    prev = -1
+    for p in progress(sorted(budget_list)):
         may_change = np.array(J)
-        for i in range(prev+1,min(p,nof_facilities)):
-            greedy_val[may_change] = [ w[JI[j][coverage[JI[j]] == 0]].sum() for j in may_change ]
+        for i in range(prev+1, min(p, nof_facilities)):
+            greedy_val[may_change] = [w[JI[j][coverage[JI[j]] == 0]].sum()
+                                      for j in may_change]
             select = np.argmax(greedy_val)
             if greedy_val[select] <= 0:
                 break
-            
+
             coverage[JI[select]] += 1
             solution.append(select)
             greedy_added.append(greedy_val[select])
-            
+
             # Greedy only changes if coverage overlap with selected facility
             may_change = np.unique(np.concatenate([IJ[i] for i in JI[select]]))
         prev = i
-        
-        solution, objective, coverage, *_ = LocalSearch(solution, coverage, GetSolutionValue( solution, w, JI ), J, JI, w)
-        
-        result.at[p,'solving']     = pc()-start
-        result.at[p,'value']       = objective
-        result.at[p,'solution']    = solution
-        result.at[p,'coverage']    = coverage
+
+        solution, objective, coverage, *_ = \
+            LocalSearch(solution, coverage,
+                        GetSolutionValue(solution, w, JI), J, JI, w)
+
+        result[p] = dict(solving=pc()-start, value=objective,
+                         solution=solution, coverage=coverage)
         start = pc()
-        
+
     return result
