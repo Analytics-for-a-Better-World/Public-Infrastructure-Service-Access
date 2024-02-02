@@ -192,8 +192,11 @@ def OptimizeWithPyomo(w: list, I: list,  # noqa: E741
     """
 
     # ensure that all facilities already open are given to a variable
-    J = list(set(J) | set(already_open))
+    J = sorted(set(J) | set(already_open))
 
+    # ensure that only reachable customers are considered
+    I = sorted(set(I) & set(IJ.keys()))  # noqa: E741
+    
     result = dict()
 
     start = pc()
@@ -323,7 +326,10 @@ def OptimizeWithGurobipy(w: list, I: list,  # noqa: E741
     """
 
     # ensure that all facilities already open are given to a variable
-    J = list(set(J) | set(already_open))
+    J = sorted(set(J) | set(already_open))
+
+    # ensure that only reachable customers are considered
+    I = sorted(set(I) & set(IJ.keys()))  # noqa: E741
 
     result = dict()
     start = pc()
@@ -563,7 +569,7 @@ def GreedyLS(w: np.ndarray,
 
     J = list(JI.keys())
 
-    prev = -1
+    i = prev = -1
     for p in progress(sorted(budget_list)):
         may_change = np.array(J)
         for i in range(prev+1, min(p, nof_facilities)):
