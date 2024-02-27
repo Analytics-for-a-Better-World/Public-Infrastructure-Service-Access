@@ -27,7 +27,7 @@ setuptools = "^65.6.0"
 pygeos = "0.12"
 numpy = "^1.23.5"
 tables = "^3.7.0"
-pandana = {git = "https://github.com/UDST/pandana", rev = "09b51c4bed6c9067955fdb47789859510230c9cd"}
+pandana = "*"
 osmxtract = "^0.0.1"
 gurobipy = "^10.0.0"
 pyomo = "^6.4.3"
