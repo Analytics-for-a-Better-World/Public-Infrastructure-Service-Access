@@ -35,8 +35,6 @@ Public-Infrastructure-Location-Optimiser.code-workspace
 
 data
 publications/.DS_Store
-.DS_Store
-publications/PISA Timor Leste/Data.zip
-publications/PISA Timor Leste/Data.zip
-*.zip
+publications/WHO Nepal Paper/.DS_Store
 publications/PISA Timor Leste/.ipynb_checkpoints/Timor Leste_Estrada_WorldPop_Analysis-checkpoint.ipynb
+publications/PISA Timor Leste/.DS_Store
