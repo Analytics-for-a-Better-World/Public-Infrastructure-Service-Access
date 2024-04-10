@@ -1,19 +1,56 @@
 import sys
 sys.path.insert(0, "..")
+sys.path.insert(0, "../optimization")
 
-import os
+from optimization import optdata as od
+from optimization import maxcovering as mc
+
 import streamlit as st
 from streamlit_folium import st_folium
 import pandas as pd
 import numpy as np
 from gpbp.layers import AdmArea
 import gpbp.visualisation
-from optimization import jg_opt
 from functools import partial
 import pycountry
 import folium
 import pandas as pd
+import matplotlib.pyplot as plt
 
+def fit_to_bounding_box( 
+        folium_map : folium.Map,
+        lon_min: float, lat_min: float, 
+        lon_max: float, lat_max: float
+    ) -> folium.Map:
+    folium_map.fit_bounds(((lat_min, lon_min), (lat_max, lon_max)))
+    return folium_map
+
+def GetSetOfAvailablePyomoSolvers():
+    print('scanning pyomo solvers...',end='',flush=True)
+    import subprocess
+    shell_command = "pyomo help --solvers"
+    output = subprocess.check_output(shell_command, shell=True).decode()
+    print(' done.')
+    return {
+        line.strip()[1:]
+        for line in output.split()
+        if line.strip().startswith("+") and not line.strip().endswith(")")
+    }
+
+def GetAvailableSolvers():
+    candidate_solvers = {
+        'appsi_gurobi',
+        'appsi_highs',
+        'cbc',
+        'cplex',
+        'cplex_direct',
+        'glpk',
+        'gurobi',
+        'gurobi_direct',
+    }
+    scanned=GetSetOfAvailablePyomoSolvers() 
+    return sorted( candidate_solvers & scanned )
+    
 st.set_page_config(
     page_title=None,
     page_icon=None,
@@ -26,6 +63,9 @@ st.title("Public Infrastructure Location Optimiser")
 # st.sidebar.markdown("# Country Data")
 
 # adm_names = st.empty()
+if "available_solvers" not in st.session_state:
+    st.session_state["available_solvers"] = GetAvailableSolvers()
+    
 if "adm_area" not in st.session_state:
     st.session_state["adm_area"] = None
 if "adm_areas_str" not in st.session_state:
@@ -40,7 +80,6 @@ if "pop_map_obj" not in st.session_state:
         location=(51.509865, -0.118092),
         zoom_start=1,
     )
-
 
 countries = sorted([country.name for country in list(pycountry.countries)])
 tab1, tab2, tab3, tab4, tab5 = st.tabs(
@@ -93,6 +132,11 @@ with tab2:
             st.session_state.fac_map_obj = gpbp.visualisation.plot_facilities(
                 st.session_state.adm_area.fac_gdf
             )
+            st.session_state.fac_map_obj = fit_to_bounding_box( 
+                st.session_state.fac_map_obj, 
+                *st.session_state.adm_area.geometry.bounds 
+            )
+            
         fac_map = st_folium(
             st.session_state.fac_map_obj,
             width=500,
@@ -111,6 +155,22 @@ with tab2:
         pot_fac_button = st.button("Compute potential locations")
         if pot_fac_button:
             st.session_state.adm_area.compute_potential_fac(st.session_state.spacing)
+            loc_gdf = st.session_state.adm_area.pot_fac_gdf
+            for i in range(0, len(loc_gdf)):
+                folium.CircleMarker(
+                    [loc_gdf.iloc[i]["latitude"], loc_gdf.iloc[i]["longitude"]],
+                    color="red",
+                    fill=True,
+                    radius=2,
+                ).add_to(st.session_state.fac_map_obj)
+                
+            fac_map = st_folium(
+                st.session_state.fac_map_obj,
+                width=500,
+                height=500,
+                key="fac_map",
+            )
+
         st.metric(
             "Number of potential locations",
             st.session_state.adm_area.pot_fac_gdf.shape[0]
@@ -138,7 +198,15 @@ with tab3:
             if st.session_state.adm_area is not None
             and st.session_state.adm_area.pop_df is not None
             else 0,
-        )        
+        )    
+        
+        st.session_state.pop_map_obj = gpbp.visualisation.plot_population_heatmap(st.session_state.adm_area.pop_df)    
+        
+        st.session_state.pop_map_obj = fit_to_bounding_box( 
+                st.session_state.pop_map_obj, 
+                *st.session_state.adm_area.geometry.bounds 
+            )
+        
         if (
             st.session_state.adm_area.pop_df is not None
             and st.session_state.adm_area.fac_gdf is not None
@@ -229,13 +297,15 @@ with tab5:
             if st.session_state.adm_area.pot_fac_gdf is not None:
                 max_value_pot = st.session_state.adm_area.pot_fac_gdf.shape[0]
         options = np.array([5, 10, 20, 50, 100, 150, 200, 250])
-        st.multiselect(
-            "Budget (number of potential locations to be built)",
+        st.selectbox(
+            "Budget (max number of potential locations to be built)",
             options=options[options <= max_value_pot],
-            max_selections=4,
             key="budget",
         )
-        st.text_input("Path to cbc optimization software", key="opt_solver_path")
+        solver = st.selectbox( "Solver:", 
+                              st.session_state["available_solvers"],
+                              key="solver"
+                              )
         opt_ready = st.button("Start optimization", key="opt_ready")
         if opt_ready:
             with st.spinner(text="Preparing data for optimization..."):
@@ -256,21 +326,50 @@ with tab5:
                     mapbox_access_token=st.session_state.mapbox_access,
                     population_resolution=st.session_state.population_resolution,
                 )
-            if os.path.exists(st.session_state.opt_solver_path):
-                opt_func = partial(
-                    jg_opt.OpenOptimize, solver_path=st.session_state.opt_solver_path
-                )
-            else:
-                raise Exception("Path does not exist")
+            
+            assert set(current.keys()) == set(potential.keys())
+            
             with st.spinner(text="Running optimization..."):
-                values, solutions = jg_opt.Solve(
-                    pop_count,
-                    current,
-                    potential,
-                    st.session_state.distance_type.replace(" ", "_"),
-                    list(map(int, st.session_state.budget)),
-                    optimize=opt_func,
-                    type="ID",
-                )
-            st.write(values)
-            st.write(solutions)
+                
+                results = dict()
+                for key in current.keys():
+                    results[key] = dict()
+                    already_open = list(current[key].Cluster_ID)
+                    assert all( current[key].columns == potential[key].columns )
+                    facs = pd.concat( [current[key], potential[key]] ).set_index('Cluster_ID')
+                    assert len(set(facs.index)) == len(facs.index)
+                    mappings = facs.to_dict()
+                    for col in facs.columns:
+                        IJ = mappings[col]
+                        I = np.unique(np.concatenate(list(IJ.values())).astype(int))
+                        J = np.unique(list(IJ.keys()))
+                        results[key][col] = mc.OptimizeWithPyomo( 
+                            pop_count, I, J, IJ,  
+                            already_open = already_open,
+                            budget_list = range(int(st.session_state.budget)), solver = solver 
+                        )
+                        
+            # import pickle
+            # with open('results.pkl', 'wb') as file:
+            #     pickle.dump(results, file)
+
+            pdf = pd.DataFrame()
+            sdf = pd.DataFrame()
+            for key in results.keys():
+                for col in results[key].keys():
+                    df = pd.DataFrame.from_dict(results[key][col], orient='index')
+                    pdf[col] = df.value / pop_count.sum()
+                    sdf[col] = df.solution
+                    
+            st.write(pdf)
+            st.write(sdf)
+                        
+            # df = pd.DataFrame.from_dict(results, orient='index')
+            # df['coverage'] = df.value / pop_count.sum()
+            # st.write(df)
+            
+            fig, ax = plt.subplots()
+            pdf.plot(ax=ax,style='.-')
+            ax.set_xticks(pdf.index)
+            ax.set_title('Pareto')
+            st.pyplot(fig)
