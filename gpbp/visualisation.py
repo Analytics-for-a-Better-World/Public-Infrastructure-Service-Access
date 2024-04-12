@@ -9,11 +9,12 @@ from matplotlib import cm
 from matplotlib.colors import to_hex
 
 
-def plot_facilities(loc_gdf: gpd.GeoDataFrame) -> folium.Map:
+def plot_facilities(loc_gdf: gpd.GeoDataFrame, tiles="OpenStreetMap") -> folium.Map:
     start_coords = (loc_gdf.latitude.mean(), loc_gdf.longitude.mean())
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=6,
+        tiles=tiles
     )
     try:
         for i in range(0, len(loc_gdf)):
@@ -28,12 +29,12 @@ def plot_facilities(loc_gdf: gpd.GeoDataFrame) -> folium.Map:
     return folium_map
 
 
-def plot_population_heatmap(pop_df: pd.DataFrame) -> folium.Map:
+def plot_population_heatmap(pop_df: pd.DataFrame, tiles="OpenStreetMap") -> folium.Map:
     start_coords = (pop_df.latitude.mean(), pop_df.longitude.mean())
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=6,
-        tiles="Stamen Terrain",
+        tiles=tiles,
     )
     HeatMap(
         pop_df.reindex(["latitude", "longitude", "population"], axis="columns").values,
@@ -43,12 +44,12 @@ def plot_population_heatmap(pop_df: pd.DataFrame) -> folium.Map:
     return folium_map
 
 
-def plot_population(pop_df: pd.DataFrame) -> folium.Map:
+def plot_population(pop_df: pd.DataFrame, tiles="OpenStreetMap") -> folium.Map:
     start_coords = (pop_df.latitude.mean(), pop_df.longitude.mean())
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=6,
-        tiles="Stamen Terrain",
+        tiles=tiles,
     )
     pop_df["percent_rank"] = pop_df["population"].rank(pct=True)
     for _, row in pop_df.iterrows():
@@ -62,12 +63,12 @@ def plot_population(pop_df: pd.DataFrame) -> folium.Map:
     return folium_map
 
 
-def plot_isochrones(isochrones: list[MultiPolygon]):
+def plot_isochrones(isochrones: list[MultiPolygon], tiles="OpenStreetMap"):
     start_coords = list(isochrones[0].centroid.coords)[0][::-1]
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=10,
-        tiles="Stamen Terrain",
+        tiles=tiles,
     )
     colors = cm.rainbow(np.linspace(0, 1, len(isochrones)))
     colors = list(map(to_hex, list(colors)))

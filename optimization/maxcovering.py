@@ -109,37 +109,22 @@ def GetPyomoSolver(solverName: str,
     pyo.SolverFactory
         Pyomo solver object.
     """
-    # change if needed!!!
-    solver_path = r'D:\joaquimg\Dropbox\Python\solvers\new cbc master\bin'
-    if solverName == 'cbc':
-        solver = pyo.SolverFactory(solverName,
-                                   executable=solver_path+r'\cbc.exe')
-        solver.options['threads'] = 8
-    elif solverName == 'cplex':
-        solver = pyo.SolverFactory('cplex_direct')
-    elif solverName == 'gurobi':
-        solver = pyo.SolverFactory('gurobi_direct')
-    elif solverName == 'glpk':
-        solver = pyo.SolverFactory(solverName,
-                                   executable=solver_path+r'\glpsol.exe')
-    else:
-        solver = pyo.SolverFactory(solverName)
+    solver = pyo.SolverFactory(solverName)
     if timeLimit:
-        if solverName == 'cplex':
+        if 'cplex' in solverName:
             solver.options['timelimit'] = timeLimit
-        elif solverName == 'cbc':
+        elif 'cbc' in solverName:
             solver.options['sec'] = np.ceil(timeLimit)
-        elif solverName == 'gurobi':
+        elif 'gurobi' in solverName:
             solver.options['TimeLimit'] = timeLimit
     if mipGap:
-        if solverName == 'cplex':
+        if 'cplex' in solverName:
             solver.options['mipgap'] = mipGap
-        elif solverName == 'cbc':
+        elif 'cbc' in solverName:
             solver.options['allowableGap'] = mipGap
-        elif solverName == 'gurobi':
+        elif 'gurobi' in solverName:
             solver.options['MipGap'] = mipGap
     return solver
-
 
 def OptimizeWithPyomo(w: list, I: list,  # noqa: E741
                       J: list, IJ: dict, budget_list: list,
@@ -246,33 +231,13 @@ def OptimizeWithPyomo(w: list, I: list,  # noqa: E741
         result[p] = dict(
             modeling=modeling,
             solving=pc()-start,
-            value=M.weighted_coverage(),
-            solution=[j for j in J if pyo.value(M.X[j]) >= .5],
+            value=0+M.weighted_coverage(),
+            solution=[j for j,x in M.X.items() if x() > .5],
             termination=solver_result.solver.termination_condition,
-            upper=solver_result.problem.upper_bound)
+            upper=0+solver_result.problem.upper_bound)
         start = pc()
 
     return result
-
-
-# a simple closure
-def make_pyomo_optimizer_using(this_solver: str) -> callable:
-    """
-    A simple closure to a function instantiating the specified this_solver
-    able to solve an instance to be defined.
-
-    Parameters
-    ----------
-        this_solver (str): the name of the solver to use.
-    """
-    def optimizer(w, I,  # noqa: E741
-                  J, IJ, budget_list, parsimonious=True,
-                  maxTimeInSeconds=5*60, mipGap=1e-8, trace=False,
-                  already_open=[]):
-        return OptimizeWithPyomo(w, I, J, IJ, budget_list, parsimonious,
-                                 maxTimeInSeconds, mipGap, trace, already_open,
-                                 this_solver)
-    return optimizer
 
 
 def OptimizeWithGurobipy(w: list, I: list,  # noqa: E741
@@ -361,10 +326,10 @@ def OptimizeWithGurobipy(w: list, I: list,  # noqa: E741
         M.optimize()
         result[p] = dict(modeling=modeling,
                          solving=pc()-start,
-                         value=M.objVal,
-                         solution=[j for j in J if X[j].x >= .5],
+                         value=0+M.objVal,
+                         solution=[j for j in J if X[j].x > .5],
                          termination=verbose_gurobi_code[M.status],
-                         upper=M.ObjBound)
+                         upper=0+M.ObjBound)
         start = pc()
 
     return result

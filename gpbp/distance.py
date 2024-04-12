@@ -11,6 +11,38 @@ import pandana
 import osmnx as ox
 import time
 
+import os
+import pickle
+from functools import wraps
+import hashlib
+
+def disk_cache(cache_dir="cache"):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            # Ensure the cache directory exists
+            os.makedirs(cache_dir, exist_ok=True)
+
+            # Create a hash key from the function name and arguments
+            hash_key = hashlib.sha256()
+            hash_key.update(func.__name__.encode())
+            hash_key.update(pickle.dumps(args))
+            hash_key.update(pickle.dumps(kwargs))
+            filename = f"{cache_dir}/{hash_key.hexdigest()}.pkl"
+
+            # Check if the cache file exists
+            if os.path.exists(filename):
+                with open(filename, 'rb') as f:
+                    return pickle.load(f)
+            else:
+                # Call the function and cache its result
+                result = func(*args, **kwargs)
+                with open(filename, 'wb') as f:
+                    pickle.dump(result, f)
+                return result
+        return wrapper
+    return decorator
+
 
 def _get_poly_nx(G: nx.MultiDiGraph, road_node, dist_value, distance_type):
     subgraph = nx.ego_graph(G, road_node, radius=dist_value, distance=distance_type)
@@ -123,7 +155,7 @@ def calculate_isopolygons_graph(
 
     return isochrone_polys
 
-
+@disk_cache('mapbox_cache')
 def calculate_isopolygons_Mapbox(
     X: Any,
     Y: Any,
