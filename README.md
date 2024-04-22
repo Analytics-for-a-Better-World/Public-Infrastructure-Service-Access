@@ -20,6 +20,15 @@ the package using an interface. Specifically, while you are located in the repos
   - ```cd gpbp_app``` to enter the application folder
   - ```streamlit run main_page.py``` to run the app, which will automatically open a browser window
 
+## Using Docker
+
+Build and run locally inside a Docker container as follows:
+
+```sh
+docker build -t pisa .
+docker run --rm -p 8501 --name pisa pisa
+```
+
 ## References
 - [Travel Distance Calculations in Python](https://pythoncharmers.com/blog/travel-distance-python-with-geopandas-folium-alphashape-osmnx-buffer.html)
 - [Geocoding Services in Python](https://towardsdatascience.com/comparison-of-geocoding-services-applied-to-stroke-care-facilities-in-vietnam-with-python-ff0ba753a590)
