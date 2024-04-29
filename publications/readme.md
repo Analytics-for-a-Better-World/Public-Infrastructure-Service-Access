@@ -1,5 +1,7 @@
 ## Public Infrastructure Service Access Publications
 ### World Bank
+- [Timor-Leste Public Expenditure Review: Changing Course Towards Better and More Sustainable Spending](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/Timor-Leste-Public-Expenditure-Review-Changing-Course-Towards-Better-and-More-Sustainable-Spending.pdf)
+- [Armenia Public Expenditure Review: Improving Spending Efficiency](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/ARMENIA%20PUBLIC%20EXPENDITURE%20REVIEW.pdf)
 - [Optimizing Geospatial Accessibility to Healthcare Services in Low- and Middle-income Countries](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/HugeScaleFacilityLocationMethod_Vietnam_TimorLeste.pdf)
 ### World Health Organization Nepal
 - [An assessment of geographical accessibility to COVID-19 testing in Nepal](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/COVID_19_Nepal.pdf)
