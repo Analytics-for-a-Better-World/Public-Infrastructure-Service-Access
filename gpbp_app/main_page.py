@@ -128,7 +128,7 @@ with tab2:
         facility_data = st.file_uploader("Upload GeoJSON", key="fac_user_data")
 
         if osm_button:
-            st.session_state.adm_area.get_facilities("osm", {"building": "hospital"})
+            st.session_state.adm_area.get_facilities("osm", {"amenity": ["hospital", "clinic"]})
             st.session_state.fac_map_obj = gpbp.visualisation.plot_facilities(
                 st.session_state.adm_area.fac_gdf
             )
@@ -136,6 +136,9 @@ with tab2:
                 st.session_state.fac_map_obj, 
                 *st.session_state.adm_area.geometry.bounds 
             )
+        
+        if st.session_state.adm_area and st.session_state.adm_area.fac_gdf is not None:
+            st.metric("Number of existing facilities", st.session_state.adm_area.fac_gdf.shape[0])
             
         fac_map = st_folium(
             st.session_state.fac_map_obj,
@@ -146,10 +149,10 @@ with tab2:
     with col2:
         st.subheader("Potential Facilities")
         st.slider(
-            "**Pick the resolution (larger values mean more locations)**",
-            min_value=0.05,
+            "**Pick the resolution (larger values mean fewer locations)**",
+            min_value=0.01,
             max_value=0.5,
-            step=0.05,
+            step=0.01,
             key="spacing",
         )
         pot_fac_button = st.button("Compute potential locations")
@@ -185,20 +188,16 @@ with tab3:
 
     worldpop_button = st.button("Get WorldPop data", key="worldpop_button")
     st.write("OR")
+    fb_pop_button = st.button("Get FB data", key="fb_pop_button")
+    st.write("OR")
     population_data = st.file_uploader("Upload GeoJSON", key="pop_user_data")
 
-    if worldpop_button:
-        st.session_state.adm_area.get_population("world_pop")
+    if worldpop_button or fb_pop_button:
+        source = "world_pop" if worldpop_button else "fb_pop"
+        st.session_state.adm_area.get_population(source)
         # st.session_state.pop_map_obj = gpbp_osm.visualisation.plot_population_heatmap(
         #    st.session_state.adm_area.pop_df
         # )
-        st.metric(
-            "Number of households",
-            st.session_state.adm_area.pop_df.shape[0]
-            if st.session_state.adm_area is not None
-            and st.session_state.adm_area.pop_df is not None
-            else 0,
-        )    
         
         st.session_state.pop_map_obj = gpbp.visualisation.plot_population_heatmap(st.session_state.adm_area.pop_df)    
         
@@ -214,6 +213,11 @@ with tab3:
             st.success(
                 "Facilities and population data retrieved. Proceed with calculation of potential location facilitites."
             )
+    
+    if st.session_state.adm_area is not None and st.session_state.adm_area.pop_df is not None:
+        total_population = round(st.session_state.adm_area.pop_df.population.sum())
+        st.metric("Population", f"{total_population:,}")
+
     pop_map = st_folium(
         st.session_state.pop_map_obj,
         width=500,
@@ -286,7 +290,7 @@ with tab5:
             key="distance_values",
         )
         st.slider(
-            "Pick the resolution of households (larger values mean more households)",
+            "Pick the population resolution (larger values increase accuracy)",
             min_value=1,
             max_value=5,
             step=1,
@@ -343,6 +347,8 @@ with tab5:
                         IJ = mappings[col]
                         I = np.unique(np.concatenate(list(IJ.values())).astype(int))
                         J = np.unique(list(IJ.keys()))
+                        # Transpose IJ
+                        IJ = {i: [j for j in J if i in IJ[j]] for i in I}
                         results[key][col] = mc.OptimizeWithPyomo( 
                             pop_count, I, J, IJ,  
                             already_open = already_open,
@@ -360,9 +366,6 @@ with tab5:
                     df = pd.DataFrame.from_dict(results[key][col], orient='index')
                     pdf[col] = df.value / pop_count.sum()
                     sdf[col] = df.solution
-                    
-            st.write(pdf)
-            st.write(sdf)
                         
             # df = pd.DataFrame.from_dict(results, orient='index')
             # df['coverage'] = df.value / pop_count.sum()
@@ -373,3 +376,5 @@ with tab5:
             ax.set_xticks(pdf.index)
             ax.set_title('Pareto')
             st.pyplot(fig)
+                    
+            st.write(pdf)
