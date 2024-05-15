@@ -34,5 +34,8 @@ COPY . ./
 
 EXPOSE 8501
 
+HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
+
 WORKDIR /app/gpbp_app
-CMD exec streamlit run main_page.py
+
+ENTRYPOINT ["streamlit", "run", "main_page.py", "--server.port=8501"]

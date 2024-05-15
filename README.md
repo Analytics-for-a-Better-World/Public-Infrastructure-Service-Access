@@ -1,6 +1,8 @@
 # Public Infrastructure Service Access
 
-## Installation
+## Local Development
+
+### Installation
 1. Clone the repository
 2. This project uses [Poetry](https://python-poetry.org/) for dependency and packaging management. You can use these [installation instructions](https://python-poetry.org/docs/#installation) to add it to your system.
   - If you choose to use poetry you can execute the following commands in a terminal while you are located in the repository folder:
@@ -13,21 +15,38 @@
     - ```cd dist``` to enter the dist folder
     - ```pip install gpbp-0.1.0-py3-none-any.whl``` to install the package
 
-## Usage
+### Usage
 1. Some example usage can be seen in the ```examples/gpbp_showcase.ipynb``` notebook
 2. When in the ```gpbp_app``` folder you can run a [Streamlit](https://streamlit.io/) app to use
 the package using an interface. Specifically, while you are located in the repository folder, execute the following:
   - ```cd gpbp_app``` to enter the application folder
   - ```streamlit run main_page.py``` to run the app, which will automatically open a browser window
 
-## Using Docker
+## Deploying/running the web interface (Docker)
 
-Build and run locally inside a Docker container as follows:
+Docker is a tool that allows you to package an application and its dependencies in a virtual container that can run on most operating systems. The web interface for the PISA project can be run using Docker. To do this, you need to have Docker installed on your system. You can download Docker from [here](https://www.docker.com/products/docker-desktop).
+
+After you have installed Docker, you can run the following command in the repository to build an image of the PISA project. All the necessary dependencies will be installed inside the image, isolated from your system. The image will be tagged as `pisa`.
 
 ```sh
 docker build -t pisa .
-docker run --rm -p 8501 --name pisa pisa
 ```
+
+Now that you have built the image, you can run a container using it. The following command will run a container from the `pisa` image and expose the web interface on port 8501 to localhost only. The command will show the URL on which it's accessible. The container will be named `pisa` as well.
+
+```sh
+docker run -p 127.0.0.1:8501:8501 --name pisa pisa
+```
+
+You can use the following commands after running the container for the first time:
+
+```sh
+docker stop pisa
+docker start pisa
+docker logs pisa
+```
+
+The image is also ready to be deployed on a server or a cloud platform that supports Docker.
 
 ## References
 - [Travel Distance Calculations in Python](https://pythoncharmers.com/blog/travel-distance-python-with-geopandas-folium-alphashape-osmnx-buffer.html)
