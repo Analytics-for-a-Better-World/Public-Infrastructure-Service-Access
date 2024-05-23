@@ -13,7 +13,7 @@ from hdx.api.configuration import Configuration
 from hdx.data.resource import Resource
 
 # from layers import AdmArea
-from shapely.geometry import Polygon, MultiPolygon
+from shapely.geometry import Polygon, MultiPolygon, Point
 
 # Population data sources
 
@@ -101,9 +101,13 @@ def fb_pop_data(country_iso3: str, geometry: MultiPolygon) -> pd.DataFrame:
     filehandle, _ = urllib.request.urlretrieve(url)
     print("Data downloaded")
     df = pd.read_csv(filehandle, compression="zip")
-    bounds = list(map(lambda x: round(x, 6), geometry.bounds))
-    df = df.query(f"{bounds[0]} <= longitude <= {bounds[2]}")
-    df = df.query(f"{bounds[1]} <= latitude <= {bounds[3]}")
+
+    # Create GDF, clip with geometry and convert back to regular DF
+    df["geometry"] = df.apply(lambda x: Point(x["longitude"], x["latitude"]), axis=1)
+    gdf = gpd.GeoDataFrame(df, geometry="geometry")
+    gdf = gpd.clip(gdf, geometry)
+    df = pd.DataFrame(gdf.drop(columns=["geometry"]))
+
     print("Loading data to dataframe")
     df = df.rename(columns={f"{country_iso3.lower()}_general_2020": "population"})
     return df
