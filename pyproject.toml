@@ -35,9 +35,11 @@ pyomo = "^6.4.3"
 jupyter-utils = "^1.2.6"
 jupyter = "^1.0.0"
 streamlit = "^1.15.2"
-streamlit-folium = "^0.7.0"
+streamlit-folium = "^0.20.0"
 nbclient = "^0.7.2"
 shapely = "^1.8.5.post1"
+plotly = "^5.22.0"
+streamlit-plotly-events = "^0.0.6"
 
 
 [tool.poetry.group.dev.dependencies]
