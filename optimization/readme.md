@@ -1,3 +1,11 @@
+<head>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.13.11/dist/contrib/auto-render.min.js" onload="renderMathInElement(document.body);"></script>
+</head>
+<body>
+
+
 ### Model `maximal covering` as in the article by [Church and ReVelle](https://www.semanticscholar.org/paper/The-maximal-covering-location-problem-Church-Revelle/c3de804bbeb15b0d8570ee3d9f4cbdf432993cfa)
 
 This model defines variables $z_i$ for each household $i\in I$ to indicate if that household can be served by a hospital that is opened at $j \in J$, leading to the complete model as follows:
@@ -14,3 +22,5 @@ The first line states the objective as to maximize the total headcount of the ho
 Then the number of hospitals to open constraints the selection and finally the binary nature of the variables used is specified. 
 
 The model above selects up to $p$ hospitals. In the original paper Church and ReVelle selected exactly $p$ hospitals, but our model has advantages to be discussed later.
+
+</body>
