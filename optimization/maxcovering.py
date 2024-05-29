@@ -242,7 +242,9 @@ def OptimizeWithPyomo(w: list, I: list,  # noqa: E741
 
 def OptimizeWithGurobipy(w: list, I: list,  # noqa: E741
                          J: list, IJ: dict,
-                         budget_list: list, parsimonious: bool = True,
+                         budget_list: list,
+                         SJ : list = [], lower_special: list = [],
+                         parsimonious: bool = True,
                          maxTimeInSeconds: int = 5*60, mipGap: float = 1e-8,
                          trace: bool = False, already_open: list = [],
                          progress: callable = lambda iterable: iterable) \
@@ -295,6 +297,10 @@ def OptimizeWithGurobipy(w: list, I: list,  # noqa: E741
 
     # ensure that only reachable customers are considered
     I = sorted(set(I) & set(IJ.keys()))  # noqa: E741
+    
+    assert set(SJ).issubset(set(J))
+    if len(lower_special) < len(budget_list):
+        lower_special = lower_special + [0]*(len(budget_list)-len(lower_special))
 
     result = dict()
     start = pc()
@@ -318,9 +324,14 @@ def OptimizeWithGurobipy(w: list, I: list,  # noqa: E741
     M.addConstrs((Y[i] <= (gb.quicksum(X[j] for j in IJ[i]))) for i in I)
     budget = M.addLConstr(X.sum() >= 0)
 
-    for p in progress(budget_list):
+    special_sum  = sum(X[j] for j in SJ)
+    special_budget = M.addLConstr(special_sum >= 0)
+
+    for p,s in progress(zip(budget_list,lower_special),total=min(len(budget_list), len(lower_special))):
         M.remove(budget)
+        M.remove(special_budget)
         budget = M.addLConstr(X.sum() <= p + len(already_open))
+        special_budget = M.addLConstr(special_sum >= s)
         modeling = pc()-start
         start = pc()
         M.optimize()
