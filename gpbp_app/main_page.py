@@ -83,9 +83,12 @@ if "pop_map_obj" not in st.session_state:
         zoom_start=1,
     )
 
+# Hardcoded strategy while OSM strategy is not working
+st.session_state.strategy = "mapbox"
+
 countries = sorted([country.name for country in list(pycountry.countries)])
-tab1, tab2, tab3, tab4, tab5 = st.tabs(
-    ["Country Data", "Facility Data", "Population Data", "Road Network", "Optimization"]
+tab1, tab2, tab3, tab4 = st.tabs(
+    ["Country Data", "Facility Data", "Population Data", "Optimization"]
 )
 
 with tab1:
@@ -227,30 +230,31 @@ with tab3:
         key="pop_map",
     )
 
+# Road network tab disabled as the functionality is currently not working
+# with tab4:
+#     st.subheader("Road Network")
+#     st.radio(
+#         "Mode of transport",
+#         options=["driving", "walking", "cycling"],
+#         horizontal=True,
+#         key="network_type",
+#     )
+#     road_button = st.button("Get OSM data", key="road_osm_button")
+#     st.write("OR")
+#     road_data = st.file_uploader("Upload GeoJSON", key="road_user_data")
+
+#     if road_button:
+#         st.session_state.adm_area.get_road_network(st.session_state.network_type)
+
 with tab4:
-    st.subheader("Road Network")
-    st.radio(
-        "Mode of transport",
-        options=["driving", "walking", "cycling"],
-        horizontal=True,
-        key="network_type",
-    )
-    road_button = st.button("Get OSM data", key="road_osm_button")
-    st.write("OR")
-    road_data = st.file_uploader("Upload GeoJSON", key="road_user_data")
-
-    if road_button:
-        st.session_state.adm_area.get_road_network(st.session_state.network_type)
-
-with tab5:
     st.subheader("Optimization")
     with st.container():
-        strategy = st.radio(
-            "Tool for calculating distances",
-            options=["osm", "mapbox"],
-            horizontal=True,
-            key="strategy",
-        )
+        # strategy = st.radio(
+        #     "Tool for calculating distances",
+        #     options=["osm", "mapbox"],
+        #     horizontal=True,
+        #     key="strategy",
+        # )
         if (
             st.session_state.strategy == "osm"
             and st.session_state.adm_area is not None
