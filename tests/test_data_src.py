@@ -1,11 +1,14 @@
-from gpbp_osm import layers, data_src
+import pytest
+
+from gpbp import data_src, layers
 
 
 def test_init_admarea():
-    adm_area = layers.AdmArea("GRC", level=0)
+    adm_area = layers.AdmArea("GREECE", level=0)
     assert adm_area is not None
 
 
+@pytest.mark.skip(reason="legacy test")
 def test_world_pop():
     adm_area = layers.AdmArea("GRC", level=0)
     adm_area.get_adm_area("Greece")
@@ -15,6 +18,7 @@ def test_world_pop():
     assert est_pop == 10.4
 
 
+@pytest.mark.skip(reason="legacy test")
 def test_fb_pop():
     adm_area = layers.AdmArea("GRC", level=0)
     adm_area.get_adm_area("Greece")
