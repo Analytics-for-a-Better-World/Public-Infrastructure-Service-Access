@@ -45,12 +45,12 @@ streamlit-plotly-events = "^0.0.6"
 [tool.poetry.group.dev.dependencies]
 pytest = "^7.2.0"
 black = "^22.10.0"
-pytest-cov = "^6.0.0"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-pythonpath = "gpbp"
-addopts = "--cov=gpbp"
+pythonpath = [
+  ".", "gpbp_osm"
+] 
