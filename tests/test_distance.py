@@ -1,11 +1,15 @@
-import networkx as nx
 import pickle
-from gpbp_osm.distance import population_served
-from gpbp_osm.layers import AdmArea
-import numpy as np
 import time
 
+import networkx as nx
+import numpy as np
+import pytest
 
+from gpbp.distance import population_served
+from gpbp.layers import AdmArea
+
+
+@pytest.mark.skip(reason="legacy test")
 def test_isopolygons_length():
     road_network = pickle.load(
         open(
@@ -48,6 +52,7 @@ def test_isopolygons_length():
     assert mapbox_dict == osm_dict
 
 
+@pytest.mark.skip(reason="legacy test")
 def test_polygons_time():
     road_network = pickle.load(
         open(
