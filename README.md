@@ -21,7 +21,6 @@
 the package using an interface. Specifically, while you are located in the repository folder, execute the following:
   - ```cd gpbp_app``` to enter the application folder
   - ```streamlit run main_page.py``` to run the app, which will automatically open a browser window
-3. This package can perform optimizations using a variety of solvers. You can use a solver of your choice. For example, you can install the [COIN-OR Branch-and-Cut solver](https://github.com/coin-or/Cbc#download) and specify the path of the solver's binary to the argument `solver_path` of `jg_opt.OpenOptimize` (for example, after installation, on a Mac you can find the path to the solver using `which cbc`).
 
 ## Deploying/running the web interface (Docker)
 
