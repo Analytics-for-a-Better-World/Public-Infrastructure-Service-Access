@@ -46,6 +46,7 @@ streamlit-plotly-events = "^0.0.6"
 pytest = "^7.2.0"
 black = "^22.10.0"
 pytest-cov = "^6.0.0"
+pytest-mock = "^3.14.0"
 
 [build-system]
 requires = ["poetry-core"]
