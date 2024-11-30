@@ -5,6 +5,34 @@ from shapely.geometry import MultiPolygon, Polygon
 from gpbp.layers import AdmArea
 
 
+class TestAdmAreaInit:
+    def test_valid_country_name(self, mocker):
+        # Mock _get_country_data to avoid data fetching with GADMDownloader
+        mocker.patch("gpbp.layers.AdmArea._get_country_data")
+
+        adm_area = AdmArea(country="Timor-Leste", level=0)
+        assert adm_area.country.name == "Timor-Leste"
+        assert adm_area.level == 0
+
+    def test_invalid_country_name_with_suggestions(self, mocker):
+        # Mock _get_country_data to avoid data fetching with GADMDownloader
+        mocker.patch("gpbp.layers.AdmArea._get_country_data")
+
+        with pytest.raises(Exception) as exception_message:
+            AdmArea(country="Timor", level=0)
+
+        assert "Country not found. Possible matches: ['Timor-Leste']" in str(exception_message.value)
+
+    def test_completely_invalid_country_name(self, mocker):
+        # Mock _get_country_data to avoid data fetching with GADMDownloader
+        mocker.patch("gpbp.layers.AdmArea._get_country_data")
+
+        with pytest.raises(Exception) as exc_info:
+            AdmArea(country="XXXXX", level=0)
+
+        assert "Invalid form of country name" in str(exc_info.value)
+
+
 @pytest.fixture
 def multipolygon():
     # Create two simple square polygons
@@ -23,7 +51,7 @@ class TestAdmAreaGetCountryData:
         }
         mock_gdf = gpd.GeoDataFrame(data, crs='EPSG:4326')
 
-        mocker.patch("layers.GADMDownloader.get_shape_data_by_country_name", return_value=mock_gdf)
+        mocker.patch("gpbp.layers.GADMDownloader.get_shape_data_by_country_name", return_value=mock_gdf)
         adm_area = AdmArea(country="Timor-Leste", level=0)
 
         assert isinstance(adm_area.geometry, MultiPolygon)
@@ -39,7 +67,7 @@ class TestAdmAreaGetCountryData:
         }
         mock_gdf = gpd.GeoDataFrame(data, crs='EPSG:4326')
 
-        mocker.patch("layers.GADMDownloader.get_shape_data_by_country_name", return_value=mock_gdf)
+        mocker.patch("gpbp.layers.GADMDownloader.get_shape_data_by_country_name", return_value=mock_gdf)
         adm_area = AdmArea(country="Timor-Leste", level=1)
 
         printed_output = capsys.readouterr().out.strip().split('\n')
