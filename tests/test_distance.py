@@ -37,6 +37,11 @@ def facilities_data():
     )
     return fac_gdf
 
+@pytest.fixture
+def road_network():
+    # I need the road network and cannot just hand-make that data.
+    return pickle.load(open("tests/test_assets/road_network_TLS.pkl", "rb"))
+
 def test_population_served_invalid_strategy(population_data, facilities_data):
     with pytest.raises(Exception) as exc_info:
         population_served(
@@ -59,16 +64,12 @@ def test_population_served_invalid_strategy(population_data, facilities_data):
 @pytest.mark.parametrize(
         "distance_type, distance_values, strategy, access_token",
         [
-            ("length", [1000, 2000], "osm", None),
-            ("length", [2000], "osm", None),
-            ("travel_time", [2000], "osm", None),
+            ("length", [0.1, 1000], "osm", None),
+            ("travel_time", [10], "osm", None),
             # ("mapbox", None),
         ]
 )
-def test_population_served(population_data, facilities_data, distance_type, distance_values, strategy, access_token):
-    # I need the road network and cannot just hand-make that data.
-    road_network = pickle.load(open("tests/road_network_TLS.pkl", "rb"))
-
+def test_population_served(population_data, facilities_data, road_network, distance_type, distance_values, strategy, access_token):
     serve_df = population_served(
         pop_gdf=population_data,
         fac_gdf=facilities_data,
@@ -89,6 +90,8 @@ def test_population_served(population_data, facilities_data, distance_type, dist
     assert serve_df["Cluster_ID"].equals(facilities_data["ID"]), "The ID column in serve_df is not correct"
     assert type(first_actual_value) == list and len(first_actual_value) <= len(population_data), "The values in serve_df should be lists no longer than the population data"
     assert all(household_id in population_data["ID"] for household_id in first_actual_value), "Some household IDs in serve_df are not in the population data"
+    if "ID_0.1" in serve_df.columns:
+        assert all(len(household_ids) == 0 for household_ids in serve_df["ID_0.1"]), "The 0.1 distance should not have any households"
 
 
 @pytest.mark.skip(reason="legacy test")
