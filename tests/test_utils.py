@@ -1,9 +1,9 @@
 import pytest
-from blosc2.info import info_text_report
+import pandas as pd
+from more_itertools.recipes import grouper
 
-from gpbp.utils import generate_grid_in_polygon
+from gpbp.utils import generate_grid_in_polygon, group_population
 from shapely.geometry import Polygon, MultiPolygon
-import geopandas as gpd
 
 
 polygon1 = Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)])
@@ -48,4 +48,25 @@ class TestGenerateGridInPolygon:
         polygon = Polygon([(0, 0), (1, 0), (1, 1), (0, 1), (0, 0)])
         with pytest.raises(ValueError):
             generate_grid_in_polygon(0.5, polygon)
+
+
+df = pd.DataFrame({"longitude": [6.87641, 6.87644, 6.87964, 6.88710], "latitude": [53.06167, 53.06180, 53.06000, 53.08787],
+                   "population": [5, 4, 3, 2]})
+
+class TestGroupPopulation:
+    def test_group_pop(self):
+        grouped_pop_1 = group_population(df, 1)
+        grouped_pop_2 = group_population(df, 2)
+        grouped_pop_3 = group_population(df, 3)
+        grouped_pop_4 = group_population(df, 4)
+        assert grouped_pop_1.shape[0] == 1
+        assert grouped_pop_2.shape[0] == 2
+        assert grouped_pop_3.shape[0] == 3
+        assert grouped_pop_4.shape[0] == 4
+        assert grouped_pop_1.loc[(grouped_pop_1['longitude'] == 6.9) & (grouped_pop_1['latitude'] == 53.1)]['population'].values[0] == 14
+        assert grouped_pop_2.loc[(grouped_pop_2['longitude'] == 6.88) & (grouped_pop_2['latitude'] == 53.06)][
+                   'population'].values[0] == 12
+        assert grouped_pop_3.loc[(grouped_pop_3['longitude'] == 6.876) & (grouped_pop_3['latitude'] == 53.062)]['population'].values[0] == 9
+
+
 
