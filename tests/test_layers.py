@@ -1,4 +1,5 @@
 import geopandas as gpd
+import numpy as np
 import pytest
 from shapely.geometry import MultiPolygon, Polygon
 
@@ -42,6 +43,17 @@ def multipolygon():
     # Combine them into a MultiPolygon
     return MultiPolygon([polygon1, polygon2])
 
+
+@pytest.fixture
+def mock_gdf(multipolygon):
+    data = {
+        'id': [0, 1],
+        'COUNTRY': ["Mock Country", "Mock Country"],
+        'NAME_1': ["Mock Region 1", "Mock Region 2"],
+        'geometry': [multipolygon, multipolygon],
+    }
+    return gpd.GeoDataFrame(data, crs='EPSG:4326')
+
 class TestAdmAreaGetCountryData:
     def test_get_country_data_level_0(self, mocker, multipolygon):
         data = {
@@ -58,15 +70,7 @@ class TestAdmAreaGetCountryData:
         assert adm_area.geometry == multipolygon
         assert adm_area.adm_name == "Timor-Leste"
 
-    def test_get_country_data_level_1(self, mocker, capsys, multipolygon):
-        data = {
-            'id': [0, 1],
-            'COUNTRY': ["Mock Country", "Mock Country"],
-            'NAME_1': ["Mock Region 1", "Mock Region 2"],
-            'geometry': [multipolygon, multipolygon],
-        }
-        mock_gdf = gpd.GeoDataFrame(data, crs='EPSG:4326')
-
+    def test_get_country_data_level_1(self, mocker, capsys, mock_gdf):
         mocker.patch("gpbp.layers.GADMDownloader.get_shape_data_by_country_name", return_value=mock_gdf)
         adm_area = AdmArea(country="Timor-Leste", level=1)
 
@@ -78,3 +82,77 @@ class TestAdmAreaGetCountryData:
 
         assert getattr(adm_area, "geometry", None) is None
         assert getattr(adm_area, "adm_name", None) is None
+
+
+class TestAdmAreaRetrieveAdmAreaNames:
+    def test_retrieve_adm_area_names_level_0(self, mocker):
+        # Mock _get_country_data to avoid data fetching with GADMDownloader
+        mocker.patch("gpbp.layers.AdmArea._get_country_data")
+
+        adm_area = AdmArea(country="Timor-Leste", level=0)
+        assert adm_area.retrieve_adm_area_names() == ["Timor-Leste"]
+
+    def test_retrieve_adm_area_names_level_1(self, mocker, mock_gdf):
+        mocker.patch("gpbp.layers.GADMDownloader.get_shape_data_by_country_name", return_value=mock_gdf)
+        adm_area = AdmArea(country="Timor-Leste", level=1)
+
+        assert np.array_equal(adm_area.retrieve_adm_area_names(), np.array(["Mock Region 1", "Mock Region 2"]))
+
+
+class TestAdmAreaGetAdmArea:
+    @pytest.mark.xfail(reason="adm_name and geometry not set for level 0. Refactor", strict=True)
+    def test_get_adm_area_level_0(self, mocker):
+        mocker.patch("gpbp.layers.AdmArea._get_country_data")
+        adm_area = AdmArea(country="Timor-Leste", level=0)
+        adm_area.get_adm_area("Timor-Leste")
+
+        assert adm_area.adm_name == "Timor-Leste"
+        assert adm_area.geometry is not None
+
+    def test_get_adm_area_valid_name(self, mocker, mock_gdf):
+        mocker.patch("gpbp.layers.GADMDownloader.get_shape_data_by_country_name", return_value=mock_gdf)
+        adm_area = AdmArea(country="Timor-Leste", level=1)
+        adm_area.get_adm_area("Mock Region 1")
+
+        assert isinstance(adm_area.geometry, MultiPolygon)
+        assert adm_area.geometry == mock_gdf.geometry[0]
+        assert adm_area.adm_name == "Mock Region 1"
+
+    def test_get_adm_area_invalid_name(self, mocker, capsys, mock_gdf):
+        mocker.patch("gpbp.layers.GADMDownloader.get_shape_data_by_country_name", return_value=mock_gdf)
+        adm_area = AdmArea(country="Timor-Leste", level=1)
+        adm_area.get_adm_area("Invalid Region")
+
+        captured = capsys.readouterr()
+        assert "No data found for Invalid Region" in captured.out
+
+
+@pytest.fixture
+def adm_area(mocker, multipolygon):
+    mocker.patch("gpbp.layers.AdmArea._get_country_data")
+    adm_area = AdmArea(country="Timor-Leste", level=0)
+    adm_area.geometry = multipolygon
+    adm_area.adm_name = "Timor-Leste"
+    return adm_area
+
+@pytest.fixture
+def osm_hospital_tags():
+    return {"building": "hospital"}
+
+class TestAdmAreaGetFacilities:
+    def test_get_facilities_valid_method(self, mocker, adm_area, osm_hospital_tags):
+        mock_facilities_src = mocker.patch("gpbp.layers.FACILITIES_SRC", {"osm": mocker.Mock()})
+        adm_area.get_facilities(method="osm", tags=osm_hospital_tags)
+        mock_facilities_src["osm"].assert_called_once_with(adm_area.adm_name, adm_area.geometry, osm_hospital_tags)
+
+    def test_get_facilities_invalid_method(self, adm_area, osm_hospital_tags):
+        with pytest.raises(Exception) as exc_info:
+            adm_area.get_facilities(method="invalid_method", tags=osm_hospital_tags)
+        assert "Invalid method" in str(exc_info.value)
+
+    def test_get_facilities_no_geometry(self, mocker, osm_hospital_tags):
+        mocker.patch("gpbp.layers.AdmArea._get_country_data")
+        adm_area = AdmArea(country="Timor-Leste", level=0)
+        with pytest.raises(Exception) as exc_info:
+            adm_area.get_facilities(method="osm", tags=osm_hospital_tags)
+        assert "Geometry is not defined. Call get_adm_area()" in str(exc_info.value)
