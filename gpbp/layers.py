@@ -1,13 +1,16 @@
-from gadm import GADMDownloader
-import osmnx as ox
-import networkx as nx
-from gpbp.constants import FACILITIES_SRC, POPULATION_SRC, RWI_SRC
-from gpbp.utils import generate_grid_in_polygon, group_population
-from gpbp.distance import population_served
+from typing import List, Union
 
-import pycountry
-import pandas as pd
+import networkx as nx
 import numpy as np
+import osmnx as ox
+import pandas as pd
+import pycountry
+from gadm import GADMDownloader
+from numpy.typing import NDArray
+
+from gpbp.constants import FACILITIES_SRC, POPULATION_SRC, RWI_SRC
+from gpbp.distance import population_served
+from gpbp.utils import generate_grid_in_polygon, group_population
 
 
 class AdmArea:
@@ -57,7 +60,7 @@ class AdmArea:
             self.geometry = self.country_gdf.geometry.values[0]
             self.adm_name = self.country.name
 
-    def retrieve_adm_area_names(self) -> list[str]:
+    def retrieve_adm_area_names(self) -> Union[List[str], NDArray[np.str_]]:
         """
         Return all administrative areas
 
