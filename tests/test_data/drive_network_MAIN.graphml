@@ -1,0 +1,201 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <key id="d15" for="edge" attr.name="geometry" attr.type="string" />
+  <key id="d14" for="edge" attr.name="length" attr.type="string" />
+  <key id="d13" for="edge" attr.name="reversed" attr.type="string" />
+  <key id="d12" for="edge" attr.name="highway" attr.type="string" />
+  <key id="d11" for="edge" attr.name="name" attr.type="string" />
+  <key id="d10" for="edge" attr.name="ref" attr.type="string" />
+  <key id="d9" for="edge" attr.name="lanes" attr.type="string" />
+  <key id="d8" for="edge" attr.name="oneway" attr.type="string" />
+  <key id="d7" for="edge" attr.name="osmid" attr.type="string" />
+  <key id="d6" for="node" attr.name="street_count" attr.type="string" />
+  <key id="d5" for="node" attr.name="x" attr.type="string" />
+  <key id="d4" for="node" attr.name="y" attr.type="string" />
+  <key id="d3" for="graph" attr.name="simplified" attr.type="string" />
+  <key id="d2" for="graph" attr.name="crs" attr.type="string" />
+  <key id="d1" for="graph" attr.name="created_with" attr.type="string" />
+  <key id="d0" for="graph" attr.name="created_date" attr.type="string" />
+  <graph edgedefault="directed">
+    <node id="679034340">
+      <data key="d4">37.7466465</data>
+      <data key="d5">-122.23472</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="4917269284">
+      <data key="d4">37.7439768</data>
+      <data key="d5">-122.2392849</data>
+      <data key="d6">4</data>
+    </node>
+    <node id="53104040">
+      <data key="d4">37.7470705</data>
+      <data key="d5">-122.2356161</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="686096877">
+      <data key="d4">37.746417</data>
+      <data key="d5">-122.23604</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="53104048">
+      <data key="d4">37.7469662</data>
+      <data key="d5">-122.2356959</data>
+      <data key="d6">4</data>
+    </node>
+    <node id="53070003">
+      <data key="d4">37.7431747</data>
+      <data key="d5">-122.2377188</data>
+      <data key="d6">6</data>
+    </node>
+    <node id="261267219">
+      <data key="d4">37.7434346</data>
+      <data key="d5">-122.2372832</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="11949129845">
+      <data key="d4">37.7452319</data>
+      <data key="d5">-122.226759</data>
+      <data key="d6">4</data>
+    </node>
+    <node id="261267195">
+      <data key="d4">37.7450956</data>
+      <data key="d5">-122.2366183</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="53114046">
+      <data key="d4">37.7451689</data>
+      <data key="d5">-122.2369148</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="53070111">
+      <data key="d4">37.7396533</data>
+      <data key="d5">-122.2382653</data>
+      <data key="d6">4</data>
+    </node>
+    <edge source="679034340" target="11949129845" id="0">
+      <data key="d7">[415836664, 495183899, 415836671]</data>
+      <data key="d8">True</data>
+      <data key="d9">['2', '3']</data>
+      <data key="d10">CA 61</data>
+      <data key="d11">Doolittle Drive</data>
+      <data key="d12">primary</data>
+      <data key="d13">False</data>
+      <data key="d14">719.5699999999999</data>
+      <data key="d15">LINESTRING (-122.23472 37.7466465, -122.2338992 37.7464981, -122.2334138 37.7464069, -122.2329068 37.7463051, -122.2288889 37.7454673, -122.2287246 37.7454344, -122.2282049 37.7453273, -122.2278696 37.7452679, -122.2275236 37.7452319, -122.227244 37.7452181, -122.226759 37.7452319)</data>
+    </edge>
+    <edge source="686096877" target="679034340" id="0">
+      <data key="d7">24099165</data>
+      <data key="d8">True</data>
+      <data key="d9">1</data>
+      <data key="d12">primary_link</data>
+      <data key="d13">False</data>
+      <data key="d14">130.62800000000001</data>
+      <data key="d15">LINESTRING (-122.23604 37.746417, -122.2358217 37.7466376, -122.2357167 37.746682, -122.235596 37.746718, -122.2354619 37.7467265, -122.2353143 37.7467138, -122.23472 37.7466465)</data>
+    </edge>
+    <edge source="686096877" target="53104048" id="0">
+      <data key="d7">54454407</data>
+      <data key="d8">True</data>
+      <data key="d9">2</data>
+      <data key="d11">Island Drive</data>
+      <data key="d12">secondary</data>
+      <data key="d13">False</data>
+      <data key="d14">68.492</data>
+      <data key="d15">LINESTRING (-122.23604 37.746417, -122.2359777 37.7465719, -122.2359113 37.7466817, -122.2358112 37.746823, -122.2356959 37.7469662)</data>
+    </edge>
+    <edge source="53104048" target="53104040" id="0">
+      <data key="d7">495183898</data>
+      <data key="d8">True</data>
+      <data key="d11">Island Drive</data>
+      <data key="d12">secondary</data>
+      <data key="d13">False</data>
+      <data key="d14">13.555</data>
+    </edge>
+    <edge source="53104048" target="679034340" id="0">
+      <data key="d7">1169766811</data>
+      <data key="d8">True</data>
+      <data key="d9">2</data>
+      <data key="d10">CA 61</data>
+      <data key="d11">Doolittle Drive</data>
+      <data key="d12">primary</data>
+      <data key="d13">False</data>
+      <data key="d14">93.905</data>
+      <data key="d15">LINESTRING (-122.2356959 37.7469662, -122.2354914 37.7468517, -122.2352661 37.7467647, -122.2350274 37.7467032, -122.23472 37.7466465)</data>
+    </edge>
+    <edge source="53070003" target="53070111" id="0">
+      <data key="d7">[415889324, 24099149]</data>
+      <data key="d8">True</data>
+      <data key="d9">['2', '3']</data>
+      <data key="d11">Island Drive</data>
+      <data key="d12">secondary</data>
+      <data key="d13">False</data>
+      <data key="d14">397.2970000000001</data>
+      <data key="d15">LINESTRING (-122.2377188 37.7431747, -122.2378007 37.742882, -122.2378469 37.7426805, -122.2378731 37.7424875, -122.237869 37.742268, -122.2378 37.7418941, -122.2377866 37.7416926, -122.2378107 37.7414954, -122.2379984 37.7407318, -122.2381057 37.7403309, -122.2381674 37.7400976, -122.2381803 37.7400393, -122.2382653 37.7396533)</data>
+    </edge>
+    <edge source="53070003" target="261267219" id="0">
+      <data key="d7">255354801</data>
+      <data key="d8">True</data>
+      <data key="d9">2</data>
+      <data key="d12">secondary_link</data>
+      <data key="d13">False</data>
+      <data key="d14">54.054</data>
+      <data key="d15">LINESTRING (-122.2377188 37.7431747, -122.2375773 37.7431688, -122.2375022 37.7431837, -122.2374271 37.7432219, -122.2373708 37.7432834, -122.2372832 37.7434346)</data>
+    </edge>
+    <edge source="53070003" target="4917269284" id="0">
+      <data key="d7">[521811464, 415903096, 415903118]</data>
+      <data key="d8">True</data>
+      <data key="d9">2</data>
+      <data key="d11">Robert Davey Junior Drive</data>
+      <data key="d12">secondary</data>
+      <data key="d13">False</data>
+      <data key="d14">166.168</data>
+      <data key="d15">LINESTRING (-122.2377188 37.7431747, -122.2378322 37.74326, -122.2379529 37.7433088, -122.2380838 37.7433464, -122.2383069 37.7434128, -122.2385081 37.7434912, -122.2387146 37.7435867, -122.2389104 37.743697, -122.2389921 37.7437448, -122.2390874 37.7438179, -122.2392849 37.7439768)</data>
+    </edge>
+    <edge source="261267219" target="261267195" id="0">
+      <data key="d7">618136581</data>
+      <data key="d8">True</data>
+      <data key="d9">2</data>
+      <data key="d11">Island Drive</data>
+      <data key="d12">secondary</data>
+      <data key="d13">False</data>
+      <data key="d14">193.727</data>
+    </edge>
+    <edge source="261267195" target="53114046" id="0">
+      <data key="d7">226426971</data>
+      <data key="d12">secondary_link</data>
+      <data key="d8">False</data>
+      <data key="d13">True</data>
+      <data key="d14">27.315</data>
+    </edge>
+    <edge source="261267195" target="686096877" id="0">
+      <data key="d7">[415889329, 415889331, 699819004, 618136581]</data>
+      <data key="d8">True</data>
+      <data key="d9">['2', '3']</data>
+      <data key="d11">Island Drive</data>
+      <data key="d12">secondary</data>
+      <data key="d13">False</data>
+      <data key="d14">155.561</data>
+      <data key="d15">LINESTRING (-122.2366183 37.7450956, -122.2364629 37.7454724, -122.2363649 37.74571, -122.2363086 37.7458587, -122.2361498 37.7462088, -122.23604 37.746417)</data>
+    </edge>
+    <edge source="53114046" target="261267195" id="0">
+      <data key="d7">226426971</data>
+      <data key="d12">secondary_link</data>
+      <data key="d8">False</data>
+      <data key="d13">False</data>
+      <data key="d14">27.315</data>
+    </edge>
+    <edge source="53114046" target="53070003" id="0">
+      <data key="d7">[415889325, 415889333]</data>
+      <data key="d8">True</data>
+      <data key="d9">['2', '3']</data>
+      <data key="d11">Island Drive</data>
+      <data key="d12">secondary</data>
+      <data key="d13">False</data>
+      <data key="d14">232.744</data>
+      <data key="d15">LINESTRING (-122.2369148 37.7451689, -122.2369933 37.7449758, -122.2375625 37.7435755, -122.2377188 37.7431747)</data>
+    </edge>
+    <data key="d0">2024-12-20 15:38:50</data>
+    <data key="d1">OSMnx 1.2.3</data>
+    <data key="d2">epsg:4326</data>
+    <data key="d3">True</data>
+  </graph>
+</graphml>
