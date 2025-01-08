@@ -11,29 +11,6 @@ from gpbp.distance import _get_poly_nx
     ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
     indirect=True,
 )
-def test_graph_loads_correctly(load_graphml_file):
-    """
-    This is not so much a test as it is a way to understand the graph
-    that is being loaded as input for the tests.
-    """
-
-    G = load_graphml_file
-
-    assert isinstance(G, nx.MultiDiGraph)
-
-    assert G.number_of_nodes() == 4
-    assert G.number_of_edges() == 6
-    assert 5909483619 in G.nodes
-    assert (5909483619, 5909483569, 0) in G.edges
-
-    assert G.edges[(5909483619, 5909483569, 0)]["length"] > 50
-
-
-@pytest.mark.parametrize(
-    "load_graphml_file",
-    ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-    indirect=True,
-)
 def test_get_poly_nx_nodes(load_graphml_file):
 
     G = load_graphml_file
@@ -65,7 +42,7 @@ def test_get_poly_nx_nodes(load_graphml_file):
     assert set(actual_nodes_gdf.index) == set(expected_nodes_gdf.index)
 
     # assert geometry almost equal
-    assert actual_nodes_gdf.geom_almost_equals(expected_nodes_gdf, decimal=2).all()
+    assert actual_nodes_gdf.geom_almost_equals(expected_nodes_gdf, decimal=5).all()
 
 
 @pytest.mark.parametrize(
@@ -94,18 +71,15 @@ def test_get_poly_nx_edges(load_graphml_file):
         (-122.2317839, 37.7689584),
     ]
 
-    # we expect to get the geometry of the edges
-    expected_edges_gdf_data = [
-        LineString(coordinates_25_to_19),  # edge 5909483625 -> 5909483619
-        LineString(coordinates_25_to_19[::-1]),  # edge 5909483619 -> 5909483625
-        LineString(coordinates_19_to_36),  # edge 5909483619 -> 5909483636
-        LineString(coordinates_19_to_36[::-1]),  # edge 5909483636 -> 5909483619
-    ]
+    expected_edges_gdf = gpd.GeoSeries(
+        [
+            LineString(coordinates_25_to_19),  # edge 5909483625 -> 5909483619
+            LineString(coordinates_25_to_19[::-1]),  # edge 5909483619 -> 5909483625
+            LineString(coordinates_19_to_36),  # edge 5909483619 -> 5909483636
+            LineString(coordinates_19_to_36[::-1]),  # edge 5909483636 -> 5909483619
+        ]
+    )
 
-    expected_edges_gdf = gpd.GeoSeries(expected_edges_gdf_data)
-
-    # Use assert_geoseries_equal when we upgrade to geopandas 1.0.1
+    # Use assert_geoseries_equal after update to geopandas 1.0.1
 
     assert actual_edges_gdf.geom_almost_equals(expected_edges_gdf, decimal=2).all()
-
-    # assert that the edge is not in the resulting geodataframe
