@@ -13,14 +13,8 @@ class TestGetPolyNx:
         """Both tests use the same graph"""
         self.G = load_graphml_file
 
-    @pytest.mark.parametrize(
-        "load_graphml_file",
-        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-        indirect=True,
-    )
-    def test_get_poly_nx_nodes(self):
-        """Tests that the nodes are correct"""
-
+    @pytest.fixture
+    def expected_nodes_gdf(self):
         expected_nodes_gdf_data = {
             "id": [5909483619, 5909483625, 5909483636],
             "geometry": [
@@ -30,9 +24,17 @@ class TestGetPolyNx:
             ],
         }
 
-        expected_nodes_gdf = gpd.GeoDataFrame(
+        return gpd.GeoDataFrame(
             expected_nodes_gdf_data,
         ).set_index("id")
+
+    @pytest.mark.parametrize(
+        "load_graphml_file",
+        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
+        indirect=True,
+    )
+    def test_get_poly_nx_nodes(self, expected_nodes_gdf):
+        """Tests that the nodes are correct"""
 
         (actual_nodes_gdf, _) = _get_poly_nx(
             self.G, road_node=5909483619, dist_value=50, distance_type="length"
@@ -46,17 +48,8 @@ class TestGetPolyNx:
 
         assert actual_nodes_gdf.geom_almost_equals(expected_nodes_gdf, decimal=4).all()
 
-    @pytest.mark.parametrize(
-        "load_graphml_file",
-        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-        indirect=True,
-    )
-    def test_get_poly_nx_edges(self):
-        """Tests that the geometry of the edges is correct"""
-
-        # we expect this edge to be discarded as its lenght is larger than 50
-        assert self.G.edges[(5909483619, 5909483569, 0)]["length"] > 50
-
+    @pytest.fixture
+    def expected_edges_gdf(self):
         coordinates_25_to_19 = [(-122.23124, 37.76876), (-122.23141, 37.76871)]
 
         coordinates_19_to_36 = [
@@ -67,7 +60,7 @@ class TestGetPolyNx:
             (-122.2317839, 37.7689584),
         ]
 
-        expected_edges_gdf = gpd.GeoSeries(
+        return gpd.GeoSeries(
             [
                 LineString(coordinates_25_to_19),  # edge 5909483625 -> 5909483619
                 LineString(coordinates_25_to_19[::-1]),  # edge 5909483619 -> 5909483625
@@ -75,6 +68,17 @@ class TestGetPolyNx:
                 LineString(coordinates_19_to_36[::-1]),  # edge 5909483636 -> 5909483619
             ]
         )
+
+    @pytest.mark.parametrize(
+        "load_graphml_file",
+        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
+        indirect=True,
+    )
+    def test_get_poly_nx_edges(self, expected_edges_gdf):
+        """Tests that the geometry of the edges is correct"""
+
+        # we expect this edge to be discarded as its lenght is larger than 50
+        assert self.G.edges[(5909483619, 5909483569, 0)]["length"] > 50
 
         (_, actual_edges_gdf) = _get_poly_nx(
             self.G, road_node=5909483619, dist_value=50, distance_type="length"
