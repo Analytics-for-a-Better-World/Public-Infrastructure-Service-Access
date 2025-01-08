@@ -59,8 +59,12 @@ def _get_poly_nx(
     distance_type (str): The type of distance (e.g., 'length').
 
     Returns:
-    - nodes_gdf: a GeoDataFrame of the nodes and their geometry
-    - edges_gdf: a GeoSeries of the geometry of the edges
+    - nodes_gdf: a GeoDataFrame of the nodes and their geometry.
+    - edges_gdf: a GeoSeries of the geometry of the edges.
+
+    If an edge (u,v) doesn't have geometry data in G, edges_gdf contains
+    a straight line from u to v.
+
     """
     subgraph = nx.ego_graph(G, road_node, radius=dist_value, distance=distance_type)
 
