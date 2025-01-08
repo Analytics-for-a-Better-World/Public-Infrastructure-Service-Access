@@ -1,20 +1,20 @@
+import hashlib
 import json
-import requests
-from typing import Any, Union
-from shapely.geometry import Polygon, MultiPolygon, Point, LineString
-import geopandas as gpd
-import pandas as pd
-import numpy as np
-
-import networkx as nx
-import pandana
-import osmnx as ox
-import time
-
 import os
 import pickle
+import time
 from functools import wraps
-import hashlib
+from typing import Any, Union
+
+import geopandas as gpd
+import networkx as nx
+import numpy as np
+import osmnx as ox
+import pandana
+import pandas as pd
+import requests
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+
 
 def disk_cache(cache_dir="cache"):
     def decorator(func):
@@ -32,19 +32,36 @@ def disk_cache(cache_dir="cache"):
 
             # Check if the cache file exists
             if os.path.exists(filename):
-                with open(filename, 'rb') as f:
+                with open(filename, "rb") as f:
                     return pickle.load(f)
             else:
                 # Call the function and cache its result
                 result = func(*args, **kwargs)
-                with open(filename, 'wb') as f:
+                with open(filename, "wb") as f:
                     pickle.dump(result, f)
                 return result
+
         return wrapper
+
     return decorator
 
 
-def _get_poly_nx(G: nx.MultiDiGraph, road_node, dist_value, distance_type):
+def _get_poly_nx(
+    G: nx.MultiDiGraph, road_node: int, dist_value: int, distance_type: str
+) -> tuple[gpd.GeoDataFrame, gpd.GeoSeries]:
+    """
+    Get nodes and edges within a specified distance from a certain node in a road network.
+
+    Parameters:
+    G (nx.MultiDiGraph): The road network.
+    road_node (int): The node from which to measure the distance.
+    dist_value (int): The distance value.
+    distance_type (str): The type of distance (e.g., 'length').
+
+    Returns:
+    - nodes_gdf: a GeoDataFrame of the nodes and their geometry
+    - edges_gdf: a GeoSeries of the geometry of the edges
+    """
     subgraph = nx.ego_graph(G, road_node, radius=dist_value, distance=distance_type)
 
     node_points = [
@@ -155,7 +172,8 @@ def calculate_isopolygons_graph(
 
     return isochrone_polys
 
-@disk_cache('mapbox_cache')
+
+@disk_cache("mapbox_cache")
 def calculate_isopolygons_Mapbox(
     X: Any,
     Y: Any,
@@ -180,7 +198,7 @@ def calculate_isopolygons_Mapbox(
     elif distance_type == "length":
         contour_type = "contours_meters"
     else:
-        raise Exception("Invalid distance type")    
+        raise Exception("Invalid distance type")
     for idx, coord_pair in enumerate(list(zip(X, Y))):
         request = (
             f"{base_url}mapbox/{route_profile}/{coord_pair[0]},"
