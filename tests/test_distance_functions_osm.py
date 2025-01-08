@@ -1,7 +1,7 @@
 import geopandas as gpd
 import networkx as nx
 import pytest
-from shapely.geometry import Point
+from shapely.geometry import LineString, Point
 
 from gpbp.distance import _get_poly_nx
 
@@ -83,5 +83,29 @@ def test_get_poly_nx_edges(load_graphml_file):
     (_, actual_edges_gdf) = _get_poly_nx(
         G, road_node=5909483619, dist_value=50, distance_type="length"
     )
+
+    coordinates_25_to_19 = [(-122.23124, 37.76876), (-122.23141, 37.76871)]
+
+    coordinates_19_to_36 = [
+        (-122.2314069, 37.7687054),
+        (-122.2314797, 37.7687656),
+        (-122.2315618, 37.7688239),
+        (-122.2316698, 37.7688952),
+        (-122.2317839, 37.7689584),
+    ]
+
+    # we expect to get the geometry of the edges
+    expected_edges_gdf_data = [
+        LineString(coordinates_25_to_19),  # edge 5909483625 -> 5909483619
+        LineString(coordinates_25_to_19[::-1]),  # edge 5909483619 -> 5909483625
+        LineString(coordinates_19_to_36),  # edge 5909483619 -> 5909483636
+        LineString(coordinates_19_to_36[::-1]),  # edge 5909483636 -> 5909483619
+    ]
+
+    expected_edges_gdf = gpd.GeoSeries(expected_edges_gdf_data)
+
+    # Use assert_geoseries_equal when we upgrade to geopandas 1.0.1
+
+    assert actual_edges_gdf.geom_almost_equals(expected_edges_gdf, decimal=2).all()
 
     # assert that the edge is not in the resulting geodataframe
