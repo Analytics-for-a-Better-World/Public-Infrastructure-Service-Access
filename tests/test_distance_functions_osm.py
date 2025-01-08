@@ -41,7 +41,6 @@ def test_get_poly_nx_nodes(load_graphml_file):
     # assert that nodes (index) are equal (though not necessarily in the same order)
     assert set(actual_nodes_gdf.index) == set(expected_nodes_gdf.index)
 
-    # assert geometry almost equal
     assert actual_nodes_gdf.geom_almost_equals(expected_nodes_gdf, decimal=5).all()
 
 
