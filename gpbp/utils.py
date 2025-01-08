@@ -10,6 +10,12 @@ def generate_grid_in_polygon(
     """
     This Function generates evenly spaced points within the given GeoDataFrame.
     The parameter 'spacing' defines the distance between the points in coordinate units.
+
+    AnoukB dec '24:
+    Function takes outer boundaries of MultiPolygon, creates a grid of points with spacing between them that
+    includes the lower boundary and excludes the upper boundary.
+    The generated grid is then clipped together with the original Multipolygon and only those points that are on the
+    grid and within the MultiPolygon are kept and returned.
     """
 
     # Get the bounds of the polygon
