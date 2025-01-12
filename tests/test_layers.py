@@ -1,5 +1,9 @@
+import random
+
 import geopandas as gpd
+import networkx as nx
 import numpy as np
+import osmnx as ox
 import pytest
 from shapely.geometry import MultiPolygon, Polygon
 
@@ -156,3 +160,32 @@ class TestAdmAreaGetFacilities:
         with pytest.raises(Exception) as exc_info:
             adm_area.get_facilities(method="osm", tags=osm_hospital_tags)
         assert "Geometry is not defined. Call get_adm_area()" in str(exc_info.value)
+
+
+@pytest.fixture
+def mock_graph():
+    # Load network
+    G = ox.load_graphml('tests/test_data/drive_network_MAIN.graphml')
+
+    # Fix a seed to get reproducible results
+    random.seed(43)
+
+    # choose a random node
+    ego_node = random.choice(list(G.nodes))
+
+    # Get a subgraph
+    subgraph = nx.ego_graph(G, ego_node, radius=2)
+
+    return subgraph
+
+
+@pytest.mark.parametrize(["network_type", "default_speed"], [["driving", 50], ["walking", 4], ["cycling", 15]])
+def test_get_road_network(mocker, adm_area, mock_graph, network_type, default_speed):
+    mocker.patch("gpbp.layers.ox.graph_from_polygon", return_value=mock_graph)
+    
+    adm_area.get_road_network(network_type=network_type)
+
+    for _, _, data in adm_area.road_network.edges(data=True):
+        assert data["speed_kph"] == default_speed
+        expected_travel_time = data["length"] / (data["speed_kph"] * 1000 / 60)  # length in meters, speed in kph
+        assert round(data["travel_time"], 2) == round(expected_travel_time, 2)
