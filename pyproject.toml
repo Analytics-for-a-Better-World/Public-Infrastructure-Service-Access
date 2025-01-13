@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "gpbp"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = ["EiriniK <Eirini.Kousathana@ortec.com>"]
 readme = "README.md"
