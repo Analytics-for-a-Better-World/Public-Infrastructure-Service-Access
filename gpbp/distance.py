@@ -68,11 +68,8 @@ def _get_poly_nx(
     """
     subgraph = nx.ego_graph(G, center_node, radius=dist_value, distance=distance_type)
 
-    node_points = [
-        Point((data["x"], data["y"])) for node, data in subgraph.nodes(data=True)
-    ]
-    nodes_gdf = gpd.GeoDataFrame({"id": list(subgraph.nodes)}, geometry=node_points)
-    nodes_gdf = nodes_gdf.set_index("id")
+    nodes, _ = ox.graph_to_gdfs(subgraph)
+    nodes_gdf = nodes.loc[:, ["geometry"]]
 
     edge_lines = []
     for n_fr, n_to in subgraph.edges():

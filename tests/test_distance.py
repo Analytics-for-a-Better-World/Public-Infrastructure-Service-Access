@@ -7,18 +7,16 @@ from gpbp.distance import _get_poly_nx
 
 @pytest.fixture
 def nodes_gdf():
-    nodes_gdf_data = {
-        "id": [5909483619, 5909483625, 5909483636],
+    return gpd.GeoDataFrame({
+        "osmid": [5909483619, 5909483625, 5909483636],
         "geometry": [
             Point(-122.2314069, 37.7687054),
             Point(-122.231243, 37.7687576),
             Point(-122.2317839, 37.7689584),
         ],
-    }
+    }).set_index("osmid")
 
-    return gpd.GeoDataFrame(
-        nodes_gdf_data,
-    ).set_index("id")
+
 
 @pytest.fixture
 def edges_gdf():
