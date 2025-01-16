@@ -47,14 +47,14 @@ def disk_cache(cache_dir="cache"):
 
 
 def _get_poly_nx(
-    G: nx.MultiDiGraph, road_node: int, dist_value: int, distance_type: str
+    G: nx.MultiDiGraph, center_node: int, dist_value: int, distance_type: str
 ) -> tuple[gpd.GeoDataFrame, gpd.GeoSeries]:
     """
     Get nodes and edges within a specified distance from a certain node in a road network.
 
     Parameters:
     G (nx.MultiDiGraph): The road network.
-    road_node (int): The node from which to measure the distance.
+    center_node (int): The node from which to measure the distance.
     dist_value (int): The distance value.
     distance_type (str): The type of distance (e.g., 'length').
 
@@ -66,7 +66,7 @@ def _get_poly_nx(
     a straight line from u to v.
 
     """
-    subgraph = nx.ego_graph(G, road_node, radius=dist_value, distance=distance_type)
+    subgraph = nx.ego_graph(G, center_node, radius=dist_value, distance=distance_type)
 
     node_points = [
         Point((data["x"], data["y"])) for node, data in subgraph.nodes(data=True)

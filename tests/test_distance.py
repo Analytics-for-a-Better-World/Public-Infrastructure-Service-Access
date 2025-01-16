@@ -59,7 +59,7 @@ class TestGetPolyNx:
         """Tests that the nodes are correct"""
 
         (actual_nodes_gdf, _) = _get_poly_nx(
-            self.G, road_node=5909483619, dist_value=50, distance_type="length"
+            self.G, center_node=5909483619, dist_value=50, distance_type="length"
         )
 
         # TODO: gpd.testing.assert_geodataframe_equal(actual_nodes_gdf, expected_nodes_gdf)
@@ -83,7 +83,7 @@ class TestGetPolyNx:
         assert self.G.edges[(5909483619, 5909483569, 0)]["length"] > 50
 
         (_, actual_edges_gdf) = _get_poly_nx(
-            self.G, road_node=5909483619, dist_value=50, distance_type="length"
+            self.G, center_node=5909483619, dist_value=50, distance_type="length"
         )
 
         # TODO: use assert_geoseries_equal after update to geopandas 1.0.1
