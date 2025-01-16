@@ -6,20 +6,22 @@ from shapely.geometry import LineString, Point
 from gpbp.distance import _get_poly_nx
 
 @pytest.fixture
-def nodes_gdf():
-    return gpd.GeoDataFrame({
+def nodes_gdf() -> gpd.GeoSeries:
+    data = {
         "osmid": [5909483619, 5909483625, 5909483636],
         "geometry": [
             Point(-122.2314069, 37.7687054),
             Point(-122.231243, 37.7687576),
             Point(-122.2317839, 37.7689584),
         ],
-    }).set_index("osmid")
+    }
+
+    return gpd.GeoDataFrame(data, crs='EPSG:4326').set_index("osmid")
 
 
 
 @pytest.fixture
-def edges_gdf():
+def edges_gdf() -> gpd.GeoSeries:
     coordinates_25_to_19 = [(-122.23124, 37.76876), (-122.23141, 37.76871)]
 
     coordinates_19_to_36 = [
@@ -36,7 +38,8 @@ def edges_gdf():
             LineString(coordinates_25_to_19[::-1]),  # edge 5909483619 -> 5909483625
             LineString(coordinates_19_to_36),  # edge 5909483619 -> 5909483636
             LineString(coordinates_19_to_36[::-1]),  # edge 5909483636 -> 5909483619
-        ]
+        ],
+        crs='EPSG:4326'
     )
 
 
@@ -45,7 +48,7 @@ class TestGetPolyNx:
     @pytest.fixture(autouse=True)
     def setup(self, load_graphml_file):
         """Both tests use the same graph"""
-        self.G = load_graphml_file
+        self.road_network = load_graphml_file
 
 
     @pytest.mark.parametrize(
@@ -57,7 +60,7 @@ class TestGetPolyNx:
         """Tests that the nodes are correct"""
 
         (actual_nodes_gdf, _) = _get_poly_nx(
-            self.G, center_node=5909483619, dist_value=50, distance_type="length"
+            self.road_network, center_node=5909483619, dist_value=50, distance_type="length"
         )
 
         # TODO: gpd.testing.assert_geodataframe_equal(actual_nodes_gdf, expected_nodes_gdf)
@@ -78,10 +81,10 @@ class TestGetPolyNx:
         """Tests that the geometry of the edges is correct"""
 
         # we expect this edge to be discarded as its lenght is larger than 50
-        assert self.G.edges[(5909483619, 5909483569, 0)]["length"] > 50
+        assert self.road_network.edges[(5909483619, 5909483569, 0)]["length"] > 50
 
         (_, actual_edges_gdf) = _get_poly_nx(
-            self.G, center_node=5909483619, dist_value=50, distance_type="length"
+            self.road_network, center_node=5909483619, dist_value=50, distance_type="length"
         )
 
         # TODO: use assert_geoseries_equal after update to geopandas 1.0.1
