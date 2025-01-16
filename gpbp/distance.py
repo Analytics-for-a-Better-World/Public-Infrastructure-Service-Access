@@ -48,7 +48,7 @@ def disk_cache(cache_dir="cache"):
 
 def _get_poly_nx(
     G: nx.MultiDiGraph, center_node: int, dist_value: int, distance_type: str
-) -> tuple[gpd.GeoDataFrame, gpd.GeoSeries]:
+) -> tuple[gpd.GeoSeries, gpd.GeoSeries]:
     """
     Get nodes and edges within a specified distance from a certain node in a road network.
 
@@ -59,7 +59,7 @@ def _get_poly_nx(
     distance_type (str): The type of distance (e.g., 'length').
 
     Returns:
-    - nodes_gdf: a GeoDataFrame of the nodes and their geometry.
+    - nodes_gdf: a GeoSeries of the nodes with their osmid and geometry.
     - edges_gdf: a GeoSeries of the geometry of the edges.
 
     If an edge (u,v) doesn't have geometry data in G, edges_gdf contains
@@ -68,17 +68,9 @@ def _get_poly_nx(
     """
     subgraph = nx.ego_graph(G, center_node, radius=dist_value, distance=distance_type)
 
-    nodes, _ = ox.graph_to_gdfs(subgraph)
-    nodes_gdf = nodes.loc[:, ["geometry"]]
-
-    edge_lines = []
-    for n_fr, n_to in subgraph.edges():
-        f = nodes_gdf.loc[n_fr].geometry
-        t = nodes_gdf.loc[n_to].geometry
-        edge_lookup = G.get_edge_data(n_fr, n_to)[0].get("geometry", LineString([f, t]))
-        edge_lines.append(edge_lookup)
-    edges_gdf = gpd.GeoSeries(edge_lines)
-    return nodes_gdf, edges_gdf
+    nodes_gdf, edges_gdf = ox.graph_to_gdfs(subgraph)
+    
+    return nodes_gdf.loc[:, "geometry"], edges_gdf.loc[:, "geometry"].reset_index()
 
 
 # TODO : complains about input type
