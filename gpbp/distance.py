@@ -53,23 +53,28 @@ def _get_poly_nx(
     Get nodes and edges within a specified distance from a certain node in a road network.
 
     Parameters:
-    road_network (nx.MultiDiGraph): The road network.
-    center_node (int): The node from which to measure the distance.
-    dist_value (int): The distance value.
-    distance_type (str): The type of distance (e.g., 'length').
+        road_network (nx.MultiDiGraph): The road network.
+        center_node (int): The node from which to measure the distance.
+        dist_value (int): The distance value.
+        distance_type (str): The type of distance (e.g., 'length').
 
     Returns:
-    - nodes_gdf: a GeoSeries of the nodes with their osmid and geometry.
-    - edges_gdf: a GeoSeries of the geometry of the edges.
+        nodes_gdf: a GeoSeries of the nodes with their osmid and geometry.
+        edges_gdf: a GeoSeries of the geometry of the edges.
 
     If an edge (u,v) doesn't have geometry data in G, edges_gdf contains
     a straight line from u to v.
 
+    Raises:
+        ValueError if all other nodes are farther than dist_value from center_node
+
     """
-    subgraph = nx.ego_graph(road_network, center_node, radius=dist_value, distance=distance_type)
+    subgraph = nx.ego_graph(
+        road_network, center_node, radius=dist_value, distance=distance_type
+    )
 
     nodes_gdf, edges_gdf = ox.graph_to_gdfs(subgraph)
-    
+
     return nodes_gdf.loc[:, "geometry"], edges_gdf.loc[:, "geometry"].reset_index()
 
 
