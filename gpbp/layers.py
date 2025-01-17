@@ -160,10 +160,10 @@ class AdmArea:
         )
         self.road_network = ox.add_edge_travel_times(self.road_network)
         time = nx.get_edge_attributes(self.road_network, "travel_time")
-        time_min = dict(
+        time_in_minutes = dict(
             zip(list(time.keys()), list(map(lambda x: round(x / 60, 2), time.values())))
         )
-        nx.set_edge_attributes(self.road_network, time_min, "travel_time")
+        nx.set_edge_attributes(self.road_network, time_in_minutes, "travel_time")
 
     def get_rwi(self, method: str) -> None:
         """
