@@ -10,6 +10,7 @@
 
 ### Thesis Work
 - [Capacitated Maximum Covering Location Problem with Closest Assignment Constraints: MIP Solver and GRASP Heuristic. Case-Study: Stroke Facility Allocation in Timor-Leste by Annelies Slot (2024), Tilburg University](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/FinalThesisAnneliesSlot.pdf)
+- [Optimizing Stroke Care Accessibility for At-Risk Populations by Merel Bonewit, 2024]()
 - [Solving Large Maximum Covering Location Problems with a GRASP Heuristic - Case-study for stroke facility allocation in Vietnam by Fleur Theulen (2022)](https://drive.google.com/file/d/14jijFt_QJPSOwHG05rgv847Tg1qHErQD/view)
 - [Geospatial healthcare capacity allocation - A case study of allocating beds to stroke centres in Vietnam by Corien van Kleij - Westveer (2022)](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/ThesisCorienWestveer.pdf)
 - [Optimizing Healthcare Accessibility through Flood Resiliency Improvements of Roads in a Network - A case study for Timor-Leste by Britt van Veggel (2021)](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/MasterThesis_Britt_van_Veggel.pdf)
