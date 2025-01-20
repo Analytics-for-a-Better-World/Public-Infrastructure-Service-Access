@@ -11,9 +11,9 @@
   - If you **do not** choose to use poetry we first recommend creating a virtual environment and
   then install the package and necessary dependencies by installing the **.whl** file in the **dist** folder. So in a terminal, while you are located in the repository folder, execute the following:
     - ```python -m venv venv``` to create the virtual environment
-    - ```venv\Scripts\Activate.ps1``` to activate it
+    - Activate the environment with ```venv\Scripts\Activate.ps1``` (on Windows) or ```source venv/bin/activate``` (on MacOS)
     - ```cd dist``` to enter the dist folder
-    - ```pip install gpbp-0.1.0-py3-none-any.whl``` to install the package
+    - ```pip install gpbp-1.0.0-py3-none-any.whl``` to install the package
 
 ### Usage
 1. Some example usage can be seen in the ```examples/gpbp_showcase.ipynb``` notebook
