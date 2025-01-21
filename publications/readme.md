@@ -10,6 +10,8 @@
 
 ### Thesis Work
 
+- [Method for analyzing climate criticality of infrastructure networks by Teun van der Laan, 2024](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/Final_Master_Thesis_UvA%20(1)%20-%20Teun.pdf)
+- [Optimization of Cold Storage Locations in Madhya Pradesh to Reduce Tomato Losses by Nick Koelemeij, 2024](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/MSc_Thesis_Nick_Koelemeij__15th_of_July__2024_.pdf)
 - [Optimizing Stroke Care Accessibility for At-Risk Populations by Merel Bonewit, 2024](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/Bonewit%2C%20Merel%20Msc.pdf)
 - [Capacitated Maximum Covering Location Problem with Closest Assignment Constraints: MIP Solver and GRASP Heuristic. Case-Study: Stroke Facility Allocation in Timor-Leste by Annelies Slot (2024), Tilburg University](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/FinalThesisAnneliesSlot.pdf)
 - [Solving Large Maximum Covering Location Problems with a GRASP Heuristic - Case-study for stroke facility allocation in Vietnam by Fleur Theulen (2022)](https://drive.google.com/file/d/14jijFt_QJPSOwHG05rgv847Tg1qHErQD/view)
