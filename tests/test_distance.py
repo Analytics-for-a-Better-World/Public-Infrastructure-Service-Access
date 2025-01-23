@@ -1,5 +1,5 @@
 import geopandas as gpd
-import networkx as nx
+import osmnx as ox
 import pytest
 from shapely.geometry import LineString, Point
 
@@ -46,15 +46,12 @@ def edges_gdf() -> gpd.GeoSeries:
 class TestGetPolyNx:
 
     @pytest.fixture(autouse=True)
-    def setup(self, load_graphml_file):
-        """Both tests use the same graph"""
-        self.road_network = load_graphml_file
+    def setup(self):
+        """All tests use the same graph"""
+        self.road_network = ox.load_graphml(
+            "tests/test_data/walk_network_4_nodes_6_edges.graphml"
+        )
 
-    @pytest.mark.parametrize(
-        "load_graphml_file",
-        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-        indirect=True,
-    )
     def test_get_poly_nx_nodes(self, nodes_gdf):
         """Tests that the nodes are correct"""
 
@@ -73,11 +70,6 @@ class TestGetPolyNx:
 
         assert actual_nodes_gdf.geom_almost_equals(nodes_gdf, decimal=4).all()
 
-    @pytest.mark.parametrize(
-        "load_graphml_file",
-        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-        indirect=True,
-    )
     def test_get_poly_nx_edges(self, edges_gdf):
         """Tests that the geometry of the edges is correct"""
 
@@ -94,11 +86,6 @@ class TestGetPolyNx:
         # TODO: use assert_geoseries_equal after update to geopandas 1.0.1
         assert actual_edges_gdf.geom_almost_equals(edges_gdf, decimal=4).all()
 
-    @pytest.mark.parametrize(
-        "load_graphml_file",
-        ["tests/test_data/walk_network_4_nodes_6_edges.graphml"],
-        indirect=True,
-    )
     def test_raises_value_error_if_all_nodes_are_too_far(self):
         """All nodes are farther than 15 meters away from node 5909483619"""
         with pytest.raises(ValueError, match="graph contains no edges"):
