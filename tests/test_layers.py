@@ -238,4 +238,4 @@ class TestAdmAreaPrepareOptimizationData:
         )
 
         assert current == {distance_type: "dummy_current_df"}
-        assert potential == {distance_type: "dummy_current_df"}
+        assert potential == {distance_type: "dummy_potential_df"}
