@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 import osmnx as ox
 import pytest
-from shapely.geometry import MultiPolygon, Polygon, Point
+from shapely.geometry import MultiPolygon, Point, Polygon
 
 from gpbp.layers import AdmArea
 
@@ -202,15 +202,16 @@ class TestAdmAreaPrepareOptimizationData:
 
     def test_prepare_optimization_data_pop_count(self, mocker, adm_area_with_population_and_facilities, population_dataframe):
         # Mock population_served, we're not testing it in this unit test
-        dummy_current = {"length": "dummy_current_df"}
-        dummy_potential = {"length": "dummy_potential_df"}
+        distance_type = "length"
+        dummy_current = {distance_type: "dummy_current_df"}
+        dummy_potential = {distance_type: "dummy_potential_df"}
         mocker.patch(
             "gpbp.layers.population_served",
-            side_effect=[dummy_current["length"], dummy_potential["length"]]
+            side_effect=[dummy_current[distance_type], dummy_potential[distance_type]]
         )
 
         pop_count, _, _ = adm_area_with_population_and_facilities.prepare_optimization_data(
-            distance_type="length",
+            distance_type=distance_type,
             distance_values=[1000],
             mode_of_transport="driving",
             strategy="osm",
@@ -220,20 +221,21 @@ class TestAdmAreaPrepareOptimizationData:
         assert pop_count == population_dataframe["population"].sum()
 
     def test_prepare_optimization_data_current_and_potential(self, mocker, adm_area_with_population_and_facilities):
-        dummy_current = {"length": "dummy_current_df"}
-        dummy_potential = {"length": "dummy_potential_df"}
+        distance_type = "length"
+        dummy_current = {distance_type: "dummy_current_df", "some_other_key": "content_we_don't_want"}
+        dummy_potential = {distance_type: "dummy_potential_df", "some_other_key": "content_we_don't_want"}
         mocker.patch(
             "gpbp.layers.population_served",
-            side_effect=[dummy_current["length"], dummy_potential["length"]]
+            side_effect=[dummy_current[distance_type], dummy_potential[distance_type]]
         )
 
         # We don't care about pop_count here; just check current and potential outputs
         _, current, potential = adm_area_with_population_and_facilities.prepare_optimization_data(
-            distance_type="length",
+            distance_type=distance_type,
             distance_values=[1000],
             mode_of_transport="driving",
             strategy="osm"
         )
 
-        assert current["length"] == dummy_current["length"]
-        assert potential["length"] == dummy_potential["length"]
+        assert current == {distance_type: "dummy_current_df"}
+        assert potential == {distance_type: "dummy_current_df"}
