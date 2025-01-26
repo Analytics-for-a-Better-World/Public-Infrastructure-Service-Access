@@ -1,0 +1,310 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <key id="d14" for="edge" attr.name="geometry" attr.type="string" />
+  <key id="d13" for="edge" attr.name="length" attr.type="string" />
+  <key id="d12" for="edge" attr.name="reversed" attr.type="string" />
+  <key id="d11" for="edge" attr.name="oneway" attr.type="string" />
+  <key id="d10" for="edge" attr.name="highway" attr.type="string" />
+  <key id="d9" for="edge" attr.name="name" attr.type="string" />
+  <key id="d8" for="edge" attr.name="osmid" attr.type="string" />
+  <key id="d7" for="node" attr.name="highway" attr.type="string" />
+  <key id="d6" for="node" attr.name="street_count" attr.type="string" />
+  <key id="d5" for="node" attr.name="x" attr.type="string" />
+  <key id="d4" for="node" attr.name="y" attr.type="string" />
+  <key id="d3" for="graph" attr.name="simplified" attr.type="string" />
+  <key id="d2" for="graph" attr.name="crs" attr.type="string" />
+  <key id="d1" for="graph" attr.name="created_with" attr.type="string" />
+  <key id="d0" for="graph" attr.name="created_date" attr.type="string" />
+  <graph edgedefault="directed">
+    <node id="7543193889">
+      <data key="d4">37.7436551</data>
+      <data key="d5">-122.2543037</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="53137243">
+      <data key="d4">37.7432844</data>
+      <data key="d5">-122.2547111</data>
+      <data key="d7">turning_circle</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="53027331">
+      <data key="d4">37.7440039</data>
+      <data key="d5">-122.2552066</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="11196998211">
+      <data key="d4">37.7439415</data>
+      <data key="d5">-122.2541672</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="2456418341">
+      <data key="d4">37.7437536</data>
+      <data key="d5">-122.2543824</data>
+      <data key="d7">crossing</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="53098858">
+      <data key="d4">37.7417615</data>
+      <data key="d5">-122.2528989</data>
+      <data key="d6">4</data>
+    </node>
+    <node id="53148626">
+      <data key="d4">37.7439172</data>
+      <data key="d5">-122.2531178</data>
+      <data key="d7">turning_circle</data>
+      <data key="d6">1</data>
+    </node>
+    <node id="53035604">
+      <data key="d4">37.7423485</data>
+      <data key="d5">-122.2533355</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="53137236">
+      <data key="d4">37.7423681</data>
+      <data key="d5">-122.2555238</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="53035605">
+      <data key="d4">37.7428263</data>
+      <data key="d5">-122.2523142</data>
+      <data key="d7">turning_circle</data>
+      <data key="d6">1</data>
+    </node>
+    <node id="53100665">
+      <data key="d4">37.7428973</data>
+      <data key="d5">-122.2537458</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="53122906">
+      <data key="d4">37.7433701</data>
+      <data key="d5">-122.2527207</data>
+      <data key="d7">turning_circle</data>
+      <data key="d6">1</data>
+    </node>
+    <node id="53100667">
+      <data key="d4">37.7434505</data>
+      <data key="d5">-122.2541551</data>
+      <data key="d6">3</data>
+    </node>
+    <edge source="7543193889" target="2456418341" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">12.956</data>
+    </edge>
+    <edge source="7543193889" target="53100667" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">26.236</data>
+    </edge>
+    <edge source="7543193889" target="53137243" id="0">
+      <data key="d8">806662567</data>
+      <data key="d10">path</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">56.307</data>
+      <data key="d14">LINESTRING (-122.2543037 37.7436551, -122.2543769 37.7435953, -122.2544305 37.7435253, -122.2545056 37.7434786, -122.2546076 37.7434341, -122.2546719 37.7433747, -122.2547111 37.7432844)</data>
+    </edge>
+    <edge source="53137243" target="53137236" id="0">
+      <data key="d8">6390234</data>
+      <data key="d9">Shannon Circle</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">201.03300000000002</data>
+      <data key="d14">LINESTRING (-122.2547111 37.7432844, -122.2550692 37.7432176, -122.2556786 37.7430548, -122.2560562 37.7428783, -122.2555238 37.7423681)</data>
+    </edge>
+    <edge source="53137243" target="53137236" id="1">
+      <data key="d8">6390234</data>
+      <data key="d9">Shannon Circle</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">192.257</data>
+      <data key="d14">LINESTRING (-122.2547111 37.7432844, -122.2545542 37.7431294, -122.2542739 37.7426968, -122.2551563 37.7425017, -122.2555238 37.7423681)</data>
+    </edge>
+    <edge source="53137243" target="7543193889" id="0">
+      <data key="d8">806662567</data>
+      <data key="d10">path</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">56.30700000000001</data>
+      <data key="d14">LINESTRING (-122.2547111 37.7432844, -122.2546719 37.7433747, -122.2546076 37.7434341, -122.2545056 37.7434786, -122.2544305 37.7435253, -122.2543769 37.7435953, -122.2543037 37.7436551)</data>
+    </edge>
+    <edge source="53027331" target="2456418341" id="0">
+      <data key="d8">[6376443, 6360351]</data>
+      <data key="d9">['Tralee Lane', 'Dublin Way']</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">97.711</data>
+      <data key="d14">LINESTRING (-122.2552066 37.7440039, -122.2548696 37.7441274, -122.2547966 37.7441423, -122.2547217 37.7441312, -122.2546725 37.7440982, -122.2546295 37.7440532, -122.2545081 37.7439111, -122.2543824 37.7437536)</data>
+    </edge>
+    <edge source="11196998211" target="2456418341" id="0">
+      <data key="d8">237762503</data>
+      <data key="d10">cycleway</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">28.427999999999997</data>
+      <data key="d14">LINESTRING (-122.2541672 37.7439415, -122.2542601 37.7438713, -122.2543037 37.7438114, -122.2543824 37.7437536)</data>
+    </edge>
+    <edge source="2456418341" target="7543193889" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">12.956</data>
+    </edge>
+    <edge source="2456418341" target="53027331" id="0">
+      <data key="d8">[6376443, 6360351]</data>
+      <data key="d9">['Dublin Way', 'Tralee Lane']</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">97.71100000000001</data>
+      <data key="d14">LINESTRING (-122.2543824 37.7437536, -122.2545081 37.7439111, -122.2546295 37.7440532, -122.2546725 37.7440982, -122.2547217 37.7441312, -122.2547966 37.7441423, -122.2548696 37.7441274, -122.2552066 37.7440039)</data>
+    </edge>
+    <edge source="2456418341" target="11196998211" id="0">
+      <data key="d8">237762503</data>
+      <data key="d10">cycleway</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">28.428</data>
+      <data key="d14">LINESTRING (-122.2543824 37.7437536, -122.2543037 37.7438114, -122.2542601 37.7438713, -122.2541672 37.7439415)</data>
+    </edge>
+    <edge source="53098858" target="53035604" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">75.724</data>
+    </edge>
+    <edge source="53148626" target="53100667" id="0">
+      <data key="d8">6400096</data>
+      <data key="d9">Ulster Place</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">104.938</data>
+    </edge>
+    <edge source="53035604" target="53035605" id="0">
+      <data key="d8">6331789</data>
+      <data key="d9">Wexford Place</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">104.342</data>
+    </edge>
+    <edge source="53035604" target="53100665" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">70.891</data>
+    </edge>
+    <edge source="53035604" target="53098858" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">75.724</data>
+    </edge>
+    <edge source="53137236" target="53137243" id="0">
+      <data key="d8">6390234</data>
+      <data key="d9">Shannon Circle</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">192.257</data>
+      <data key="d14">LINESTRING (-122.2555238 37.7423681, -122.2551563 37.7425017, -122.2542739 37.7426968, -122.2545542 37.7431294, -122.2547111 37.7432844)</data>
+    </edge>
+    <edge source="53137236" target="53137243" id="1">
+      <data key="d8">6390234</data>
+      <data key="d9">Shannon Circle</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">201.033</data>
+      <data key="d14">LINESTRING (-122.2555238 37.7423681, -122.2560562 37.7428783, -122.2556786 37.7430548, -122.2550692 37.7432176, -122.2547111 37.7432844)</data>
+    </edge>
+    <edge source="53035605" target="53035604" id="0">
+      <data key="d8">6331789</data>
+      <data key="d9">Wexford Place</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">104.342</data>
+    </edge>
+    <edge source="53100665" target="53035604" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">70.891</data>
+    </edge>
+    <edge source="53100665" target="53122906" id="0">
+      <data key="d8">6378770</data>
+      <data key="d9">Thurles Place</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">104.348</data>
+    </edge>
+    <edge source="53100665" target="53100667" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">71.27000000000001</data>
+      <data key="d14">LINESTRING (-122.2537458 37.7428973, -122.2539671 37.7431915, -122.2541551 37.7434505)</data>
+    </edge>
+    <edge source="53122906" target="53100665" id="0">
+      <data key="d8">6378770</data>
+      <data key="d9">Thurles Place</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">104.348</data>
+    </edge>
+    <edge source="53100667" target="7543193889" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">26.236</data>
+    </edge>
+    <edge source="53100667" target="53148626" id="0">
+      <data key="d8">6400096</data>
+      <data key="d9">Ulster Place</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">False</data>
+      <data key="d13">104.938</data>
+    </edge>
+    <edge source="53100667" target="53100665" id="0">
+      <data key="d8">6360351</data>
+      <data key="d9">Dublin Way</data>
+      <data key="d10">residential</data>
+      <data key="d11">False</data>
+      <data key="d12">True</data>
+      <data key="d13">71.27000000000001</data>
+      <data key="d14">LINESTRING (-122.2541551 37.7434505, -122.2539671 37.7431915, -122.2537458 37.7428973)</data>
+    </edge>
+    <data key="d0">2024-12-20 15:53:14</data>
+    <data key="d1">OSMnx 1.2.3</data>
+    <data key="d2">epsg:4326</data>
+    <data key="d3">True</data>
+  </graph>
+</graphml>
