@@ -1,0 +1,88 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd">
+  <key id="d12" for="edge" attr.name="geometry" attr.type="string" />
+  <key id="d11" for="edge" attr.name="length" attr.type="string" />
+  <key id="d10" for="edge" attr.name="reversed" attr.type="string" />
+  <key id="d9" for="edge" attr.name="oneway" attr.type="string" />
+  <key id="d8" for="edge" attr.name="highway" attr.type="string" />
+  <key id="d7" for="edge" attr.name="osmid" attr.type="string" />
+  <key id="d6" for="node" attr.name="street_count" attr.type="string" />
+  <key id="d5" for="node" attr.name="x" attr.type="string" />
+  <key id="d4" for="node" attr.name="y" attr.type="string" />
+  <key id="d3" for="graph" attr.name="simplified" attr.type="string" />
+  <key id="d2" for="graph" attr.name="crs" attr.type="string" />
+  <key id="d1" for="graph" attr.name="created_with" attr.type="string" />
+  <key id="d0" for="graph" attr.name="created_date" attr.type="string" />
+  <graph edgedefault="directed">
+    <node id="5909483625">
+      <data key="d4">37.7687576</data>
+      <data key="d5">-122.231243</data>
+      <data key="d6">1</data>
+    </node>
+    <node id="5909483619">
+      <data key="d4">37.7687054</data>
+      <data key="d5">-122.2314069</data>
+      <data key="d6">3</data>
+    </node>
+    <node id="5909483636">
+      <data key="d4">37.7689584</data>
+      <data key="d5">-122.2317839</data>
+      <data key="d6">4</data>
+    </node>
+    <node id="5909483569">
+      <data key="d4">37.768278</data>
+      <data key="d5">-122.2315948</data>
+      <data key="d6">3</data>
+    </node>
+    <edge source="5909483625" target="5909483619" id="0">
+      <data key="d7">625922074</data>
+      <data key="d8">footway</data>
+      <data key="d9">False</data>
+      <data key="d10">False</data>
+      <data key="d11">15.532</data>
+    </edge>
+    <edge source="5909483619" target="5909483625" id="0">
+      <data key="d7">625922074</data>
+      <data key="d8">footway</data>
+      <data key="d9">False</data>
+      <data key="d10">True</data>
+      <data key="d11">15.532</data>
+    </edge>
+    <edge source="5909483619" target="5909483636" id="0">
+      <data key="d7">625922095</data>
+      <data key="d8">footway</data>
+      <data key="d9">False</data>
+      <data key="d10">False</data>
+      <data key="d11">43.575</data>
+      <data key="d12">LINESTRING (-122.2314069 37.7687054, -122.2314797 37.7687656, -122.2315618 37.7688239, -122.2316698 37.7688952, -122.2317839 37.7689584)</data>
+    </edge>
+    <edge source="5909483619" target="5909483569" id="0">
+      <data key="d7">625922095</data>
+      <data key="d8">footway</data>
+      <data key="d9">False</data>
+      <data key="d10">True</data>
+      <data key="d11">72.85300000000001</data>
+      <data key="d12">LINESTRING (-122.2314069 37.7687054, -122.2313131 37.7685819, -122.2312222 37.7684446, -122.2312262 37.7684176, -122.2312494 37.7683906, -122.2312849 37.7683707, -122.2315672 37.7682853, -122.2315948 37.768278)</data>
+    </edge>
+    <edge source="5909483636" target="5909483619" id="0">
+      <data key="d7">625922095</data>
+      <data key="d8">footway</data>
+      <data key="d9">False</data>
+      <data key="d10">True</data>
+      <data key="d11">43.574999999999996</data>
+      <data key="d12">LINESTRING (-122.2317839 37.7689584, -122.2316698 37.7688952, -122.2315618 37.7688239, -122.2314797 37.7687656, -122.2314069 37.7687054)</data>
+    </edge>
+    <edge source="5909483569" target="5909483619" id="0">
+      <data key="d7">625922095</data>
+      <data key="d8">footway</data>
+      <data key="d9">False</data>
+      <data key="d10">False</data>
+      <data key="d11">72.85300000000001</data>
+      <data key="d12">LINESTRING (-122.2315948 37.768278, -122.2315672 37.7682853, -122.2312849 37.7683707, -122.2312494 37.7683906, -122.2312262 37.7684176, -122.2312222 37.7684446, -122.2313131 37.7685819, -122.2314069 37.7687054)</data>
+    </edge>
+    <data key="d0">2024-12-20 15:32:04</data>
+    <data key="d1">OSMnx 1.2.3</data>
+    <data key="d2">epsg:4326</data>
+    <data key="d3">True</data>
+  </graph>
+</graphml>

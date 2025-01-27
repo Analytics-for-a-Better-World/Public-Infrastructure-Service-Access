@@ -1,20 +1,20 @@
+import hashlib
 import json
-import requests
-from typing import Any, Union
-from shapely.geometry import Polygon, MultiPolygon, Point, LineString
-import geopandas as gpd
-import pandas as pd
-import numpy as np
-
-import networkx as nx
-import pandana
-import osmnx as ox
-import time
-
 import os
 import pickle
+import time
 from functools import wraps
-import hashlib
+from typing import Any, Union
+
+import geopandas as gpd
+import networkx as nx
+import numpy as np
+import osmnx as ox
+import pandana
+import pandas as pd
+import requests
+from shapely.geometry import LineString, MultiPolygon, Point, Polygon
+
 
 def disk_cache(cache_dir="cache"):
     def decorator(func):
@@ -32,35 +32,50 @@ def disk_cache(cache_dir="cache"):
 
             # Check if the cache file exists
             if os.path.exists(filename):
-                with open(filename, 'rb') as f:
+                with open(filename, "rb") as f:
                     return pickle.load(f)
             else:
                 # Call the function and cache its result
                 result = func(*args, **kwargs)
-                with open(filename, 'wb') as f:
+                with open(filename, "wb") as f:
                     pickle.dump(result, f)
                 return result
+
         return wrapper
+
     return decorator
 
 
-def _get_poly_nx(G: nx.MultiDiGraph, road_node, dist_value, distance_type):
-    subgraph = nx.ego_graph(G, road_node, radius=dist_value, distance=distance_type)
+def _get_poly_nx(
+    road_network: nx.MultiDiGraph, center_node: int, dist_value: int, distance_type: str
+) -> tuple[gpd.GeoSeries, gpd.GeoSeries]:
+    """
+    Get nodes and edges within a specified distance from a certain node in a road network.
 
-    node_points = [
-        Point((data["x"], data["y"])) for node, data in subgraph.nodes(data=True)
-    ]
-    nodes_gdf = gpd.GeoDataFrame({"id": list(subgraph.nodes)}, geometry=node_points)
-    nodes_gdf = nodes_gdf.set_index("id")
+    Parameters:
+        road_network (nx.MultiDiGraph): The road network.
+        center_node (int): The node from which to measure the distance.
+        dist_value (int): The distance value.
+        distance_type (str): The type of distance (e.g., 'length').
 
-    edge_lines = []
-    for n_fr, n_to in subgraph.edges():
-        f = nodes_gdf.loc[n_fr].geometry
-        t = nodes_gdf.loc[n_to].geometry
-        edge_lookup = G.get_edge_data(n_fr, n_to)[0].get("geometry", LineString([f, t]))
-        edge_lines.append(edge_lookup)
-    edges_gdf = gpd.GeoSeries(edge_lines)
-    return nodes_gdf, edges_gdf
+    Returns:
+        nodes_gdf: a GeoSeries of the nodes with their osmid and geometry.
+        edges_gdf: a GeoSeries of the geometry of the edges.
+
+    If an edge (u,v) doesn't have geometry data in G, edges_gdf contains
+    a straight line from u to v.
+
+    Raises:
+        ValueError if all other nodes are farther than dist_value from center_node
+
+    """
+    subgraph = nx.ego_graph(
+        road_network, center_node, radius=dist_value, distance=distance_type
+    )
+
+    nodes_gdf, edges_gdf = ox.graph_to_gdfs(subgraph)
+
+    return nodes_gdf.loc[:, "geometry"], edges_gdf.loc[:, "geometry"].reset_index()
 
 
 # TODO : complains about input type
@@ -117,28 +132,9 @@ def calculate_isopolygons_graph(
         #        else:
         #            get_poly_func = _get_poly_pandana
         for road_node in road_nodes:
-            subgraph = nx.ego_graph(
-                G, road_node, radius=dist_value, distance=distance_type
+            nodes_gdf, edges_gdf = _get_poly_nx(
+                road_network=road_network, center_node=road_node, dist_value=dist_value, distance_type=distance_type
             )
-
-            node_points = [
-                Point((data["x"], data["y"]))
-                for node, data in subgraph.nodes(data=True)
-            ]
-            nodes_gdf = gpd.GeoDataFrame(
-                {"id": list(subgraph.nodes)}, geometry=node_points
-            )
-            nodes_gdf = nodes_gdf.set_index("id")
-
-            edge_lines = []
-            for n_fr, n_to in subgraph.edges():
-                f = nodes_gdf.loc[n_fr].geometry
-                t = nodes_gdf.loc[n_to].geometry
-                edge_lookup = G.get_edge_data(n_fr, n_to)[0].get(
-                    "geometry", LineString([f, t])
-                )
-                edge_lines.append(edge_lookup)
-            edges_gdf = gpd.GeoSeries(edge_lines)
             try:
                 n = nodes_gdf.buffer(node_buff).geometry
                 e = edges_gdf.buffer(edge_buff).geometry
@@ -155,7 +151,8 @@ def calculate_isopolygons_graph(
 
     return isochrone_polys
 
-@disk_cache('mapbox_cache')
+
+@disk_cache("mapbox_cache")
 def calculate_isopolygons_Mapbox(
     X: Any,
     Y: Any,
@@ -180,7 +177,7 @@ def calculate_isopolygons_Mapbox(
     elif distance_type == "length":
         contour_type = "contours_meters"
     else:
-        raise Exception("Invalid distance type")    
+        raise Exception("Invalid distance type")
     for idx, coord_pair in enumerate(list(zip(X, Y))):
         request = (
             f"{base_url}mapbox/{route_profile}/{coord_pair[0]},"
