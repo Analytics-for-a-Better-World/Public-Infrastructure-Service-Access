@@ -1,9 +1,10 @@
 import geopandas as gpd
 import osmnx as ox
+import pandas as pd
 import pytest
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, Polygon
 
-from gpbp.distance import _get_poly_nx
+from gpbp.distance import _get_poly_nx, calculate_isopolygons_graph
 
 
 @pytest.fixture
@@ -41,6 +42,17 @@ def edges_gdf() -> gpd.GeoSeries:
         ],
         crs="EPSG:4326",
     )
+
+
+@pytest.fixture
+def dataframe_with_lat_and_lon() -> pd.DataFrame:
+
+    points = [
+        (-122.2314069, 37.7687054),  # closest node 19
+        (-122.23124, 37.76876),  # closest node 25
+    ]
+
+    return pd.DataFrame(points, columns=["longitude", "latitude"])
 
 
 class TestGetPolyNx:
@@ -95,3 +107,46 @@ class TestGetPolyNx:
                 dist_value=15,
                 distance_type="length",
             )
+
+
+class TestCalculateIsopolygonsGraph:
+
+    def test_format(self, dataframe_with_lat_and_lon):
+
+        isopolygons = calculate_isopolygons_graph(
+            X=dataframe_with_lat_and_lon.longitude.values,
+            Y=dataframe_with_lat_and_lon.latitude.values,
+            distance_type="length",
+            distance_values=[20, 50],
+            road_network=ox.load_graphml(
+                "tests/test_data/walk_network_4_nodes_6_edges.graphml"
+            ),
+        )
+
+        assert isinstance(isopolygons, dict)
+
+        assert isopolygons.keys() == {"ID_20", "ID_50"}
+
+        assert isinstance(isopolygons["ID_20"], list)
+
+        assert len(isopolygons["ID_50"]) == 2
+
+        isopolygons_ID_50 = isopolygons["ID_50"]
+
+        assert isinstance(isopolygons_ID_50[0], Polygon)
+
+    @pytest.mark.xfail(
+        reason="ValueError from _get_poly_nx not handled. Refactor", strict=True
+    )
+    def test_unhandled_value_error(self, dataframe_with_lat_and_lon):
+        calculate_isopolygons_graph(
+            X=dataframe_with_lat_and_lon.longitude.values,
+            Y=dataframe_with_lat_and_lon.latitude.values,
+            distance_type="length",
+            distance_values=[15],
+            road_network=ox.load_graphml(
+                "tests/test_data/walk_network_4_nodes_6_edges.graphml"
+            ),
+            node_buff=0.00005,
+            edge_buff=0.00005,
+        )

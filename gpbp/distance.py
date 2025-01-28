@@ -127,13 +127,16 @@ def calculate_isopolygons_graph(
     # Construct isopolygon for each distance value
     for dist_value in distance_values:
         isochrone_polys["ID_" + str(dist_value)] = []
-        if is_networkx:
-            get_poly_func = _get_poly_nx
+        # if is_networkx:
+        #    get_poly_func = _get_poly_nx
         #        else:
         #            get_poly_func = _get_poly_pandana
         for road_node in road_nodes:
             nodes_gdf, edges_gdf = _get_poly_nx(
-                road_network=road_network, center_node=road_node, dist_value=dist_value, distance_type=distance_type
+                road_network=road_network,
+                center_node=road_node,
+                dist_value=dist_value,
+                distance_type=distance_type,
             )
             try:
                 n = nodes_gdf.buffer(node_buff).geometry
