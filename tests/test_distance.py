@@ -100,7 +100,7 @@ class TestGetPolyNx:
 
     def test_raises_value_error_if_all_nodes_are_too_far(self):
         """All nodes are farther than 15 meters away from node 5909483619"""
-        with pytest.raises(ValueError, match="Graph contains no edges"):
+        with pytest.raises(ValueError, match="graph contains no edges"):
             _get_poly_nx(
                 self.road_network,
                 center_node=5909483619,
