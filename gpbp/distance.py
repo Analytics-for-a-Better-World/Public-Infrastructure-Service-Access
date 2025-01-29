@@ -127,17 +127,33 @@ def calculate_isopolygons_graph(
     # Construct isopolygon for each distance value
     for dist_value in distance_values:
         isochrone_polys["ID_" + str(dist_value)] = []
-        # if is_networkx:
-        #    get_poly_func = _get_poly_nx
+        if is_networkx:
+            get_poly_func = _get_poly_nx
         #        else:
         #            get_poly_func = _get_poly_pandana
         for road_node in road_nodes:
-            nodes_gdf, edges_gdf = _get_poly_nx(
-                road_network=road_network,
-                center_node=road_node,
-                dist_value=dist_value,
-                distance_type=distance_type,
+            subgraph = nx.ego_graph(
+                G, road_node, radius=dist_value, distance=distance_type
             )
+
+            node_points = [
+                Point((data["x"], data["y"]))
+                for node, data in subgraph.nodes(data=True)
+            ]
+            nodes_gdf = gpd.GeoDataFrame(
+                {"id": list(subgraph.nodes)}, geometry=node_points
+            )
+            nodes_gdf = nodes_gdf.set_index("id")
+
+            edge_lines = []
+            for n_fr, n_to in subgraph.edges():
+                f = nodes_gdf.loc[n_fr].geometry
+                t = nodes_gdf.loc[n_to].geometry
+                edge_lookup = G.get_edge_data(n_fr, n_to)[0].get(
+                    "geometry", LineString([f, t])
+                )
+                edge_lines.append(edge_lookup)
+            edges_gdf = gpd.GeoSeries(edge_lines)
             try:
                 n = nodes_gdf.buffer(node_buff).geometry
                 e = edges_gdf.buffer(edge_buff).geometry
