@@ -37,7 +37,7 @@ jupyter = "^1.0.0"
 streamlit = "^1.15.2"
 streamlit-folium = "^0.20.0"
 nbclient = "^0.7.2"
-shapely = "^1.8.5.post1"
+shapely = "2.0.6"
 plotly = "^5.22.0"
 streamlit-plotly-events = "^0.0.6"
 
