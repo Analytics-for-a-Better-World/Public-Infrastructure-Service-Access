@@ -1,4 +1,3 @@
-import osmnx as ox
 import pandas as pd
 import pytest
 
