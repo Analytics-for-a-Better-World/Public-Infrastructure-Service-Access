@@ -3,17 +3,15 @@ import urllib.request
 
 import geopandas as gpd
 import numpy as np
+import osmnx as ox
 import pandas as pd
-import geopandas as gpd
 import rasterio
 import rasterio.mask as riomask
 import requests
-import osmnx as ox
 from hdx.api.configuration import Configuration
 from hdx.data.resource import Resource
-
 # from layers import AdmArea
-from shapely.geometry import Polygon, MultiPolygon, Point
+from shapely.geometry import MultiPolygon, Point, Polygon
 
 # Population data sources
 
@@ -148,8 +146,8 @@ def osm_facilities(
     for an area defined by the MultiPolygon geometry
     """
     print(f"Retrieving {tags} for {adm_name} area")
-    gdf = ox.geometries_from_polygon(polygon=geometry, tags=tags)
-    osmids = gdf.index.get_level_values("osmid")
+    gdf = ox.features_from_polygon(polygon=geometry, tags=tags)
+    osmids = gdf.index.get_level_values("id")
     lon, lat = [], []
     for index, data in gdf.iterrows():
         if index[0] == "node":
