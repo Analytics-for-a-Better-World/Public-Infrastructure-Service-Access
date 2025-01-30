@@ -90,7 +90,7 @@ class TestGetPolyNx:
             distance_type="length",
         )
 
-        assert actual_edges_gdf.geom_almost_equals(edges_gdf, decimal=4).all()
+        assert actual_edges_gdf.geom_equals_exact(edges_gdf, tolerance=4).all()
 
     def test_raises_value_error_if_all_nodes_are_too_far(self):
         """All nodes are farther than 15 meters away from node 5909483619"""
