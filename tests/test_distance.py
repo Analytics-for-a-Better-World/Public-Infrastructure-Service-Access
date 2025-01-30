@@ -2,6 +2,7 @@ import geopandas as gpd
 import osmnx as ox
 import pandas as pd
 import pytest
+from geopandas.testing import assert_geoseries_equal
 from shapely.geometry import LineString, Point, Polygon
 
 from gpbp.distance import _get_poly_nx, calculate_isopolygons_graph
@@ -9,16 +10,16 @@ from gpbp.distance import _get_poly_nx, calculate_isopolygons_graph
 
 @pytest.fixture
 def nodes_gdf() -> gpd.GeoSeries:
+
     data = {
-        "osmid": [5909483619, 5909483625, 5909483636],
+        "osmid": [5909483625, 5909483619, 5909483636],
         "geometry": [
-            Point(-122.2314069, 37.7687054),
             Point(-122.231243, 37.7687576),
+            Point(-122.2314069, 37.7687054),
             Point(-122.2317839, 37.7689584),
         ],
     }
-
-    return gpd.GeoDataFrame(data, crs="EPSG:4326").set_index("osmid")
+    return gpd.GeoSeries(data["geometry"], index=data["osmid"], crs="EPSG:4326")
 
 
 @pytest.fixture
@@ -74,13 +75,7 @@ class TestGetPolyNx:
             distance_type="length",
         )
 
-        # TODO: gpd.testing.assert_geodataframe_equal(actual_nodes_gdf, expected_nodes_gdf)
-        # after updating to Geopandas 1.0.1
-
-        # assert that nodes (index) are equal (though not necessarily in the same order)
-        assert set(actual_nodes_gdf.index) == set(nodes_gdf.index)
-
-        assert actual_nodes_gdf.geom_almost_equals(nodes_gdf, decimal=4).all()
+        assert_geoseries_equal(actual_nodes_gdf, nodes_gdf)
 
     def test_get_poly_nx_edges(self, edges_gdf):
         """Tests that the geometry of the edges is correct"""
@@ -95,7 +90,6 @@ class TestGetPolyNx:
             distance_type="length",
         )
 
-        # TODO: use assert_geoseries_equal after update to geopandas 1.0.1
         assert actual_edges_gdf.geom_almost_equals(edges_gdf, decimal=4).all()
 
     def test_raises_value_error_if_all_nodes_are_too_far(self):
