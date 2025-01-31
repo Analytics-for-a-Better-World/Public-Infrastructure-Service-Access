@@ -158,7 +158,7 @@ def calculate_isopolygons_graph(
                 n = nodes_gdf.buffer(node_buff).geometry
                 e = edges_gdf.buffer(edge_buff).geometry
                 all_gs = list(n) + list(e)
-                new_iso = gpd.GeoSeries(all_gs).unary_union
+                new_iso = gpd.GeoSeries(all_gs).union_all()
                 new_iso = Polygon(new_iso.exterior)
                 isochrone_polys["ID_" + str(dist_value)].append(new_iso)
                 if is_scalar:
