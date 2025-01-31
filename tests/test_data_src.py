@@ -182,7 +182,7 @@ class TestFBdata:
 
 class TestOSMFacilities:
     def test_osm_facilities(self, mocker, multipolygon, mock_hospital_osm_facilities_data):
-        mocker.patch('data_src.ox.geometries_from_polygon', return_value=mock_hospital_osm_facilities_data)
+        mocker.patch("data_src.ox.features_from_polygon", return_value=mock_hospital_osm_facilities_data)
 
         gdf = osm_facilities('test_country', multipolygon, {"amenity": ["hospital", "clinic"]})
 
