@@ -159,7 +159,7 @@ def osm_facilities(
     """
     print(f"Retrieving {tags} for {adm_name} area")
     gdf = ox.features_from_polygon(polygon=geometry, tags=tags)
-    osmids = gdf.index.get_level_values("osmid")
+    osmids = gdf.index.get_level_values("id")
     lon, lat = [], []
     for index, data in gdf.iterrows():
         if index[0] == "node":

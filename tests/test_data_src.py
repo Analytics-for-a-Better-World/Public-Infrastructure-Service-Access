@@ -76,8 +76,8 @@ def mock_hospital_osm_facilities_data():
 
     gdf = gpd.GeoDataFrame(
         [hospital1, hospital2],
-        columns=["element_type", "osmid", "nodes", "building", "geometry"],
-    ).set_index(["element_type", "osmid"])
+        columns=["element_type", "id", "nodes", "building", "geometry"],
+    ).set_index(["element_type", "id"])
 
     return gdf
 
