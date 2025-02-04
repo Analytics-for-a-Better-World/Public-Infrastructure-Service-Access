@@ -76,8 +76,8 @@ def mock_hospital_osm_facilities_data():
 
     gdf = gpd.GeoDataFrame(
         [hospital1, hospital2],
-        columns=["element_type", "osmid", "nodes", "building", "geometry"],
-    ).set_index(["element_type", "osmid"])
+        columns=["element_type", "id", "nodes", "building", "geometry"],
+    ).set_index(["element_type", "id"])
 
     return gdf
 
@@ -182,7 +182,7 @@ class TestFBdata:
 
 class TestOSMFacilities:
     def test_osm_facilities(self, mocker, multipolygon, mock_hospital_osm_facilities_data):
-        mocker.patch('data_src.ox.geometries_from_polygon', return_value=mock_hospital_osm_facilities_data)
+        mocker.patch("data_src.ox.features_from_polygon", return_value=mock_hospital_osm_facilities_data)
 
         gdf = osm_facilities('test_country', multipolygon, {"amenity": ["hospital", "clinic"]})
 
