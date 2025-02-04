@@ -13,7 +13,7 @@
     - ```python -m venv venv``` to create the virtual environment
     - Activate the environment with ```venv\Scripts\Activate.ps1``` (on Windows) or ```source venv/bin/activate``` (on MacOS)
     - ```cd dist``` to enter the dist folder
-    - ```pip install gpbp-0.2.0-py3-none-any.whl``` to install the package
+    - ```pip install gpbp-1.0.0-py3-none-any.whl``` to install the package
 
 ### Usage
 1. Some example usage can be seen in the ```examples/gpbp_showcase.ipynb``` notebook
