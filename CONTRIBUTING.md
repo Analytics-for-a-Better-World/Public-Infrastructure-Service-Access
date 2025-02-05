@@ -21,7 +21,7 @@ part of the documentation, such as the official docs, docstrings, or the README 
 
 #### Build Documentation Locally
 
-The documentation is automatically build in Sphinx when the main branch changes. 
+The documentation is automatically built in Sphinx when the main branch changes. 
 It is often useful to build the documentation locally to see how changes to the documentation or the docstrings will be parsed by Sphinx. To do this activate your virtual environment and in the terminal run `cd docs` and `make html`. This will create a new folder “docs/_build/html”. Click on index.html to show the (local) website.
 
 In some cases it can be useful to force Sphinx to rebuild (rather than update) the documentation. To do this follow the steps above but replace `make html` with `make html clean`.
