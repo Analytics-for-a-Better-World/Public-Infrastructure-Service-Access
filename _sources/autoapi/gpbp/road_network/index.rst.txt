@@ -1,0 +1,29 @@
+gpbp.road_network
+=================
+
+.. py:module:: gpbp.road_network
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   gpbp.road_network.get_length_edge
+   gpbp.road_network.get_road_geometries_overpass
+   gpbp.road_network.get_road_network_overpass
+
+
+Module Contents
+---------------
+
+.. py:function:: get_length_edge(x)
+
+.. py:function:: get_road_geometries_overpass(geometry: shapely.geometry.MultiPolygon, network_type: str = 'drive', timeout: int = 2000)
+
+.. py:function:: get_road_network_overpass(geometry: shapely.geometry.MultiPolygon, network_type: str = 'driving', road_speeds: dict = None, default_speed: int = None, timeout: int = 2000, rounding: int = 5, graph_type: str = 'networkx')
+
+   geometry: geometry of the area to get road network
+   rounding: tolerance parameter for coordinate precision
+
+

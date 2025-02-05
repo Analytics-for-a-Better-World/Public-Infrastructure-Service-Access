@@ -1,0 +1,296 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>gpbp.data_src &mdash; Public Infrastructure Service Access 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Public Infrastructure Service Access
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="../../autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Public Infrastructure Service Access</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">Module code</a></li>
+      <li class="breadcrumb-item active">gpbp.data_src</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <h1>Source code for gpbp.data_src</h1><div class="highlight"><pre>
+<span></span><span class="kn">import</span><span class="w"> </span><span class="nn">os</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
+
+<span class="kn">import</span><span class="w"> </span><span class="nn">geopandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gpd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">osmnx</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">ox</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rasterio</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">rasterio.mask</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">riomask</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">requests</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">hdx.api.configuration</span><span class="w"> </span><span class="kn">import</span> <span class="n">Configuration</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">hdx.data.resource</span><span class="w"> </span><span class="kn">import</span> <span class="n">Resource</span>
+<span class="c1"># from layers import AdmArea</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">MultiPolygon</span><span class="p">,</span> <span class="n">Point</span><span class="p">,</span> <span class="n">Polygon</span>
+
+<span class="c1"># Population data sources</span>
+
+
+<div class="viewcode-block" id="get_admarea_mask">
+<a class="viewcode-back" href="../../autoapi/gpbp/data_src/index.html#gpbp.data_src.get_admarea_mask">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">get_admarea_mask</span><span class="p">(</span>
+    <span class="n">vector_polygon</span><span class="p">:</span> <span class="n">MultiPolygon</span><span class="p">,</span> <span class="n">raster_layer</span><span class="p">:</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">DatasetReader</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">np</span><span class="o">.</span><span class="n">ndarray</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Extract mask from raster for a given MultiPolygon</span>
+
+<span class="sd">    Return a boolean mask for the raster layer which is True where the polygon is located and false for all points outside</span>
+<span class="sd">    the given MultiPolygon</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">gtraster</span><span class="p">,</span> <span class="n">bound</span> <span class="o">=</span> <span class="n">riomask</span><span class="o">.</span><span class="n">mask</span><span class="p">(</span>
+        <span class="n">raster_layer</span><span class="p">,</span> <span class="p">[</span><span class="n">vector_polygon</span><span class="p">],</span> <span class="n">all_touched</span><span class="o">=</span><span class="kc">True</span><span class="p">,</span> <span class="n">crop</span><span class="o">=</span><span class="kc">False</span>
+    <span class="p">)</span>
+    <span class="c1"># Keep only non zero values</span>
+    <span class="n">adm_mask</span> <span class="o">=</span> <span class="n">gtraster</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">&gt;</span> <span class="mi">0</span>
+    <span class="k">return</span> <span class="n">adm_mask</span></div>
+
+
+
+<div class="viewcode-block" id="raster_to_df">
+<a class="viewcode-back" href="../../autoapi/gpbp/data_src/index.html#gpbp.data_src.raster_to_df">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">raster_to_df</span><span class="p">(</span><span class="n">raster_fpath</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">mask_polygon</span><span class="p">:</span> <span class="n">MultiPolygon</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Convert raster file to a dataframe of longitude, latitude</span>
+<span class="sd">    and statistical population count</span>
+
+<span class="sd">    Function takes the bounds of the raster file in the raster_fpath, draws an evenly spaced sequence of points between</span>
+<span class="sd">    the xmin &amp; xmax, and between ymin &amp; ymax, and then generates a grid to cover the complete square area inside the</span>
+<span class="sd">    boundaries. The population count for each point in the grid that falls within the given MultiPolygon area</span>
+<span class="sd">    (identified by the mask) is extracted from the raster file, and a dataframe with latitude, longitude &amp; population</span>
+<span class="sd">    count for each point in the raster is returned.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="c1"># Convert raster file to dataframe</span>
+    <span class="n">src</span> <span class="o">=</span> <span class="n">rasterio</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="n">raster_fpath</span><span class="p">)</span>
+    <span class="c1"># Create 2D arrays</span>
+    <span class="n">xmin</span><span class="p">,</span> <span class="n">ymax</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">xy</span><span class="p">(</span><span class="mf">0.00</span><span class="p">,</span> <span class="mf">0.00</span><span class="p">),</span> <span class="mi">9</span><span class="p">)</span>
+    <span class="n">xmax</span><span class="p">,</span> <span class="n">ymin</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">around</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">xy</span><span class="p">(</span><span class="n">src</span><span class="o">.</span><span class="n">height</span> <span class="o">-</span> <span class="mi">1</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">width</span> <span class="o">-</span> <span class="mi">1</span><span class="p">),</span> <span class="mi">9</span><span class="p">)</span>
+    <span class="n">x</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">xmin</span><span class="p">,</span> <span class="n">xmax</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">width</span><span class="p">)</span>
+    <span class="n">y</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">linspace</span><span class="p">(</span><span class="n">ymax</span><span class="p">,</span> <span class="n">ymin</span><span class="p">,</span> <span class="n">src</span><span class="o">.</span><span class="n">height</span><span class="p">)</span>
+    <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">meshgrid</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">)</span>
+    <span class="n">zs</span> <span class="o">=</span> <span class="n">src</span><span class="o">.</span><span class="n">read</span><span class="p">(</span><span class="mi">1</span><span class="p">)</span>
+    <span class="c1"># Adm area mask</span>
+    <span class="n">mask</span> <span class="o">=</span> <span class="n">get_admarea_mask</span><span class="p">(</span><span class="n">mask_polygon</span><span class="p">,</span> <span class="n">src</span><span class="p">)</span>
+    <span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">,</span> <span class="n">zs</span> <span class="o">=</span> <span class="n">xs</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">ys</span><span class="p">[</span><span class="n">mask</span><span class="p">],</span> <span class="n">zs</span><span class="p">[</span><span class="n">mask</span><span class="p">]</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;longitude&quot;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">xs</span><span class="p">),</span>
+        <span class="s2">&quot;latitude&quot;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">ys</span><span class="p">),</span>
+        <span class="s2">&quot;population&quot;</span><span class="p">:</span> <span class="n">pd</span><span class="o">.</span><span class="n">Series</span><span class="p">(</span><span class="n">zs</span><span class="p">),</span>
+    <span class="p">}</span>
+    <span class="c1"># Create X,Y,Z DataFrame</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">data</span><span class="o">=</span><span class="n">data</span><span class="p">)</span>
+    <span class="n">src</span><span class="o">.</span><span class="n">close</span><span class="p">()</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+
+<div class="viewcode-block" id="world_pop_data">
+<a class="viewcode-back" href="../../autoapi/gpbp/data_src/index.html#gpbp.data_src.world_pop_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">world_pop_data</span><span class="p">(</span><span class="n">country_iso3</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">geometry</span><span class="p">:</span> <span class="n">MultiPolygon</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get latest worldpop data for an area defined by the MultiPolygon geometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="n">worldpop_url</span> <span class="o">=</span> <span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;https://www.worldpop.org/rest/data/pop/wpgpunadj/?iso3=</span><span class="si">{</span><span class="n">country_iso3</span><span class="si">}</span><span class="s2">&quot;</span>
+    <span class="p">)</span>
+    <span class="n">headers</span> <span class="o">=</span> <span class="p">{</span>
+        <span class="s2">&quot;User-Agent&quot;</span><span class="p">:</span> <span class="s2">&quot;Mozilla/5.0 (Windows NT 10.0; Win64; x64)&quot;</span>
+    <span class="p">}</span>  <span class="c1"># User-Agent is required to get API response</span>
+    <span class="n">response</span> <span class="o">=</span> <span class="n">requests</span><span class="o">.</span><span class="n">get</span><span class="p">(</span><span class="n">worldpop_url</span><span class="p">,</span> <span class="n">headers</span><span class="o">=</span><span class="n">headers</span><span class="p">)</span>
+
+    <span class="c1"># Extract url for data for the latest year</span>
+    <span class="n">data</span> <span class="o">=</span> <span class="n">response</span><span class="o">.</span><span class="n">json</span><span class="p">()[</span><span class="s2">&quot;data&quot;</span><span class="p">][</span><span class="o">-</span><span class="mi">1</span><span class="p">]</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">data</span><span class="p">[</span><span class="s2">&quot;files&quot;</span><span class="p">][</span><span class="mi">0</span><span class="p">]</span>
+    <span class="n">filehandle</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Data downloaded&quot;</span><span class="p">)</span>
+    <span class="c1"># Convert raster file to dataframe</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Converting raster file to dataframe&quot;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">raster_to_df</span><span class="p">(</span><span class="n">filehandle</span><span class="p">,</span> <span class="n">geometry</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+
+<div class="viewcode-block" id="fb_pop_data">
+<a class="viewcode-back" href="../../autoapi/gpbp/data_src/index.html#gpbp.data_src.fb_pop_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">fb_pop_data</span><span class="p">(</span><span class="n">country_iso3</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">geometry</span><span class="p">:</span> <span class="n">MultiPolygon</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get 2020 facebook data for an area defined by the MultiPolygon geometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">Configuration</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">hdx_site</span><span class="o">=</span><span class="s2">&quot;prod&quot;</span><span class="p">,</span> <span class="n">user_agent</span><span class="o">=</span><span class="s2">&quot;Get_Population_Data&quot;</span><span class="p">,</span> <span class="n">hdx_read_only</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="n">resource</span> <span class="o">=</span> <span class="n">Resource</span><span class="o">.</span><span class="n">search_in_hdx</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;name:</span><span class="si">{</span><span class="n">country_iso3</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">_general_2020_csv.zip&quot;</span>
+    <span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">resource</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;download_url&quot;</span><span class="p">]</span>
+    <span class="n">filehandle</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data downloaded&quot;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filehandle</span><span class="p">,</span> <span class="n">compression</span><span class="o">=</span><span class="s2">&quot;zip&quot;</span><span class="p">)</span>
+
+    <span class="c1"># Create GDF, clip with geometry and convert back to regular DF</span>
+    <span class="n">df</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">apply</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="n">Point</span><span class="p">(</span><span class="n">x</span><span class="p">[</span><span class="s2">&quot;longitude&quot;</span><span class="p">],</span> <span class="n">x</span><span class="p">[</span><span class="s2">&quot;latitude&quot;</span><span class="p">]),</span> <span class="n">axis</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+    <span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span><span class="n">df</span><span class="p">,</span> <span class="n">geometry</span><span class="o">=</span><span class="s2">&quot;geometry&quot;</span><span class="p">)</span>
+    <span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">clip</span><span class="p">(</span><span class="n">gdf</span><span class="p">,</span> <span class="n">geometry</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">(</span><span class="n">gdf</span><span class="o">.</span><span class="n">drop</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]))</span>
+
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loading data to dataframe&quot;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">country_iso3</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">_general_2020&quot;</span><span class="p">:</span> <span class="s2">&quot;population&quot;</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+
+<div class="viewcode-block" id="rwi_data">
+<a class="viewcode-back" href="../../autoapi/gpbp/data_src/index.html#gpbp.data_src.rwi_data">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">rwi_data</span><span class="p">(</span><span class="n">country_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">geometry</span><span class="p">:</span> <span class="n">MultiPolygon</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">pd</span><span class="o">.</span><span class="n">DataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Get Facebook Relative Wealth index data defined by the MultiPolygon geometry</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="k">try</span><span class="p">:</span>
+        <span class="n">Configuration</span><span class="o">.</span><span class="n">create</span><span class="p">(</span>
+            <span class="n">hdx_site</span><span class="o">=</span><span class="s2">&quot;prod&quot;</span><span class="p">,</span> <span class="n">user_agent</span><span class="o">=</span><span class="s2">&quot;Get_RWI_Data&quot;</span><span class="p">,</span> <span class="n">hdx_read_only</span><span class="o">=</span><span class="kc">True</span>
+        <span class="p">)</span>
+    <span class="k">except</span><span class="p">:</span>
+        <span class="k">pass</span>
+    <span class="n">resource</span> <span class="o">=</span> <span class="n">Resource</span><span class="o">.</span><span class="n">search_in_hdx</span><span class="p">(</span>
+        <span class="sa">f</span><span class="s2">&quot;name:</span><span class="si">{</span><span class="n">country_name</span><span class="o">.</span><span class="n">lower</span><span class="p">()</span><span class="si">}</span><span class="s2">_relative_wealth_index.csv&quot;</span>
+    <span class="p">)</span>
+    <span class="n">url</span> <span class="o">=</span> <span class="n">resource</span><span class="p">[</span><span class="mi">0</span><span class="p">][</span><span class="s2">&quot;download_url&quot;</span><span class="p">]</span>
+    <span class="n">filehandle</span><span class="p">,</span> <span class="n">_</span> <span class="o">=</span> <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Data downloaded&quot;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">pd</span><span class="o">.</span><span class="n">read_csv</span><span class="p">(</span><span class="n">filehandle</span><span class="p">)</span>
+    <span class="n">bounds</span> <span class="o">=</span> <span class="nb">list</span><span class="p">(</span><span class="nb">map</span><span class="p">(</span><span class="k">lambda</span> <span class="n">x</span><span class="p">:</span> <span class="nb">round</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="mi">6</span><span class="p">),</span> <span class="n">geometry</span><span class="o">.</span><span class="n">bounds</span><span class="p">))</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bounds</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="si">}</span><span class="s2"> &lt;= longitude &lt;= </span><span class="si">{</span><span class="n">bounds</span><span class="p">[</span><span class="mi">2</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="n">df</span> <span class="o">=</span> <span class="n">df</span><span class="o">.</span><span class="n">query</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;</span><span class="si">{</span><span class="n">bounds</span><span class="p">[</span><span class="mi">1</span><span class="p">]</span><span class="si">}</span><span class="s2"> &lt;= latitude &lt;= </span><span class="si">{</span><span class="n">bounds</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="s2">&quot;Loading data to dataframe&quot;</span><span class="p">)</span>
+    <span class="k">return</span> <span class="n">df</span></div>
+
+
+
+<span class="c1"># Facilities data sources</span>
+
+
+<div class="viewcode-block" id="osm_facilities">
+<a class="viewcode-back" href="../../autoapi/gpbp/data_src/index.html#gpbp.data_src.osm_facilities">[docs]</a>
+<span class="k">def</span><span class="w"> </span><span class="nf">osm_facilities</span><span class="p">(</span>
+    <span class="n">adm_name</span><span class="p">:</span> <span class="nb">str</span><span class="p">,</span> <span class="n">geometry</span><span class="p">:</span> <span class="n">MultiPolygon</span><span class="p">,</span> <span class="n">tags</span><span class="p">:</span> <span class="nb">dict</span>
+<span class="p">)</span> <span class="o">-&gt;</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">:</span>
+<span class="w">    </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">    Retrieve facilities specified by the tags parameter for an area defined by the MultiPolygon geometry.</span>
+
+<span class="sd">    Return a dataframe where each facility is added with its osmid, longitude, latitude and geometry. If facility is a node</span>
+<span class="sd">    (point) then its latitude and longitude are the same as the geometry. If facility is a way (line) then its latitude</span>
+<span class="sd">    and longitude are the centroid of the geometry.</span>
+<span class="sd">    &quot;&quot;&quot;</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Retrieving </span><span class="si">{</span><span class="n">tags</span><span class="si">}</span><span class="s2"> for </span><span class="si">{</span><span class="n">adm_name</span><span class="si">}</span><span class="s2"> area&quot;</span><span class="p">)</span>
+    <span class="n">gdf</span> <span class="o">=</span> <span class="n">ox</span><span class="o">.</span><span class="n">features_from_polygon</span><span class="p">(</span><span class="n">polygon</span><span class="o">=</span><span class="n">geometry</span><span class="p">,</span> <span class="n">tags</span><span class="o">=</span><span class="n">tags</span><span class="p">)</span>
+    <span class="n">osmids</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">index</span><span class="o">.</span><span class="n">get_level_values</span><span class="p">(</span><span class="s2">&quot;id&quot;</span><span class="p">)</span>
+    <span class="n">lon</span><span class="p">,</span> <span class="n">lat</span> <span class="o">=</span> <span class="p">[],</span> <span class="p">[]</span>
+    <span class="k">for</span> <span class="n">index</span><span class="p">,</span> <span class="n">data</span> <span class="ow">in</span> <span class="n">gdf</span><span class="o">.</span><span class="n">iterrows</span><span class="p">():</span>
+        <span class="k">if</span> <span class="n">index</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span> <span class="o">==</span> <span class="s2">&quot;node&quot;</span><span class="p">:</span>
+            <span class="n">lon</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">lat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="n">lon</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">x</span><span class="p">)</span>
+            <span class="n">lat</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">data</span><span class="p">[</span><span class="s2">&quot;geometry&quot;</span><span class="p">]</span><span class="o">.</span><span class="n">centroid</span><span class="o">.</span><span class="n">y</span><span class="p">)</span>
+    <span class="n">gdf</span> <span class="o">=</span> <span class="n">gpd</span><span class="o">.</span><span class="n">GeoDataFrame</span><span class="p">(</span>
+        <span class="n">data</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;osmid&quot;</span><span class="p">:</span> <span class="n">osmids</span><span class="p">,</span> <span class="s2">&quot;longitude&quot;</span><span class="p">:</span> <span class="n">lon</span><span class="p">,</span> <span class="s2">&quot;latitude&quot;</span><span class="p">:</span> <span class="n">lat</span><span class="p">},</span>
+        <span class="n">geometry</span><span class="o">=</span><span class="n">gdf</span><span class="o">.</span><span class="n">geometry</span><span class="o">.</span><span class="n">values</span><span class="p">,</span>
+    <span class="p">)</span>
+    <span class="n">gdf</span> <span class="o">=</span> <span class="n">gdf</span><span class="o">.</span><span class="n">reset_index</span><span class="p">()</span><span class="o">.</span><span class="n">rename</span><span class="p">(</span><span class="n">columns</span><span class="o">=</span><span class="p">{</span><span class="s2">&quot;index&quot;</span><span class="p">:</span> <span class="s2">&quot;ID&quot;</span><span class="p">})</span>
+    <span class="k">return</span> <span class="n">gdf</span></div>
+
+</pre></div>
+
+           </div>
+          </div>
+          <footer>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

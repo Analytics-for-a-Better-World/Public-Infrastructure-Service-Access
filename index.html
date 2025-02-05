@@ -1,0 +1,175 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Public Infrastructure Service Access &mdash; Public Infrastructure Service Access 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+      <link rel="stylesheet" type="text/css" href="_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="API Reference" href="autoapi/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            Public Infrastructure Service Access
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">Public Infrastructure Service Access</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Public Infrastructure Service Access</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.md.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="public-infrastructure-service-access">
+<h1>Public Infrastructure Service Access<a class="headerlink" href="#public-infrastructure-service-access" title="Link to this heading"></a></h1>
+<section id="local-development">
+<h2>Local Development<a class="headerlink" href="#local-development" title="Link to this heading"></a></h2>
+<section id="installation">
+<h3>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Clone the repository</p></li>
+<li><p>This project uses <a class="reference external" href="https://python-poetry.org/">Poetry</a> for dependency and packaging management. You can use these <a class="reference external" href="https://python-poetry.org/docs/#installation">installation instructions</a> to add it to your system.</p></li>
+</ol>
+<ul class="simple">
+<li><p>If you choose to use poetry you can execute the following commands in a terminal while you are located in the repository folder:
+<code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">install</span></code>
+This will create a virtual environment and install all the necessary library dependencies.</p></li>
+<li><p>If you <strong>do not</strong> choose to use poetry we first recommend creating a virtual environment and
+then install the package and necessary dependencies by installing the <strong>.whl</strong> file in the <strong>dist</strong> folder. So in a terminal, while you are located in the repository folder, execute the following:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">venv</span> <span class="pre">venv</span></code> to create the virtual environment</p></li>
+<li><p>Activate the environment with <code class="docutils literal notranslate"><span class="pre">venv\Scripts\Activate.ps1</span></code> (on Windows) or <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">venv/bin/activate</span></code> (on MacOS)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">dist</span></code> to enter the dist folder</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">gpbp-1.0.0-py3-none-any.whl</span></code> to install the package</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="usage">
+<h3>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h3>
+<ol class="arabic simple">
+<li><p>Some example usage can be seen in the <code class="docutils literal notranslate"><span class="pre">examples/gpbp_showcase.ipynb</span></code> notebook</p></li>
+<li><p>When in the <code class="docutils literal notranslate"><span class="pre">gpbp_app</span></code> folder you can run a <a class="reference external" href="https://streamlit.io/">Streamlit</a> app to use
+the package using an interface. Specifically, while you are located in the repository folder, execute the following:</p></li>
+</ol>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">gpbp_app</span></code> to enter the application folder</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">streamlit</span> <span class="pre">run</span> <span class="pre">main_page.py</span></code> to run the app, which will automatically open a browser window</p></li>
+</ul>
+</section>
+</section>
+<section id="deploying-running-the-web-interface-docker">
+<h2>Deploying/running the web interface (Docker)<a class="headerlink" href="#deploying-running-the-web-interface-docker" title="Link to this heading"></a></h2>
+<p>Docker is a tool that allows you to package an application and its dependencies in a virtual container that can run on most operating systems. The web interface for the PISA project can be run using Docker. To do this, you need to have Docker installed on your system. You can download Docker from <a class="reference external" href="https://www.docker.com/products/docker-desktop">here</a>.</p>
+<p>After you have installed Docker, you can run the following command in the repository to build an image of the PISA project. All the necessary dependencies will be installed inside the image, isolated from your system. The image will be tagged as <code class="docutils literal notranslate"><span class="pre">pisa</span></code>.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>pisa<span class="w"> </span>.
+</pre></div>
+</div>
+<p>Now that you have built the image, you can run a container using it. The following command will run a container from the <code class="docutils literal notranslate"><span class="pre">pisa</span></code> image and expose the web interface on port 8501 to localhost only. The command will show the URL on which it’s accessible. The container will be named <code class="docutils literal notranslate"><span class="pre">pisa</span></code> as well.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">127</span>.0.0.1:8501:8501<span class="w"> </span>--name<span class="w"> </span>pisa<span class="w"> </span>pisa
+</pre></div>
+</div>
+<p>You can use the following commands after running the container for the first time:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>stop<span class="w"> </span>pisa
+docker<span class="w"> </span>start<span class="w"> </span>pisa
+docker<span class="w"> </span>logs<span class="w"> </span>pisa
+</pre></div>
+</div>
+<p>The image is also ready to be deployed on a server or a cloud platform that supports Docker.</p>
+</section>
+<section id="references">
+<h2>References<a class="headerlink" href="#references" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference external" href="https://pythoncharmers.com/blog/travel-distance-python-with-geopandas-folium-alphashape-osmnx-buffer.html">Travel Distance Calculations in Python</a></p></li>
+<li><p><a class="reference external" href="https://towardsdatascience.com/comparison-of-geocoding-services-applied-to-stroke-care-facilities-in-vietnam-with-python-ff0ba753a590">Geocoding Services in Python</a></p></li>
+<li><p><a class="reference external" href="https://towardsdatascience.com/visualising-global-population-datasets-with-python-c87bcfc8c6a6">Visualising Global Population Datasets in Python</a></p></li>
+<li><p><a class="reference external" href="https://github.com/Analytics-for-a-Better-World/GPBP_Analytics_Tools">GPBP Publications - Temporary GitHub Repository</a></p></li>
+<li><p><a class="reference external" href="https://giscience.github.io/openrouteservice/installation/Installation-and-Usage.html">Installation and Usage of Openroute Service</a></p></li>
+</ul>
+<div class="toctree-wrapper compound">
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="autoapi/index.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
