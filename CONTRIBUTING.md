@@ -19,6 +19,8 @@ are required to merge into main.
 You can never have enough documentation! Please feel free to contribute to any
 part of the documentation, such as the official docs, docstrings, or the README file.
 
+#### Build Documentation Locally
+
 The documentation is automatically build in Sphinx when the main branch changes. 
 It is often useful to build the documentation locally to see how changes to the documentation or the docstrings will be parsed by Sphinx. To do this activate your virtual environment and in the terminal run `cd docs` and `make html`. This will create a new folder “docs/_build/html”. Click on index.html to show the (local) website.
 
