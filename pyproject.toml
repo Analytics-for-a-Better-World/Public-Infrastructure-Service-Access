@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "gpbp"
 version = "1.0.0"
-description = ""
+description = "Estimate and optimize service coverage of public infrastructure facilities."
 authors = ["EiriniK <Eirini.Kousathana@ortec.com>"]
 readme = "README.md"
 packages = [{include = "gpbp"}]
@@ -42,6 +42,9 @@ pytest = "^7.2.0"
 black = "^22.10.0"
 pytest-cov = "^6.0.0"
 pytest-mock = "^3.14.0"
+myst-nb = "^1.1.2"
+sphinx-autoapi = "^3.4.0"
+sphinx-rtd-theme = "^3.0.2"
 
 [build-system]
 requires = ["poetry-core"]

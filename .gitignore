@@ -7,6 +7,12 @@ model_files/*
 # Results
 results/*
 
+# Sphinx documentation
+docs/_build/
+
+# MacOS
+.DS_Store
+
 # Virtual environment
 venv
 
@@ -34,9 +40,5 @@ examples/test_ntbk.ipynb
 Public-Infrastructure-Location-Optimiser.code-workspace
 
 data
-publications/.DS_Store
-publications/WHO Nepal Paper/.DS_Store
 publications/PISA Timor Leste/.ipynb_checkpoints/Timor Leste_Estrada_WorldPop_Analysis-checkpoint.ipynb
-publications/PISA Timor Leste/.DS_Store
 *.pkl
-.DS_Store
