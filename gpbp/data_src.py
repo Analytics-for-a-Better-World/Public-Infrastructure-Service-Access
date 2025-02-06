@@ -3,17 +3,15 @@ import urllib.request
 
 import geopandas as gpd
 import numpy as np
+import osmnx as ox
 import pandas as pd
-import geopandas as gpd
 import rasterio
 import rasterio.mask as riomask
 import requests
-import osmnx as ox
 from hdx.api.configuration import Configuration
 from hdx.data.resource import Resource
-
 # from layers import AdmArea
-from shapely.geometry import Polygon, MultiPolygon, Point
+from shapely.geometry import MultiPolygon, Point, Polygon
 
 # Population data sources
 
@@ -22,7 +20,10 @@ def get_admarea_mask(
     vector_polygon: MultiPolygon, raster_layer: rasterio.DatasetReader
 ) -> np.ndarray:
     """
-    Extract mask from raster for a given polygon
+    Extract mask from raster for a given MultiPolygon
+
+    Return a boolean mask for the raster layer which is True where the polygon is located and false for all points outside
+    the given MultiPolygon
     """
     gtraster, bound = riomask.mask(
         raster_layer, [vector_polygon], all_touched=True, crop=False
@@ -36,6 +37,12 @@ def raster_to_df(raster_fpath: str, mask_polygon: MultiPolygon) -> pd.DataFrame:
     """
     Convert raster file to a dataframe of longitude, latitude
     and statistical population count
+
+    Function takes the bounds of the raster file in the raster_fpath, draws an evenly spaced sequence of points between
+    the xmin & xmax, and between ymin & ymax, and then generates a grid to cover the complete square area inside the
+    boundaries. The population count for each point in the grid that falls within the given MultiPolygon area
+    (identified by the mask) is extracted from the raster file, and a dataframe with latitude, longitude & population
+    count for each point in the raster is returned.
     """
     # Convert raster file to dataframe
     src = rasterio.open(raster_fpath)
@@ -144,12 +151,15 @@ def osm_facilities(
     adm_name: str, geometry: MultiPolygon, tags: dict
 ) -> gpd.GeoDataFrame:
     """
-    Retrieve facilities specified by the tags parameter
-    for an area defined by the MultiPolygon geometry
+    Retrieve facilities specified by the tags parameter for an area defined by the MultiPolygon geometry.
+
+    Return a dataframe where each facility is added with its osmid, longitude, latitude and geometry. If facility is a node
+    (point) then its latitude and longitude are the same as the geometry. If facility is a way (line) then its latitude
+    and longitude are the centroid of the geometry.
     """
     print(f"Retrieving {tags} for {adm_name} area")
-    gdf = ox.geometries_from_polygon(polygon=geometry, tags=tags)
-    osmids = gdf.index.get_level_values("osmid")
+    gdf = ox.features_from_polygon(polygon=geometry, tags=tags)
+    osmids = gdf.index.get_level_values("id")
     lon, lat = [], []
     for index, data in gdf.iterrows():
         if index[0] == "node":

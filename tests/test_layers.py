@@ -5,7 +5,7 @@ import networkx as nx
 import numpy as np
 import osmnx as ox
 import pytest
-from shapely.geometry import MultiPolygon, Polygon
+from shapely.geometry import MultiPolygon, Point, Polygon
 
 from gpbp.layers import AdmArea
 
@@ -189,3 +189,53 @@ def test_get_road_network(mocker, adm_area, mock_graph, network_type, default_sp
         assert data["speed_kph"] == default_speed
         expected_travel_time = data["length"] / (data["speed_kph"] * 1000 / 60)  # length in meters, speed in kph
         assert round(data["travel_time"], 2) == round(expected_travel_time, 2)
+
+
+class TestAdmAreaPrepareOptimizationData:
+    @pytest.fixture
+    def adm_area_with_population_and_facilities(self, adm_area, population_dataframe):
+        adm_area.pop_df = population_dataframe
+        adm_area.fac_gdf = gpd.GeoDataFrame({"ID": [0], "geometry": [Point(0, 0)]}, crs="EPSG:4326")
+        adm_area.pot_fac_gdf = gpd.GeoDataFrame({"ID": [1], "geometry": [Point(1, 1)]}, crs="EPSG:4326")
+
+        return adm_area
+
+    def test_prepare_optimization_data_pop_count(self, mocker, adm_area_with_population_and_facilities, population_dataframe):
+        # Mock population_served, we're not testing it in this unit test
+        distance_type = "length"
+        dummy_current = {distance_type: "dummy_current_df"}
+        dummy_potential = {distance_type: "dummy_potential_df"}
+        mocker.patch(
+            "gpbp.layers.population_served",
+            side_effect=[dummy_current[distance_type], dummy_potential[distance_type]]
+        )
+
+        pop_count, _, _ = adm_area_with_population_and_facilities.prepare_optimization_data(
+            distance_type=distance_type,
+            distance_values=[1000],
+            mode_of_transport="driving",
+            strategy="osm",
+            population_resolution=1,  # Testing the minimum resolution. The result should be the total population.
+        )
+
+        assert pop_count == population_dataframe["population"].sum()
+
+    def test_prepare_optimization_data_current_and_potential(self, mocker, adm_area_with_population_and_facilities):
+        distance_type = "length"
+        dummy_current = {distance_type: "dummy_current_df", "some_other_key": "content_we_don't_want"}
+        dummy_potential = {distance_type: "dummy_potential_df", "some_other_key": "content_we_don't_want"}
+        mocker.patch(
+            "gpbp.layers.population_served",
+            side_effect=[dummy_current[distance_type], dummy_potential[distance_type]]
+        )
+
+        # We don't care about pop_count here; just check current and potential outputs
+        _, current, potential = adm_area_with_population_and_facilities.prepare_optimization_data(
+            distance_type=distance_type,
+            distance_values=[1000],
+            mode_of_transport="driving",
+            strategy="osm"
+        )
+
+        assert current == {distance_type: "dummy_current_df"}
+        assert potential == {distance_type: "dummy_potential_df"}

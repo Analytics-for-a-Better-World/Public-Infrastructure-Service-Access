@@ -1,5 +1,4 @@
 import pytest
-import pandas as pd
 
 from gpbp.utils import generate_grid_in_polygon, group_population
 from shapely.geometry import Polygon, MultiPolygon
@@ -46,21 +45,13 @@ class TestGenerateGridInPolygon:
         with pytest.raises(ValueError):
             generate_grid_in_polygon(0.5, empty_multipolygon)
 
-
-
-@pytest.fixture()
-def df():
-    return pd.DataFrame({"longitude": [6.87641, 6.87644, 6.87964, 6.88710], "latitude": [53.06167, 53.06180, 53.06000, 53.08787],
-                         "population": [5, 4, 3, 2]})
-
-
 class TestGroupPopulation:
     @pytest.mark.parametrize("nof_digits, count_of_areas_included", [(1, 1), (2, 2), (3, 3), (4, 4)])
-    def test_group_pop_length(self, df, nof_digits, count_of_areas_included):
-        group_pop = group_population(df, nof_digits=nof_digits)
+    def test_group_pop_length(self, population_dataframe, nof_digits, count_of_areas_included):
+        group_pop = group_population(population_dataframe, nof_digits=nof_digits)
         assert group_pop.shape[0] == count_of_areas_included
 
     @pytest.mark.parametrize("nof_digits, longitude, latitude, population_sum", [(1, 6.9, 53.1, 14), (2, 6.88, 53.06, 12), (3, 6.876, 53.062, 9), (4, 6.8796, 53.0600, 3)])
-    def test_group_pop_values(self, df, nof_digits, longitude, latitude, population_sum):
-        group_pop = group_population(df, nof_digits=nof_digits)
+    def test_group_pop_values(self, population_dataframe, nof_digits, longitude, latitude, population_sum):
+        group_pop = group_population(population_dataframe, nof_digits=nof_digits)
         assert group_pop.loc[(group_pop['longitude'] == longitude) & (group_pop['latitude'] == latitude)]['population'].values[0] == population_sum
