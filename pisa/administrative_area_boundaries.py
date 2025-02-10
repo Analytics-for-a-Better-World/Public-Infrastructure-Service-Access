@@ -9,7 +9,7 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
-class AdministrativeAreaBoundaries:
+class AdministrativeArea:
     """Get the boundaries of administrative areas for a specified country.
 
     The administrative area level is specified by an integer, where 0 is the country level, 
@@ -20,10 +20,10 @@ class AdministrativeAreaBoundaries:
     Example usage:
     
     ```python
-    admin_area_boundaries = AdministrativeAreaBoundaries("Timor-Leste", admin_level=1)
-    print(boundaries.get_admin_area_names())
-    target_admin_area_boundary = boundaries.get_admin_area_boundaries("Baucau")
-    country_code = boundaries.get_iso3_country_code()
+    timor_leste = AdministrativeArea("Timor-Leste", admin_level=1)
+    print(timor_leste.get_admin_area_names())
+    baucau_boundaries = timor_leste.get_admin_area_boundaries("Baucau")
+    timor_leste_country_code = timor_leste.get_iso3_country_code()
     ```
     """
 
@@ -32,12 +32,12 @@ class AdministrativeAreaBoundaries:
         country_name: str,
         admin_level: int,
     ):
-        self.country = self._validate_country_name(country_name)
+        self.country = self._get_pycountry_from_country_name(country_name)
         self.admin_level = admin_level
-        self.all_admin_areas_gdf = self._download_admin_areas()
+        self.all_admin_areas_gdf = self._download_admin_areas(country=self.country, admin_level=self.admin_level)
 
     @staticmethod
-    def _validate_country_name(country_name: str):
+    def _get_pycountry_from_country_name(country_name: str) -> pycountry.ExistingCountries.data_class_base:
         """Validates country name using fuzzy matching and returns pycountry object.
         
         Args:
@@ -56,15 +56,15 @@ class AdministrativeAreaBoundaries:
             logger.warning(f"Country name '{country_name}' not found, attempting fuzzy search")
             try:
                 possible_matches = pycountry.countries.search_fuzzy(country_name)
-            except Exception as e:
-                raise Exception("Invalid form of country name")
+            except LookupError as e:
+                raise ValueError("Invalid form of country name") from e
             raise Exception(f"Country not found. Possible matches: {[match.name for match in possible_matches]}")
         
         logger.info(f"Country name '{country_name}' validated successfully")
         return country
     
     @staticmethod
-    def _download_admin_areas(country_name: str, admin_level: int) -> GeoDataFrame:
+    def _download_admin_areas(country: pycountry.ExistingCountries.data_class_base, admin_level: int) -> GeoDataFrame:
         """Downloads and returns all administrative areas of specified level for a country.
         
         Args:
@@ -74,10 +74,10 @@ class AdministrativeAreaBoundaries:
         Returns:
             GeoDataFrame containing all administrative areas of the specified level
         """
-        logger.info(f"Retrieving boundaries of all administrative areas of level {admin_level} for country {country_name}")
+        logger.info(f"Retrieving boundaries of all administrative areas of level {admin_level} for country {country.name}")
         downloader = GADMDownloader(version="4.0")
-        return downloader.get_shape_data_by_country_name(
-            country_name=country_name,
+        return downloader.get_shape_data_by_country(
+            country=country,
             ad_level=admin_level
         )
     
