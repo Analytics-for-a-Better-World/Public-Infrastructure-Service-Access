@@ -51,7 +51,7 @@ def test_get_admin_area_boundaries_found():
 
 def test_get_admin_area_boundaries_not_found():
     admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
-    with pytest.raises(Exception) as excinfo:
+    with pytest.raises(ValueError) as excinfo:
         admin_area.get_admin_area_boundaries("NonExistentArea")
     assert "not found" in str(excinfo.value)
 

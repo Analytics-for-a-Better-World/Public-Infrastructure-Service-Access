@@ -58,7 +58,7 @@ class AdministrativeArea:
                 possible_matches = pycountry.countries.search_fuzzy(country_name)
             except LookupError as e:
                 raise ValueError("Invalid form of country name") from e
-            raise Exception(f"Country not found. Possible matches: {[match.name for match in possible_matches]}")
+            raise ValueError(f"Country not found. Possible matches: {[match.name for match in possible_matches]}")
         
         logger.info(f"Country name '{country_name}' validated successfully")
         return country
@@ -113,9 +113,9 @@ class AdministrativeArea:
         ]
         
         if filtered.empty:
-            raise Exception(
-            f"Administrative area '{admin_area_name}' not found. "
-            f"Available areas: {self.get_admin_area_names()}"
+            raise ValueError(
+                f"Administrative area '{admin_area_name}' not found. "
+                f"Available areas: {self.get_admin_area_names()}"
             )
             
         return filtered.geometry.iloc[0]
