@@ -31,33 +31,33 @@ def patch_download(mocker):
 
 
 def test_get_admin_area_names_level_0():
-    admin_area_boundaries = AdministrativeArea("Timor-Leste", admin_level=0)
-    names = admin_area_boundaries.get_admin_area_names()
-    assert names == [admin_area_boundaries.country.name]
+    admin_area = AdministrativeArea("Timor-Leste", admin_level=0)
+    names = admin_area.get_admin_area_names()
+    assert names == [admin_area.country.name]
 
 
 def test_get_admin_area_names_level_1():
-    admin_area_boundaries = AdministrativeArea("Timor-Leste", admin_level=1)
-    names = admin_area_boundaries.get_admin_area_names()
+    admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+    names = admin_area.get_admin_area_names()
     assert names == ["AreaA", "AreaB"]
 
 
 def test_get_admin_area_boundaries_found():
-    admin_area_boundaries = AdministrativeArea("Timor-Leste", admin_level=1)
-    geom = admin_area_boundaries.get_admin_area_boundaries("AreaA")
+    admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+    geom = admin_area.get_admin_area_boundaries("AreaA")
     expected = Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])
     assert geom.equals(expected)
 
 
 def test_get_admin_area_boundaries_not_found():
-    admin_area_boundaries = AdministrativeArea("Timor-Leste", admin_level=1)
+    admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
     with pytest.raises(Exception) as excinfo:
-        admin_area_boundaries.get_admin_area_boundaries("NonExistentArea")
+        admin_area.get_admin_area_boundaries("NonExistentArea")
     assert "not found" in str(excinfo.value)
 
 
 def test_get_iso3_country_code():
-    admin_area_boundaries = AdministrativeArea("Timor-Leste", admin_level=1)
-    iso_code = admin_area_boundaries.get_iso3_country_code()
+    admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+    iso_code = admin_area.get_iso3_country_code()
     country = pycountry.countries.get(name="Timor-Leste")
     assert iso_code == country.alpha_3.lower()
