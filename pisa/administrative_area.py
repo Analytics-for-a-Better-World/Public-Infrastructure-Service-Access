@@ -37,7 +37,7 @@ class AdministrativeArea:
         self.all_admin_areas_gdf = self._download_admin_areas(country=self.country, admin_level=self.admin_level)
 
     @staticmethod
-    def _get_pycountry_from_country_name(country_name: str) -> pycountry.ExistingCountries.data_class_base:
+    def _get_pycountry_from_country_name(country_name: str):
         """Validates country name using fuzzy matching and returns pycountry object.
         
         Args:
@@ -64,7 +64,7 @@ class AdministrativeArea:
         return country
     
     @staticmethod
-    def _download_admin_areas(country: pycountry.ExistingCountries.data_class_base, admin_level: int) -> GeoDataFrame:
+    def _download_admin_areas(country, admin_level: int) -> GeoDataFrame:
         """Downloads and returns all administrative areas of specified level for a country.
         
         Args:

@@ -6,7 +6,7 @@ from shapely.geometry import Polygon
 from pisa.administrative_area import AdministrativeArea
 
 
-def get_shape_data_by_country(country: pycountry.ExistingCountries.data_class_base, admin_level: int) -> gpd.GeoDataFrame:
+def get_shape_data_by_country(admin_level: int) -> gpd.GeoDataFrame:
     if admin_level == 0:
         data = {"geometry": [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)])]}
     else:
@@ -26,7 +26,7 @@ def patch_download(mocker):
     mocker.patch.object(
         AdministrativeArea,
         "_download_admin_areas",
-        lambda self, country, admin_level: get_shape_data_by_country(country, admin_level)
+        lambda self, country, admin_level: get_shape_data_by_country(admin_level)
     )
 
 
