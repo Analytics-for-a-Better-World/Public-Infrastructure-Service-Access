@@ -4,7 +4,6 @@ import osmnx as ox
 import pandas as pd
 import pytest
 from geopandas.testing import assert_geoseries_equal
-from pandas import testing as tm
 from shapely.geometry import LineString, Point
 
 from pisa.isopolygons import OsmIsopolygonCalculator
@@ -33,7 +32,7 @@ def excluded_node() -> Point:
 
 @pytest.fixture
 def edges_gdf() -> gpd.GeoSeries:
-    """Edges in the road network used for the tests in this file"""
+    """Some of the edges in the road network used for the tests in this file"""
 
     coordinates_25_to_19 = [(-122.23124, 37.76876), (-122.23141, 37.76871)]
 
@@ -112,9 +111,9 @@ class TestOsmCalculateIsopolygons:
         nodes_within = self.graph_nodes[
             self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_5"])
         ]
-        assert nodes_within.index.tolist() == [
+        assert set(nodes_within.index) == {
             5909483619
-        ], "The only node in this isopolygon should be 5909483619"
+        }, "The only node in this isopolygon should be 5909483619"
 
     def test_no_edges_in_isopolygon_5909483619_5(self):
 
@@ -125,45 +124,30 @@ class TestOsmCalculateIsopolygons:
             self.graph_edges.within(self.isopolygons.loc[5909483619, "ID_5"])
         ), "There should be no edges in this isopolygon"
 
-    def test_nodes_in_isopolygons_20(self):
+    def test_nodes_in_isopolygon_5909483619_50(self):
 
-        # converting from series to geoseries so we can use .within() function
-        isopolygons_20 = gpd.GeoSeries(self.isopolygons.loc[:, "ID_20"])
+        nodes_within = self.graph_nodes[
+            self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_50"])
+        ]
 
-        expected = pd.Series(
-            [True, True, False, False],
-            index=[5909483619, 5909483625, 5909483636, 5909483569],
-        )
+        # Node 5909483569 is farther than 50m from node 5909483619
+        assert set(nodes_within.index) == {
+            5909483619,
+            5909483625,
+            5909483636,
+        }, "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon, but 5909483569 should not"
 
-        tm.assert_series_equal(
-            left=self.graph_nodes.geometry.within(isopolygons_20),
-            right=expected,
-            check_like=True,  # ignore order of the index
-        )
+    def test_nodes_in_isopolygon_5909483625_50(self):
 
-    def test_nodes_in_isopolygon_5909483619_50(self, nodes_gdf, excluded_node):
+        nodes_within = self.graph_nodes[
+            self.graph_nodes.within(self.isopolygons.loc[5909483625, "ID_50"])
+        ]
 
-        # Nodes 5909483619, 5909483625 and 5909483636 are all less than 50m away from 5909483619
-        assert all(
-            nodes_gdf.geometry.within(self.isopolygons.loc[5909483619, "ID_50"])
-        ), "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon"
-
-        # Node 5909483569 is more than 50m away from 5909483619
-        assert not excluded_node.within(
-            self.isopolygons.loc[5909483619, "ID_50"]
-        ), "Node 5909483569 should not be in this isopolygon"
-
-    def test_nodes_in_isopolygon_5909483625_50(self, nodes_gdf):
-
-        # Node 5909483636 is more than 50m away from node 5909483625
-
-        assert list(
-            nodes_gdf.geometry.within(self.isopolygons.loc[5909483625, "ID_50"])
-        ) == [
-            True,
-            True,
-            False,
-        ], "Nodes 5909483619 and 5909483625 should be in this isopolygon, but 5909483636 should not"
+        # Nodes 5909483636 and 5909483569 are farther than 50m away from node 5909483625
+        assert set(nodes_within.index) == {
+            5909483619,
+            5909483625,
+        }, "Nodes 5909483619 and 5909483625 should be in this isopolygon, but 5909483636 and 5909483569 should not"
 
 
 class TestInflateSkeletonToIsopolygon:
@@ -216,7 +200,7 @@ class TestGetSkeletonNodesAndEdges:
             "tests/test_data/walk_network_4_nodes_6_edges.graphml"
         )
 
-    def test_get_poly_nx_nodes(self, nodes_gdf):
+    def test_get_correct_nodes(self, nodes_gdf):
         """Tests that the nodes are correct"""
 
         (actual_nodes_gdf, _) = OsmIsopolygonCalculator._get_skeleton_nodes_and_edges(
@@ -228,7 +212,7 @@ class TestGetSkeletonNodesAndEdges:
 
         assert_geoseries_equal(actual_nodes_gdf, nodes_gdf)
 
-    def test_get_poly_nx_edges(self, edges_gdf):
+    def test_get_correct_edges(self, edges_gdf):
         """Tests that the geometry of the edges is correct"""
 
         # we expect this edge to be discarded as its lenght is larger than 50

@@ -7,7 +7,7 @@ import osmnx as ox
 import pandas as pd
 from networkx import MultiDiGraph
 from pandas import DataFrame
-from shapely import Polygon
+from shapely import MultiPolygon, Polygon
 
 
 class IsopolygonCalculator(ABC):
@@ -24,12 +24,23 @@ class IsopolygonCalculator(ABC):
         self.distance_type = distance_type
         self.distance_values = distance_values
 
-        # todo: error if distance values are too high
+        self._validate_input()
 
-    # TODO: is dict[DataFrame] the return type we want?
+    def _validate_input(self):
+        """Checks that distance values are within the permitted limits"""
+
+        if self.distance_type == "length" and max(self.distance_values) > 100000:
+            raise ValueError(
+                "One or more distance values are larger than the permitted 100.000 meters limit."
+            )
+
+        if self.distance_type == "minutes" and max(self.distance_values) > 60:
+            raise ValueError(
+                "One or more distance values are larger than the permitted 60 minutes limit."
+            )
 
     @abstractmethod
-    def calculate_isopolygons(self):
+    def calculate_isopolygons(self) -> DataFrame:
         """must be implemented in subclasses"""
         pass
 
@@ -82,14 +93,11 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
                         new_isopolygon
                     )
 
-                except:  # they probably wanted to catch an exception from _inflate_skeleton,
-                    # AttributeError: 'MultiPolygon' object has no attribute 'exterior'
-                    # if the result of unary_union is two (or more) disconnected Polygons.
+                except (
+                    AttributeError
+                ):  # Probably trying to catch 'MultiPolygon' object has no attribute 'exterior' from _inflate_skeleton, but it wasn't specified in the code before
 
-                    logging.info(
-                        f"problem with node {road_node}"
-                    )  # in the original code
-                    # continue?
+                    logging.info(f"problem with node {road_node}")  # stops execution
 
         return isopolygons
 
@@ -171,8 +179,8 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         If an edge (u,v) doesn't have geometry data in G, edges_gdf contains
         a straight line from u to v.
 
-        If all (other) nodes are too far away from the center node,
-        nodes_gdf contains only the center node and edges_gdf is empty.
+        If no edges are found (for example, if all other nodes are too far away from center_node),
+        edges_gdf is an empty dataframe.
 
         """
         subgraph = nx.ego_graph(
@@ -192,6 +200,92 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
                 nodes_gdf.loc[:, "geometry"],
                 gpd.GeoSeries([], name="geometry", crs=nodes_gdf.crs),
             )
+
+
+class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
+
+    def __init__(
+        self,
+        facilities_lon_lat: DataFrame,
+        distance_type: str,
+        distance_values: list[int],
+        road_network: MultiDiGraph,
+        buffer: float = 50,  # in meters
+    ):
+        super().__init__(facilities_lon_lat, distance_type, distance_values)
+        self.road_network = road_network
+        self.buffer = buffer
+
+        # Find the nearest node in the road network for each facility
+        self.nearest_nodes = ox.distance.nearest_nodes(
+            G=self.road_network,
+            X=self.facilities_longitude_array,
+            Y=self.facilities_latitude_array,
+        )
+
+        # nearest_nodes has type ndarray, converting to list
+
+    def calculate_isopolygons(self) -> DataFrame:
+
+        # Initialize DataFrame with explicit index
+        isopolygons = pd.DataFrame()
+
+        # Construct isopolygon for each distance value
+        for distance_value in self.distance_values:
+
+            for road_node in self.nearest_nodes:
+
+                skeleton = self._get_skeleton_nodes_and_edges(
+                    self.road_network, road_node, distance_value, self.distance_type
+                )
+
+                new_isopolygon = ox.utils_geo.buffer_geometry(
+                    geom=skeleton, dist=self.buffer
+                )
+
+                isopolygons.at[road_node, "ID_" + str(distance_value)] = new_isopolygon
+
+        return isopolygons
+
+    @staticmethod
+    def _get_skeleton_nodes_and_edges(
+        road_network: nx.MultiDiGraph,
+        center_node: int,
+        distance_value: int,
+        distance_type: str,
+    ):  # hard to specify return type. It should be type "Geometry", but I don't know how to write that correctly
+        """
+        Get nodes and edges within a specified distance from a certain node in a road network.
+        This will be the "skeleton" of the isopolygon.
+
+        Parameters:
+            road_network (nx.MultiDiGraph): The road network.
+            center_node (int): The node from which to measure the distance.
+            distance_value (int): The distance value.
+            distance_type (str): The type of distance (e.g., 'length').
+
+        Returns:
+            The union of the geometries of the nodes and edges within the specified distance from center_node.
+
+
+        """
+        subgraph = nx.ego_graph(
+            road_network, center_node, radius=distance_value, distance=distance_type
+        )
+
+        try:
+            nodes_gdf, edges_gdf = ox.graph_to_gdfs(subgraph)
+
+            skeleton = (edges_gdf.geometry.union_all()).union(
+                nodes_gdf.geometry.union_all()
+            )
+
+        except ValueError:  # if no edges are found
+            nodes_gdf = ox.graph_to_gdfs(subgraph, edges=False)
+
+            skeleton = nodes_gdf.geometry.union_all()
+
+        return skeleton
 
 
 class MapboxIsopolygonCalculator(IsopolygonCalculator):
