@@ -38,8 +38,6 @@ class TestOsmCalculateIsopolygonsAlternative:
             buffer=15,
         )
 
-        # TODO: something in the next line is giving me a deprecation warning
-        # DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
         self.isopolygons = self.isopolygon_calculator.calculate_isopolygons()
 
     def test_format(self):
