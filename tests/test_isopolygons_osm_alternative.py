@@ -12,8 +12,8 @@ def dataframe_with_lon_and_lat() -> pd.DataFrame:
     """Location (longitude and latitude) of two ficticious facilities"""
 
     points = [
-        (-122.2314069, 37.7687054),  # closest node 19
-        (-122.23124, 37.76876),  # closest node 25
+        (-122.2314069, 37.7687054),  # closest node 5909483619
+        (-122.23124, 37.76876),  # closest node 5909483625
     ]
 
     return pd.DataFrame(points, columns=["longitude", "latitude"])
