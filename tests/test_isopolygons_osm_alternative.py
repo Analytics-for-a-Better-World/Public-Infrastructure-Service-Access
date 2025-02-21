@@ -1,10 +1,8 @@
-import geopandas as gpd
 import numpy as np
 import osmnx as ox
 import pandas as pd
 import pytest
-from pandas import testing as tm
-from shapely.geometry import LineString, Point
+from shapely.geometry import Point
 
 from pisa.isopolygons import OsmIsopolygonCalculatorAlternative
 
@@ -43,9 +41,6 @@ class TestOsmCalculateIsopolygonsAlternative:
         # TODO: something in the next line is giving me a deprecation warning
         # DeprecationWarning: Conversion of an array with ndim > 0 to a scalar is deprecated, and will error in future. Ensure you extract a single element from your array before performing this operation. (Deprecated NumPy 1.25.)
         self.isopolygons = self.isopolygon_calculator.calculate_isopolygons()
-
-    def test_nothing(self):
-        assert True
 
     def test_format(self):
 
@@ -154,4 +149,3 @@ class TestGetSkeletonNodesAndEdgesAlternative:
             skeleton
         ), """Edge (5909483619, 5909483569) should not be within the skeleton because 
         node 5909483569 is farther than 50m from node 5909483619"""
-

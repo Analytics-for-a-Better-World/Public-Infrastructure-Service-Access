@@ -7,7 +7,7 @@ import osmnx as ox
 import pandas as pd
 from networkx import MultiDiGraph
 from pandas import DataFrame
-from shapely import MultiPolygon, Polygon
+from shapely import Polygon
 
 
 class IsopolygonCalculator(ABC):
@@ -26,7 +26,7 @@ class IsopolygonCalculator(ABC):
 
         self._validate_input()
 
-    def _validate_input(self):
+    def _validate_input(self) -> None:
         """Checks that distance values are within the permitted limits"""
 
         if self.distance_type == "length" and max(self.distance_values) > 100000:
@@ -216,34 +216,40 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         self.road_network = road_network
         self.buffer = buffer
 
-        # Find the nearest node in the road network for each facility
+        # For each facility, find the nearest node in the road network
         self.nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
             X=self.facilities_longitude_array,
             Y=self.facilities_latitude_array,
         )
 
-        # nearest_nodes has type ndarray, converting to list
-
     def calculate_isopolygons(self) -> DataFrame:
+        """
+        Calculate isopolygons for each facility at different distances (distance_values).
 
-        # Initialize DataFrame with explicit index
+        An isopolygon represents the area that can be reached within a specific distance/time from a facility
+        using the road network.
+
+        """
+
         isopolygons = pd.DataFrame()
 
-        # Construct isopolygon for each distance value
         for distance_value in self.distance_values:
 
             for road_node in self.nearest_nodes:
 
+                # Get the nodes and edges within distance_value from road_node
                 skeleton = self._get_skeleton_nodes_and_edges(
                     self.road_network, road_node, distance_value, self.distance_type
                 )
 
-                new_isopolygon = ox.utils_geo.buffer_geometry(
+                # "Inflate" the skeleton into a Polygon
+                isopolygon = ox.utils_geo.buffer_geometry(
                     geom=skeleton, dist=self.buffer
                 )
 
-                isopolygons.at[road_node, "ID_" + str(distance_value)] = new_isopolygon
+                # Add the isopolygon to the isopolygons DataFrame at row road_node and column distance_value
+                isopolygons.at[road_node, "ID_" + str(distance_value)] = isopolygon
 
         return isopolygons
 
@@ -253,10 +259,10 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         center_node: int,
         distance_value: int,
         distance_type: str,
-    ):  # hard to specify return type. It should be type "Geometry", but I don't know how to write that correctly
+    ):
         """
-        Get nodes and edges within a specified distance from a certain node in a road network.
-        This will be the "skeleton" of the isopolygon.
+        Get nodes and edges within distance_value from a node in the road network, and return
+        the union of their geometries. This will be the "skeleton" of the isopolygon.
 
         Parameters:
             road_network (nx.MultiDiGraph): The road network.
@@ -266,8 +272,6 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
 
         Returns:
             The union of the geometries of the nodes and edges within the specified distance from center_node.
-
-
         """
         subgraph = nx.ego_graph(
             road_network, center_node, radius=distance_value, distance=distance_type
