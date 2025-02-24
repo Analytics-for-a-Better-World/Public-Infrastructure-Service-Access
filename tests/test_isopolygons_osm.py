@@ -83,8 +83,8 @@ class TestOsmCalculateIsopolygons:
             distance_type="length",
             distance_values=[5, 20, 50],
             road_network=self.graph,
-            node_buff=0.00005,
-            edge_buff=0.00005,
+            node_buffer=0.00005,
+            edge_buffer=0.00005,
         )
 
         self.isopolygons = self.isopolygon_calculator.calculate_isopolygons()
@@ -156,11 +156,11 @@ class TestInflateSkeletonToIsopolygon:
         """Desired behavior: the node previously excluded because it was
         too far away is excluded from the resulting polygon"""
 
-        poly = OsmIsopolygonCalculator._inflate_skeleton_to_isopolygon(
+        poly = OsmIsopolygonCalculator._add_buffer_to_isopolygon_skeleton(
             nodes_gdf=nodes_gdf,
             edges_gdf=edges_gdf,
-            node_buff=0.00005,
-            edge_buff=0.00005,
+            node_buffer=0.00005,
+            edge_buffer=0.00005,
         )
 
         assert not poly.contains(excluded_node)
@@ -172,11 +172,11 @@ class TestInflateSkeletonToIsopolygon:
 
         These buffers are the default in gpbp/distance.py"""
 
-        poly = OsmIsopolygonCalculator._inflate_skeleton_to_isopolygon(
+        poly = OsmIsopolygonCalculator._add_buffer_to_isopolygon_skeleton(
             nodes_gdf=nodes_gdf,
             edges_gdf=edges_gdf,
-            node_buff=0.001,
-            edge_buff=0.0005,
+            node_buffer=0.001,
+            edge_buffer=0.0005,
         )
 
         assert poly.contains(excluded_node)
@@ -184,8 +184,8 @@ class TestInflateSkeletonToIsopolygon:
     def test_with_0_node_buffer(self, nodes_gdf, edges_gdf):
         """This should not be a problem because all nodes are connected"""
 
-        poly = OsmIsopolygonCalculator._inflate_skeleton_to_isopolygon(
-            nodes_gdf=nodes_gdf, edges_gdf=edges_gdf, node_buff=0, edge_buff=0.00005
+        poly = OsmIsopolygonCalculator._add_buffer_to_isopolygon_skeleton(
+            nodes_gdf=nodes_gdf, edges_gdf=edges_gdf, node_buffer=0, edge_buffer=0.00005
         )
 
         assert poly.area > 0
