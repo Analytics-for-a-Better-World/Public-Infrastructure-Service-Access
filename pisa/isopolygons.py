@@ -140,7 +140,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         Returns
         -------
         shapely.geometry.Polygon
-            A polygon representing the merged buffer zones with no interior holes
+            A polygon representing the merged buffer zones
         Raises
         ------
         ValueError
