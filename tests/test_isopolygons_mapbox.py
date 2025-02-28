@@ -42,7 +42,7 @@ class TestMapboxIsopolygonCalculator:
         self.distance_values = [1000, 2000]
 
         self.isopolygon_calculator = MapboxIsopolygonCalculator(
-            facilities_lon_lat=dataframe_with_lon_and_lat,
+            facilities_df=dataframe_with_lon_and_lat,
             distance_type="length",
             distance_values=self.distance_values,
             route_profile="driving",

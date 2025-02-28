@@ -29,13 +29,14 @@ class IsopolygonCalculator(ABC):
 
     def __init__(
         self,
-        facilities_lon_lat: DataFrame,
+        facilities_df: DataFrame,
         distance_type: str,  # e.g. travel_time or length
         distance_values: list[int],
     ):
-        self.facilities_lon_lat = facilities_lon_lat
+        self.facilities_df = facilities_df
         self.distance_type = distance_type
 
+        # distance_values must be a list
         if isinstance(distance_values, list):
             self.distance_values = distance_values
         else:
@@ -68,14 +69,14 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
 
     def __init__(
         self,
-        facilities_lon_lat: DataFrame,
+        facilities_df: DataFrame,
         distance_type: str,
         distance_values: list[int],
         road_network: MultiDiGraph,
         node_buffer: float = 0.001,
         edge_buffer: float = 0.0005,
     ):
-        super().__init__(facilities_lon_lat, distance_type, distance_values)
+        super().__init__(facilities_df, distance_type, distance_values)
         self.road_network = road_network
         self.node_buff = node_buffer
         self.edge_buff = edge_buffer
@@ -83,8 +84,8 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         # Find the nearest node in the road network for each facility
         self.nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
-            X=self.facilities_lon_lat.longitude.values,
-            Y=self.facilities_lon_lat.latitude.values,
+            X=self.facilities_df.longitude.values,
+            Y=self.facilities_df.latitude.values,
         )
 
     def calculate_isopolygons(self) -> DataFrame:
@@ -231,21 +232,21 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
 
     def __init__(
         self,
-        facilities_lon_lat: DataFrame,
+        facilities_df: DataFrame,
         distance_type: str,
         distance_values: list[int],
         road_network: MultiDiGraph,
         buffer: float = 50,  # in meters
     ):
-        super().__init__(facilities_lon_lat, distance_type, distance_values)
+        super().__init__(facilities_df, distance_type, distance_values)
         self.road_network = road_network
         self.buffer = buffer
 
         # Find the nearest node in the road network for each facility
         self.nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
-            X=self.facilities_lon_lat.longitude.values,
-            Y=self.facilities_lon_lat.latitude.values,
+            X=self.facilities_df.longitude.values,
+            Y=self.facilities_df.latitude.values,
         )
 
     def calculate_isopolygons(self) -> DataFrame:

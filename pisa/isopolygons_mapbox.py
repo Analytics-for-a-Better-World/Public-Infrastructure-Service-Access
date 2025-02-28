@@ -34,7 +34,7 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
     def __init__(
         self,
-        facilities_lon_lat: DataFrame,
+        facilities_df: DataFrame,
         distance_type: str,  # either travel_time or length (meters). TODO: Force?
         distance_values: list[
             int
@@ -43,7 +43,7 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         mapbox_api_token: str,
         base_url: str = "https://api.mapbox.com/isochrone/v1/",
     ):
-        super().__init__(facilities_lon_lat, distance_type, distance_values)
+        super().__init__(facilities_df, distance_type, distance_values)
         self.route_profile = route_profile
         self.mapbox_api_token = mapbox_api_token
         self.base_url = base_url
@@ -57,7 +57,7 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
         self.contour_type = self._set_countour_type(self.distance_type)
 
-        self.facilities_lon_lat = facilities_lon_lat
+        self.facilities_df = facilities_df
 
     def calculate_isopolygons(self) -> DataFrame:
         """Calculates isopolygons for all facilities using Mapbox API.
@@ -77,13 +77,13 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         """
 
         columns = [f"ID_{d}" for d in self.distance_values]
-        number_of_facilities = len(self.facilities_lon_lat)
+        number_of_facilities = len(self.facilities_df)
 
         # DataFrame with each row per facility and one column per distance
         isopolygons = DataFrame(index=range(number_of_facilities), columns=columns)
 
         # The Isochrone API supports 1 coordinate per request
-        for idx, facility in self.facilities_lon_lat.iterrows():
+        for idx, facility in self.facilities_df.iterrows():
 
             # The Isochrone API is limited to 300 requests per minute
             self._handle_rate_limit(request_count=idx)
