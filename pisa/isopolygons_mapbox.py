@@ -59,19 +59,6 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
         self.facilities_lon_lat = facilities_lon_lat
 
-    @staticmethod
-    def _set_countour_type(distance_type) -> str:
-
-        # todo: force distance_type to be either travel_time or length
-
-        """Determines countour_type (Mapbox readable) according to distance_type (given by user)"""
-        if distance_type == "travel_time":
-            return "contours_minutes"
-        elif distance_type == "length":
-            return "contours_meters"
-        else:
-            raise ValueError("Distance type must be either 'travel_time' or 'length'.")
-
     def calculate_isopolygons(self) -> DataFrame:
         """Calculates isopolygons for all facilities using Mapbox API.
 
@@ -114,6 +101,18 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
                 isopolygons.at[idx, f"ID_{contour}"] = isopolygon
 
         return isopolygons
+
+    @staticmethod
+    def _set_countour_type(distance_type: str) -> str:
+
+        # todo: force distance_type to be either travel_time or length
+
+        """Determines countour_type (Mapbox readable) according to distance_type (given by user)"""
+        if distance_type == "travel_time":
+            return "contours_minutes"
+        if distance_type == "length":
+            return "contours_meters"
+        raise ValueError("Distance type must be either 'travel_time' or 'length'.")
 
     def _build_request_url(self, longitude: float, latitude: float) -> str:
         """Builds the Mapbox API request URL for isopolygon calculation."""
