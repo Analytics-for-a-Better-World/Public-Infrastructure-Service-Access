@@ -43,6 +43,23 @@ class Facilities:
     def _get_existing_facilities_osm(
         osm_tags: dict, administrative_area: Polygon | MultiPolygon
     ) -> DataFrame:
+        """
+        Fetches existing facilities from OpenStreetMap (OSM) within a specified administrative area.
+        Parameters
+        ----------
+        osm_tags : dict
+            Dictionary of OSM tags to filter facilities (e.g., {'amenity': 'school'})
+        administrative_area : Polygon | MultiPolygon
+            Geographic area within which to search for facilities, defined as a shapely Polygon
+            or MultiPolygon object
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame containing facilities information with columns:
+            - osmid (index): OSM ID of the facility
+            - longitude: Longitude of facility
+            - latitude: Latitude of facility
+        """
 
         logger.info(f"Retrieving existing facilities with tags {osm_tags} using OSM.")
 
