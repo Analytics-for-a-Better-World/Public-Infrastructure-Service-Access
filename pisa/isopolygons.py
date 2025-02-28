@@ -27,13 +27,22 @@ from shapely import Polygon
 class IsopolygonCalculator(ABC):
     """Abstract base class for isopolygon calculation."""
 
+    VALID_DISTANCE_TYPES = {"length", "travel_time"}
+
     def __init__(
         self,
         facilities_df: DataFrame,
-        distance_type: str,  # e.g. travel_time or length
-        distance_values: list[int],
+        distance_type: str,
+        distance_values: list[int],  # in meters or minutes
     ):
         self.facilities_df = facilities_df
+        self.distance_type = distance_type
+
+        # distance_type must be either travel_time or length
+        if distance_type not in self.VALID_DISTANCE_TYPES:
+            raise ValueError(
+                f"distance_type must be one of {self.VALID_DISTANCE_TYPES}"
+            )
         self.distance_type = distance_type
 
         # distance_values must be a list
