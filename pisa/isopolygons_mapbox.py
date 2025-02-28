@@ -32,32 +32,42 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     Mapbox APIs use GeoJSON formatting wherever possible to represent geospatial data.
     """
 
+    VALID_ROUTE_PROFILES = {"driving", "walking", "cycling"}
+
     def __init__(
         self,
         facilities_df: DataFrame,
-        distance_type: str,  # either travel_time or length (meters). TODO: Force?
-        distance_values: list[
-            int
-        ],  # TODO: minutes or meters. Max 4, in ascending order
-        route_profile: str,  # ? driving, walking or cycling. TODO: Force?
+        distance_type: str,  # length or travel_time
+        distance_values: list[int],  # in minutes or meters
+        route_profile: str,  # driving, walking or cycling
         mapbox_api_token: str,
         base_url: str = "https://api.mapbox.com/isochrone/v1/",
     ):
-        super().__init__(facilities_df, distance_type, distance_values)
-        self.route_profile = route_profile
+
+        if not mapbox_api_token:
+            raise ValueError("Mapbox API token is required")
         self.mapbox_api_token = mapbox_api_token
+
+        if route_profile not in self.VALID_ROUTE_PROFILES:
+            raise ValueError(
+                f"route_profile must be one of {self.VALID_ROUTE_PROFILES}"
+            )
+        self.route_profile = route_profile
+
+        super().__init__(facilities_df, distance_type, distance_values)
+
+        # Mapbox accepts at most 4 distance_values
+        if len(self.distance_values) > 4:
+            raise ValueError("Mapbox API accepts a maximum of 4 distance_values")
+
+        # distance_values must be in increasing order
+        self.distance_values.sort()
+
         self.base_url = base_url
 
-        if not self.mapbox_api_token:
-            raise ValueError("Mapbox API token is required.")
-
-        # TODO: implement (from mapbox docs)
-        # You can specify up to four contours. Times must be in increasing order. The maximum time that can be specified is 60 minutes.
-        # You can specify up to four contours. Distances must be in increasing order. The maximum distance that can be specified is 100000 meters (100km).
-
-        self.contour_type = self._set_countour_type(self.distance_type)
-
-        self.facilities_df = facilities_df
+        self.contour_type = (
+            "contours_meters" if self.distance_type == "length" else "contours_minutes"
+        )
 
     def calculate_isopolygons(self) -> DataFrame:
         """Calculates isopolygons for all facilities using Mapbox API.
@@ -101,18 +111,6 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
                 isopolygons.at[idx, f"ID_{contour}"] = isopolygon
 
         return isopolygons
-
-    @staticmethod
-    def _set_countour_type(distance_type: str) -> str:
-
-        # todo: force distance_type to be either travel_time or length
-
-        """Determines countour_type (Mapbox readable) according to distance_type (given by user)"""
-        if distance_type == "travel_time":
-            return "contours_minutes"
-        if distance_type == "length":
-            return "contours_meters"
-        raise ValueError("Distance type must be either 'travel_time' or 'length'.")
 
     def _build_request_url(self, longitude: float, latitude: float) -> str:
         """Builds the Mapbox API request URL for isopolygon calculation."""

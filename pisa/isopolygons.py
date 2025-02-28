@@ -31,38 +31,92 @@ class IsopolygonCalculator(ABC):
 
     def __init__(
         self,
-        facilities_df: DataFrame,
-        distance_type: str,
-        distance_values: list[int],  # in meters or minutes
+        facilities_df: DataFrame,  # must have columns "longitude" and "latitude"
+        distance_type: str,  # either "length" or "travel_time"
+        distance_values: int | list[int],  # in meters or minutes
     ):
-        self.facilities_df = facilities_df
-        self.distance_type = distance_type
+        self.facilities_df = self._validate_facilities_df_format(facilities_df)
 
-        # distance_type must be either travel_time or length
+        self.distance_type = self._validate_distance_type(distance_type)
+
+        self.distance_values = self._validate_distance_values(distance_values)
+
+        self._validate_distance_upper_limits()
+
+    @staticmethod
+    def _validate_facilities_df_format(facilities_df: DataFrame) -> DataFrame:
+        """Checks that facilities_df has columns "longitude and latitude, and
+        has one or more rows"""
+
+        if (
+            "longitude" not in facilities_df.columns
+            or "latitude" not in facilities_df.columns
+        ):
+            raise ValueError(
+                "facilities_df must have columns 'longitude' and 'latitude'"
+            )
+
+        if len(facilities_df) == 0:
+            raise ValueError("facilities_df must have at least one row")
+
+        return facilities_df
+
+    def _validate_distance_type(self, distance_type: str) -> str:
         if distance_type not in self.VALID_DISTANCE_TYPES:
             raise ValueError(
                 f"distance_type must be one of {self.VALID_DISTANCE_TYPES}"
             )
-        self.distance_type = distance_type
+        return distance_type
 
-        # distance_values must be a list
+    @staticmethod
+    def _validate_distance_values(distance_values) -> list[int]:
+        """
+        Ensures that distance_values are in the correct format for calculating isopolygons.
+        It converts single integer inputs into a list format.
+
+        Args:
+            distance_values (int | list[int]): Either a single integer or a list of integers representing
+                distances for isopolygon calculations.
+        Returns:
+            list[int]: A list containing the validated distance values. If input was a single integer,
+                returns a single-element list.
+        Raises:
+            TypeError: If distance_values is neither an integer nor a list of integers.
+            TypeError: If any element in the distance_values list is not an integer.
+
+        """
+
+        if isinstance(distance_values, int):
+            return [distance_values]
+
+        # TODO: the requirement that all distance_values be integers comes from
+        # Mapbox Isochrone API, but was specified in the docs as a
+        # requirement for all calculations (see docstring of
+        # prepare_optimization_data in gpbp/layers.py).
+        # Keep this requirement here or move to MapboxCalculator?
+
         if isinstance(distance_values, list):
-            self.distance_values = distance_values
-        else:
-            raise TypeError("distance_values must be a list of integers")
+            if not all(isinstance(x, int) for x in distance_values):
+                raise TypeError("All elements in distance_values must be integers")
+            return distance_values
 
-        self._validate_distance_upper_limits()
+        raise TypeError("All elements in distance_values must be integers")
 
     def _validate_distance_upper_limits(self) -> None:
-        """Checks that distance values are within the permitted limits:
-        100.000 meters for length and 60 minutes for time."""
+        """Checks that distance_values are within the permitted limits:
+        100.000 meters for length and 60 minutes for time.
+
+        TODO: this is requested by the Mapbox Isochrone API but was enforced for
+        every distance calculator in original code. Keep here or move to
+        MapboxIsopolygonCalculator?
+        """
 
         if self.distance_type == "length" and max(self.distance_values) > 100000:
             raise ValueError(
                 "One or more distance values are larger than the permitted 100.000 meters limit."
             )
 
-        if self.distance_type == "minutes" and max(self.distance_values) > 60:
+        if self.distance_type == "travel_time" and max(self.distance_values) > 60:
             raise ValueError(
                 "One or more distance values are larger than the permitted 60 minutes limit."
             )

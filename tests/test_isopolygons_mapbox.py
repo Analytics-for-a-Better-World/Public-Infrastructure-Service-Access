@@ -1,66 +1,128 @@
 """
-Catalina, Feb 25:
-
-Temporary test. Useful for refactoring stage
-to make sure that the code for calculating isopolygons
-with mapbox is the same. When gpbp folder is gone, 
-delete.
-
-In the meantime, here's how to use it:
-
-- clear the mapbox_cache folder
-- insert your token 
-- remove skips
+Testing error handling that forces request to fulfill constraints of MapboxAPI
 """
 
 import pandas as pd
 import pytest
-from pandas.testing import assert_frame_equal
 
-from gpbp.distance import calculate_isopolygons_Mapbox
 from pisa.isopolygons_mapbox import MapboxIsopolygonCalculator
-
-my_mapbox_token = "INSERT YOUR MAPBOX TOKEN HERE"
 
 
 @pytest.fixture
-def dataframe_with_lon_and_lat() -> pd.DataFrame:
-    """Location (longitude and latitude) of an actual facility in Baucau, Timor-Leste"""
-
-    points = [
-        (126.60048, -8.54733),
-    ]
-
-    return pd.DataFrame(points, columns=["longitude", "latitude"])
+def valid_mapbox_api_token() -> str:
+    """Fixture providing a mock Mapbox API token for testing"""
+    return "a_valid_api_token"
 
 
-class TestMapboxIsopolygonCalculator:
+@pytest.fixture
+def valid_facilities_df() -> pd.DataFrame:
+    """Location (longitude and latitude) of two ficticious facilities"""
+    return pd.DataFrame(
+        [(0, 1), (1, 2)],
+        columns=["longitude", "latitude"],
+    )
 
-    @pytest.fixture(autouse=True)
-    def setup(self, dataframe_with_lon_and_lat):
 
-        self.distance_values = [1000, 2000]
-
-        self.isopolygon_calculator = MapboxIsopolygonCalculator(
-            facilities_df=dataframe_with_lon_and_lat,
+@pytest.mark.parametrize(
+    "facilities_df,error_message",
+    [
+        (
+            pd.DataFrame([(-1, 1)], columns=["x", "y"]),
+            "facilities_df must have columns 'longitude' and 'latitude'",
+        ),
+        (
+            pd.DataFrame([], columns=["longitude", "latitude"]),
+            "facilities_df must have at least one row",
+        ),
+    ],
+)
+def test_invalid_facilities_df(facilities_df, error_message, valid_mapbox_api_token):
+    with pytest.raises(ValueError, match=error_message):
+        MapboxIsopolygonCalculator(
+            facilities_df=facilities_df,
             distance_type="length",
-            distance_values=self.distance_values,
+            distance_values=[1000],
             route_profile="driving",
-            mapbox_api_token=my_mapbox_token,
+            mapbox_api_token=valid_mapbox_api_token,
         )
 
-        self.isopolygons = self.isopolygon_calculator.calculate_isopolygons()
 
-    @pytest.mark.skip(reason="automatically run without valid API token")
-    def test_old_code_is_same_as_new(self, dataframe_with_lon_and_lat):
+@pytest.mark.parametrize(
+    "param_name,invalid_value",
+    [
+        ("distance_type", "blah"),
+        ("route_profile", "flying"),
+    ],
+)
+def test_invalid_distance_type_or_route_profile(
+    param_name, invalid_value, valid_facilities_df, valid_mapbox_api_token
+):
+    params = {
+        "facilities_df": valid_facilities_df,
+        "distance_type": "length",
+        "distance_values": [1000],
+        "route_profile": "driving",
+        "mapbox_api_token": valid_mapbox_api_token,
+    }
+    params[param_name] = invalid_value
 
-        old_isopolygons = calculate_isopolygons_Mapbox(
-            X=dataframe_with_lon_and_lat.longitude.to_list(),
-            Y=dataframe_with_lon_and_lat.latitude.to_list(),
-            route_profile="driving",
+    with pytest.raises(ValueError):
+        MapboxIsopolygonCalculator(**params)
+
+
+def test_too_many_distance_values(valid_facilities_df, valid_mapbox_api_token):
+    with pytest.raises(
+        ValueError, match="Mapbox API accepts a maximum of 4 distance_values"
+    ):
+        MapboxIsopolygonCalculator(
+            facilities_df=valid_facilities_df,
             distance_type="length",
-            distance_values=self.distance_values,
-            access_token=my_mapbox_token,
+            distance_values=[20, 15, 40, 60, 10],
+            route_profile="driving",
+            mapbox_api_token=valid_mapbox_api_token,
         )
 
-        assert_frame_equal(pd.DataFrame(old_isopolygons), self.isopolygons)
+
+@pytest.mark.parametrize(
+    "distance_values",
+    [
+        [10.5, 12],
+        10.5,
+        [10, "oops"],
+    ],
+)
+def test_wrong_format_distance_values(
+    distance_values, valid_facilities_df, valid_mapbox_api_token
+):
+    with pytest.raises(
+        TypeError, match="All elements in distance_values must be integers"
+    ):
+        MapboxIsopolygonCalculator(
+            facilities_df=valid_facilities_df,
+            distance_type="length",
+            distance_values=distance_values,
+            route_profile="driving",
+            mapbox_api_token=valid_mapbox_api_token,
+        )
+
+
+def test_empty_string_mapbox_api_token(valid_facilities_df):
+    with pytest.raises(ValueError, match="Mapbox API token is required"):
+        MapboxIsopolygonCalculator(
+            facilities_df=valid_facilities_df,
+            distance_type="length",
+            distance_values=[1000],
+            route_profile="driving",
+            mapbox_api_token="",
+        )
+
+
+def test_scalar_distance_value_is_handled(valid_facilities_df, valid_mapbox_api_token):
+    calculator = MapboxIsopolygonCalculator(
+        facilities_df=valid_facilities_df,
+        distance_type="length",
+        distance_values=10,
+        route_profile="driving",
+        mapbox_api_token=valid_mapbox_api_token,
+    )
+    assert calculator.distance_values == [10]
