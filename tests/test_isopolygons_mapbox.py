@@ -8,8 +8,9 @@ delete.
 
 In the meantime, here's how to use it:
 
+- clear the mapbox_cache folder
 - insert your token 
-- remove skip
+- remove skips
 """
 
 import pandas as pd
