@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 import geopandas as gpd
 import numpy as np
 import osmnx as ox
+from geopandas import GeoDataFrame
+from pandas import DataFrame
 from shapely import MultiPolygon, Polygon
 
 logging.basicConfig(level=logging.INFO)
@@ -23,47 +25,47 @@ class Facilities:
     ```
     """
 
-    admin_area_boundaries: Polygon | MultiPolygon
+    administrative_area: Polygon | MultiPolygon
     data_src: str = "osm"
-    tags: dict = field(default_factory=lambda: {"building": "hospital"})  # we think this default should change, awaiting Joaquim's response
+    osm_tags: dict = field(
+        default_factory=lambda: {"building": "hospital"}
+    )  # we think this default should change, awaiting Joaquim's response
 
-    def get_existing_facilities(self) -> gpd.GeoDataFrame:
+    def get_existing_facilities(self) -> DataFrame:
         """Get facilities from specified data source"""
         if self.data_src == "osm":
-            return self.__get_existing_facilities_osm()
-        else:
-            raise NotImplementedError(f"Data source '{self.data_src}' not implemented")
+            return self._get_existing_facilities_osm(
+                administrative_area=self.administrative_area, osm_tags=self.osm_tags
+            )
+        raise NotImplementedError(f"Data source '{self.data_src}' not implemented")
 
-    def __get_existing_facilities_osm(self) -> gpd.GeoDataFrame:
-        """Get facilities from OSM
+    @staticmethod
+    def _get_existing_facilities_osm(
+        osm_tags: dict, administrative_area: Polygon | MultiPolygon
+    ) -> DataFrame:
 
-        Retrieve facilities from OSM data using the specified tags. Facilities are returned as a GeoDataFrame with columns for osmid, longitude, latitude and geometry.
+        logger.info(f"Retrieving existing facilities with tags {osm_tags} using OSM.")
 
-        Returns:
-            GeoDataFrame containing existing facilities
-
-        """
-        logger.info(f"Retrieving existing facilities with tags {self.tags} using OSM.")
-        gdf = ox.features_from_polygon(polygon=self.admin_area_boundaries, tags=self.tags)
-        osmids = gdf.index.get_level_values("id")
-        lon, lat = [], []
-        for index, data in gdf.iterrows():
-            if index[0] == "node":
-                # For node geometries, use the x and y coordinates directly
-                lon.append(data["geometry"].x)
-                lat.append(data["geometry"].y)
-            else:
-                # For non-node geometries (ways), use the centroid of the geometry
-                lon.append(data["geometry"].centroid.x)
-                lat.append(data["geometry"].centroid.y)
-        gdf = gpd.GeoDataFrame(
-            data={"ID": osmids, "longitude": lon, "latitude": lat},
-            geometry=gdf.geometry.values,
+        # retrieves facilities GeodataFrame from osm
+        facilities_gdf = ox.features_from_polygon(
+            polygon=administrative_area, tags=osm_tags
         )
-        gdf = gdf.reset_index()
 
-        logger.info("Successfully retrieved existing facilities.")
-        return gdf
+        # from the geometry column create longitude and latitude columns,
+        # independently on whether the element is node or way
+        facilities_gdf["longitude"] = facilities_gdf.geometry.centroid.x
+        facilities_gdf["latitude"] = facilities_gdf.geometry.centroid.y
+
+        # reset multiindex and drop some columns. It becomes a DataFrame
+        facilities_df = facilities_gdf.reset_index().drop(
+            columns=["element", "amenity", "geometry"]
+        )
+
+        logger.info("Successfully retrieved existing facilities from OSM.")
+
+        # index facilities_df is the OSMID of the facility.
+        # We don't strictly need it, but it could be useful for debugging.
+        return facilities_df.set_index("id").rename_axis("osmid")
 
     def estimate_potential_facilities(self, spacing: float) -> gpd.GeoDataFrame:
         """Create grid of potential facility locations
@@ -78,7 +80,7 @@ class Facilities:
 
         """
         # Get the bounds of the polygon
-        minx, miny, maxx, maxy = self.admin_area_boundaries.bounds
+        minx, miny, maxx, maxy = self.administrative_area.bounds
 
         # Square around the polygon with the min, max polygon bounds
         x_coords = list(np.arange(np.floor(minx), np.ceil(maxx + spacing), spacing))
@@ -93,7 +95,7 @@ class Facilities:
         )
 
         # Clip the grid to the admin area boundaries
-        grid = gpd.clip(grid, self.admin_area_boundaries)
+        grid = gpd.clip(grid, self.administrative_area)
         grid = grid.reset_index(drop=True).reset_index().rename(columns={"index": "ID"})
 
         return grid
