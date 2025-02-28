@@ -33,15 +33,13 @@ class IsopolygonCalculator(ABC):
         distance_type: str,  # e.g. travel_time or length
         distance_values: list[int],
     ):
-
-        self.facilities_longitude_array = facilities_lon_lat.longitude.values
-        self.facilities_latitude_array = facilities_lon_lat.latitude.values
+        self.facilities_lon_lat = facilities_lon_lat
         self.distance_type = distance_type
         self.distance_values = distance_values
 
-        self._validate_input()
+        self._validate_distance_upper_limits()
 
-    def _validate_input(self) -> None:
+    def _validate_distance_upper_limits(self) -> None:
         """Checks that distance values are within the permitted limits:
         100.000 meters for length and 60 minutes for time."""
 
@@ -81,8 +79,8 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         # Find the nearest node in the road network for each facility
         self.nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
-            X=self.facilities_longitude_array,
-            Y=self.facilities_latitude_array,
+            X=self.facilities_lon_lat.longitude.values,
+            Y=self.facilities_lon_lat.latitude.values,
         )
 
     def calculate_isopolygons(self) -> DataFrame:
@@ -239,11 +237,11 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         self.road_network = road_network
         self.buffer = buffer
 
-        # For each facility, find the nearest node in the road network
+        # Find the nearest node in the road network for each facility
         self.nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
-            X=self.facilities_longitude_array,
-            Y=self.facilities_latitude_array,
+            X=self.facilities_lon_lat.longitude.values,
+            Y=self.facilities_lon_lat.latitude.values,
         )
 
     def calculate_isopolygons(self) -> DataFrame:
@@ -319,20 +317,3 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
             skeleton = nodes_gdf.geometry.union_all()
 
         return skeleton
-
-
-class MapboxIsopolygonCalculator(IsopolygonCalculator):
-
-    def __init__(
-        self,
-        facilities_lon_lat: DataFrame,
-        distance_type: str,
-        distance_values: list[int],
-        route_profile: str,  # ?
-        mapbox_api_token: str,
-    ):
-        super().__init__(facilities_lon_lat, distance_type, distance_values)
-        self.route_profile = route_profile
-        self.mapbox_api_token = mapbox_api_token
-
-    def calculate_isopolygons(self) -> DataFrame: ...
