@@ -35,7 +35,11 @@ class IsopolygonCalculator(ABC):
     ):
         self.facilities_lon_lat = facilities_lon_lat
         self.distance_type = distance_type
-        self.distance_values = distance_values
+
+        if isinstance(distance_values, list):
+            self.distance_values = distance_values
+        else:
+            raise TypeError("distance_values must be a list of integers")
 
         self._validate_distance_upper_limits()
 
