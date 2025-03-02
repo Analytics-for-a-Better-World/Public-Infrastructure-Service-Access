@@ -39,7 +39,7 @@ class IsopolygonCalculator(ABC):
 
         self.distance_type = self._validate_distance_type(distance_type)
 
-        self.distance_values = self._validate_distance_values(distance_values)
+        self.distance_values = self._validate_distance_values_are_ints(distance_values)
 
         self._validate_distance_upper_limits()
 
@@ -69,7 +69,7 @@ class IsopolygonCalculator(ABC):
         return distance_type
 
     @staticmethod
-    def _validate_distance_values(distance_values) -> list[int]:
+    def _validate_distance_values_are_ints(distance_values) -> list[int]:
         """
         Ensures that distance_values are in the correct format for calculating isopolygons.
         It converts single integer inputs into a list format.

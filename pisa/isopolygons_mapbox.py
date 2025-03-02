@@ -16,10 +16,10 @@ import logging
 import time
 
 import requests
-from isopolygons import IsopolygonCalculator
 from pandas import DataFrame
 from shapely.geometry import shape
 
+from pisa.isopolygons import IsopolygonCalculator
 from pisa.utils import disk_cache
 
 logger = logging.getLogger(__name__)
@@ -44,15 +44,9 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         base_url: str = "https://api.mapbox.com/isochrone/v1/",
     ):
 
-        if not mapbox_api_token:
-            raise ValueError("Mapbox API token is required")
-        self.mapbox_api_token = mapbox_api_token
+        self.mapbox_api_token = self._validate_mapbox_token_not_empty(mapbox_api_token)
 
-        if route_profile not in self.VALID_ROUTE_PROFILES:
-            raise ValueError(
-                f"route_profile must be one of {self.VALID_ROUTE_PROFILES}"
-            )
-        self.route_profile = route_profile
+        self.route_profile = self._validate_route_profile(route_profile)
 
         super().__init__(facilities_df, distance_type, distance_values)
 
@@ -188,3 +182,16 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
             raise RuntimeError(
                 f"Unexpected error when connecting to Mapbox: {str(e)}"
             ) from e
+
+    def _validate_route_profile(self, route_profile: str) -> str:
+        if route_profile not in self.VALID_ROUTE_PROFILES:
+            raise ValueError(
+                f"route_profile must be one of {self.VALID_ROUTE_PROFILES}"
+            )
+        return route_profile
+
+    @staticmethod
+    def _validate_mapbox_token_not_empty(mapbox_api_token: str) -> str:
+        if not mapbox_api_token:
+            raise ValueError("Mapbox API token is required")
+        return mapbox_api_token
