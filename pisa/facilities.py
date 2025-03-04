@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 import geopandas as gpd
 import numpy as np
 import osmnx as ox
-from geopandas import GeoDataFrame
 from pandas import DataFrame
 from shapely import MultiPolygon, Polygon
 
@@ -14,22 +13,11 @@ logger = logging.getLogger(__name__)
 
 @dataclass
 class Facilities:
-    """Get existing and potential facility locations for given administrative area
-
-    Facility locations are retrieved from OpenStreetMap (OSM) data. Consult the OSM wiki for more information on the tags used to identify facilities.
-
-    Example usage:
-
-    ```python
-    print("test")
-    ```
-    """
+    """Get existing and potential facility locations for given administrative area"""
 
     administrative_area: Polygon | MultiPolygon
     data_src: str = "osm"
-    osm_tags: dict = field(
-        default_factory=lambda: {"building": "hospital"}
-    )  # we think this default should change, awaiting Joaquim's response
+    osm_tags: dict = field(default_factory=lambda: {"amenity": "hospital"})
 
     def get_existing_facilities(self) -> DataFrame:
         """Get facilities from specified data source"""
@@ -107,7 +95,6 @@ class Facilities:
         mesh = np.meshgrid(x_coords, y_coords)
         grid = gpd.GeoDataFrame(
             data={"longitude": mesh[0].flatten(), "latitude": mesh[1].flatten()},
-            geometry=gpd.points_from_xy(mesh[0].flatten(), mesh[1].flatten()),
             crs="EPSG:4326",
         )
 
