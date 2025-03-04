@@ -58,8 +58,11 @@ class Facilities:
 
         # from the geometry column create longitude and latitude columns,
         # independently on whether the element is node or way
-        facilities_gdf["longitude"] = facilities_gdf.geometry.centroid.x
-        facilities_gdf["latitude"] = facilities_gdf.geometry.centroid.y
+        facilities_centroid = facilities_gdf.to_crs("EPSG:4087").centroid.to_crs(
+            facilities_gdf.crs
+        )
+        facilities_gdf["longitude"] = facilities_centroid.x
+        facilities_gdf["latitude"] = facilities_centroid.y
 
         # reset multiindex and drop some columns. It becomes a DataFrame
         facilities_df = facilities_gdf.reset_index().drop(

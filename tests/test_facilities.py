@@ -108,16 +108,38 @@ class TestFacilities:
         # Should have 3 entries (2 nodes + 1 way)
         assert len(facilities_df) == 3
 
+        # Create fake centroids with re-projecting the geometries to mimik behaviour in get_existing_facilities_osm
+        fake_centroids = fake_facilities_gdf.to_crs("EPSG:4087").centroid.to_crs(
+            fake_facilities_gdf.crs
+        )
+
         # Check elements "node", should have coordinates directly from Point geometry
-        assert facilities_df.loc[1777614876, "longitude"] == 126.60048
-        assert facilities_df.loc[1777614876, "latitude"] == -8.54733
-        assert facilities_df.loc[1777614896, "longitude"] == 126.65333
-        assert facilities_df.loc[1777614896, "latitude"] == -8.62843
+        assert (
+            facilities_df.loc[1777614876, "longitude"]
+            == fake_centroids.loc["node", 1777614876].x
+        )  # 126.60048
+        assert (
+            facilities_df.loc[1777614876, "latitude"]
+            == fake_centroids.loc["node", 1777614876].y
+        )  # -8.54733
+        assert (
+            facilities_df.loc[1777614896, "longitude"]
+            == fake_centroids.loc["node", 1777614896].x
+        )  # 126.65333
+        assert (
+            facilities_df.loc[1777614896, "latitude"]
+            == fake_centroids.loc["node", 1777614896].y
+        )  # -8.62843
 
         # Check element "way", should have coordinates as the centroid of the Polygon geometry
-        centroid = fake_facilities_gdf.iloc[2]["geometry"].centroid
-        assert facilities_df.loc[527394448, "longitude"] == centroid.x
-        assert facilities_df.loc[527394448, "latitude"] == centroid.y
+        assert (
+            facilities_df.loc[527394448, "longitude"]
+            == fake_centroids.loc["way", 527394448].x
+        )
+        assert (
+            facilities_df.loc[527394448, "latitude"]
+            == fake_centroids.loc["way", 527394448].y
+        )
 
     def test_estimate_potential_facilities_format(self, simple_polygon):
         """Test the format of the potential facilities GeoDataFrame"""
@@ -149,8 +171,7 @@ class TestFacilities:
         for i in range(len(result) - 1):
             if result.iloc[i].longitude == result.iloc[i + 1].longitude:
                 assert (
-                    result.iloc[i + 1].latitude - result.iloc[i].latitude
-                    == test_spacing
+                    result.iloc[i + 1].latitude - result.iloc[i].latitude == test_spacing
                 )
             if result.iloc[i].latitude == result.iloc[i + 1].latitude:
                 assert (
