@@ -61,7 +61,7 @@ class TestFacilities:
 
         assert facilities.administrative_area == simple_polygon
         assert facilities.data_src == "osm"
-        assert facilities.osm_tags == {"building": "hospital"}
+        assert facilities.osm_tags == {"amenity": "hospital"}
 
     def test_init_with_custom_tags(self, simple_polygon):
         """Test initialization with custom location tags"""
@@ -94,11 +94,10 @@ class TestFacilities:
     def test_get_existing_facilities_osm(
         self, mocked_osm_response, fake_facilities_gdf, multi_polygon
     ):
-
         mocked_osm_response.return_value = fake_facilities_gdf
 
         facilities_df = Facilities._get_existing_facilities_osm(
-            osm_tags={"building": "hospital"}, administrative_area=multi_polygon
+            osm_tags={"amenity": "hospital"}, administrative_area=multi_polygon
         )
 
         mocked_osm_response.assert_called_once()

@@ -94,7 +94,11 @@ class Facilities:
         # Now generate the entire grid
         mesh = np.meshgrid(x_coords, y_coords)
         grid = gpd.GeoDataFrame(
-            data={"longitude": mesh[0].flatten(), "latitude": mesh[1].flatten()},
+            data={
+                "longitude": mesh[0].flatten(),
+                "latitude": mesh[1].flatten(),
+            },
+            geometry=gpd.points_from_xy(mesh[0].flatten(), mesh[1].flatten()),
             crs="EPSG:4326",
         )
 
