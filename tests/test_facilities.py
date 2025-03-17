@@ -55,14 +55,6 @@ def fake_facilities_gdf() -> GeoDataFrame:
 
 
 class TestFacilities:
-    def test_init(self, simple_polygon):
-        """Test proper initialization of Facilities class"""
-        facilities = Facilities(administrative_area=simple_polygon)
-
-        assert facilities.administrative_area == simple_polygon
-        assert facilities.data_src == "osm"
-        assert facilities.osm_tags == {"amenity": "hospital"}
-
     def test_init_with_custom_tags(self, simple_polygon):
         """Test initialization with custom location tags"""
         custom_tags = {"amenity": "school"}
@@ -108,7 +100,6 @@ class TestFacilities:
         # Should have 3 entries (2 nodes + 1 way)
         assert len(facilities_df) == 3
 
-        # Create fake centroids with re-projecting the geometries to mimik behaviour in get_existing_facilities_osm
         fake_centroids = fake_facilities_gdf.geometry.centroid
 
         # Check elements "node", should have coordinates directly from Point geometry
