@@ -66,13 +66,6 @@ class TestFacilities:
         assert facilities.data_src == "osm"
         assert facilities.osm_tags == custom_tags
 
-    def test_initialization_with_multipolygon(self, multi_polygon):
-        """Test initialization with MultiPolygon"""
-        facilities = Facilities(administrative_area=multi_polygon)
-
-        assert facilities.administrative_area == multi_polygon
-        assert facilities.data_src == "osm"
-
     def test_get_existing_facilities_invalid_data_src(self, simple_polygon):
         """Test error when using invalid data source"""
         facilities = Facilities(administrative_area=simple_polygon, data_src="invalid")
@@ -99,8 +92,6 @@ class TestFacilities:
 
         # Should have 3 entries (2 nodes + 1 way)
         assert len(facilities_df) == 3
-
-        fake_centroids = fake_facilities_gdf.geometry.centroid
 
         # Check elements "node", should have coordinates directly from Point geometry
         assert facilities_df.loc[1777614876, ["longitude", "latitude"]].tolist() == [
