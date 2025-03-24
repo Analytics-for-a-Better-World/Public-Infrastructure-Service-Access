@@ -99,11 +99,11 @@ class Facilities:
                 "latitude": mesh[1].flatten(),
             },
             geometry=gpd.points_from_xy(mesh[0].flatten(), mesh[1].flatten()),
-            crs="EPSG:4326",
         )
 
         # Clip the grid to the admin area boundaries
         grid = gpd.clip(grid, self.administrative_area)
+        grid = grid.drop(columns=["geometry"])
         grid = grid.reset_index(drop=True).reset_index().rename(columns={"index": "ID"})
 
         return grid

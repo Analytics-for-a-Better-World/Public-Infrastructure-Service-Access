@@ -135,11 +135,10 @@ class TestFacilities:
         facilities = Facilities(administrative_area=simple_polygon)
         result = facilities.estimate_potential_facilities(spacing=0.5)
 
-        assert isinstance(result, gpd.GeoDataFrame)
+        assert isinstance(result, pd.DataFrame)
         assert "ID" in result.columns
         assert "longitude" in result.columns
         assert "latitude" in result.columns
-        assert "geometry" in result.columns
 
     def test_estimate_potential_facilities_grid(self, simple_polygon):
         """Test the creation of the grid to estimate potential facilities"""
