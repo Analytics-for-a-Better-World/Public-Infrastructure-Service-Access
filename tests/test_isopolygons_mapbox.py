@@ -104,6 +104,20 @@ def test_wrong_format_distance_values(
         )
 
 
+def test_validate_mapbox_distance_values():
+
+    assert MapboxIsopolygonCalculator._validate_mapbox_distance_values([3, 1, 4]) == [
+        1,
+        3,
+        4,
+    ]
+
+    with pytest.raises(
+        ValueError, match="Mapbox API accepts a maximum of 4 distance_values"
+    ):
+        MapboxIsopolygonCalculator._validate_mapbox_distance_values([1, 2, 3, 4, 5])
+
+
 def test_empty_string_mapbox_api_token(valid_facilities_df):
     with pytest.raises(ValueError, match="Mapbox API token is required"):
         MapboxIsopolygonCalculator(

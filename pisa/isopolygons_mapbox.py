@@ -50,12 +50,9 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
         super().__init__(facilities_df, distance_type, distance_values)
 
-        # Mapbox accepts at most 4 distance_values
-        if len(self.distance_values) > 4:
-            raise ValueError("Mapbox API accepts a maximum of 4 distance_values")
-
-        # distance_values must be in increasing order
-        self.distance_values.sort()
+        self.distance_values = self._validate_mapbox_distance_values(
+            self.distance_values
+        )
 
         self.base_url = base_url
 
@@ -182,6 +179,29 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
             raise RuntimeError(
                 f"Unexpected error when connecting to Mapbox: {str(e)}"
             ) from e
+
+    @staticmethod
+    def _validate_mapbox_distance_values(distance_values: list[int]) -> list[int]:
+        """Checks if distance_values meet Mapbox API requirements:
+        a maximum of 4 values in increasing order.
+
+        Args:
+            distance_values (list[int]): List of integer distances to validate
+
+        Returns:
+            list[int]: Sorted list of distance values
+
+        Raises:
+            ValueError: If more than 4 distance values are provided
+
+        """
+
+        if len(distance_values) > 4:
+            raise ValueError("Mapbox API accepts a maximum of 4 distance_values")
+
+        distance_values.sort()
+
+        return distance_values
 
     def _validate_route_profile(self, route_profile: str) -> str:
 
