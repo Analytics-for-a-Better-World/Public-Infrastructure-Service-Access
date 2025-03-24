@@ -94,9 +94,7 @@ def test_too_many_distance_values(valid_facilities_df, valid_mapbox_api_token):
 def test_wrong_format_distance_values(
     distance_values, valid_facilities_df, valid_mapbox_api_token
 ):
-    with pytest.raises(
-        TypeError, match="All elements in distance_values must be integers"
-    ):
+    with pytest.raises(TypeError, match="distance_values must be a list of integers"):
         MapboxIsopolygonCalculator(
             facilities_df=valid_facilities_df,
             distance_type="length",

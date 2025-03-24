@@ -89,7 +89,6 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         # The Isochrone API supports 1 coordinate per request
         for idx, facility in self.facilities_df.iterrows():
 
-            # The Isochrone API is limited to 300 requests per minute
             self._handle_rate_limit(request_count=idx)
 
             request_url = self._build_request_url(facility.longitude, facility.latitude)
@@ -115,10 +114,11 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         )
 
     def _handle_rate_limit(self, request_count: int) -> None:
-        """Handles Mapbox API rate limiting."""
+        """Handles Mapbox API rate limiting, a maximum of 300 requests per minute."""
+
         if (request_count + 1) % 300 == 0:
-            logger.info("Reached Mapbox API request limit. Waiting for 5 minutes...")
-            time.sleep(300)
+            logger.info("Reached Mapbox API request limit. Waiting for 1 minute...")
+            time.sleep(60)
             logger.info("Resuming requests")
 
     @disk_cache("mapbox_cache")

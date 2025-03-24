@@ -32,7 +32,7 @@ class IsopolygonCalculator(ABC):
     def __init__(
         self,
         facilities_df: DataFrame,  # must have columns "longitude" and "latitude"
-        distance_type: str,  # either "length" or "travel_time"
+        distance_type: str,  # must be an element of VALID_DISTANCE_TYPES
         distance_values: int | list[int],  # in meters or minutes
     ):
         self.facilities_df = self._validate_facilities_df_format(facilities_df)
@@ -74,6 +74,8 @@ class IsopolygonCalculator(ABC):
         Ensures that distance_values are in the correct format for calculating isopolygons.
         It converts single integer inputs into a list format.
 
+        The requirement that all distance_values be integers comes from the Mapbox Isochrone API.
+
         Args:
             distance_values (int | list[int]): Either a single integer or a list of integers representing
                 distances for isopolygon calculations.
@@ -89,18 +91,12 @@ class IsopolygonCalculator(ABC):
         if isinstance(distance_values, int):
             return [distance_values]
 
-        # TODO: the requirement that all distance_values be integers comes from
-        # Mapbox Isochrone API, but was specified in the docs as a
-        # requirement for all calculations (see docstring of
-        # prepare_optimization_data in gpbp/layers.py).
-        # Keep this requirement here or move to MapboxCalculator?
-
         if isinstance(distance_values, list):
             if not all(isinstance(x, int) for x in distance_values):
-                raise TypeError("All elements in distance_values must be integers")
+                raise TypeError("distance_values must be a list of integers")
             return distance_values
 
-        raise TypeError("All elements in distance_values must be integers")
+        raise TypeError("distance_values must be a list of integers")
 
     def _validate_distance_upper_limits(self) -> None:
         """Checks that distance_values are within the permitted limits:
