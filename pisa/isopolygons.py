@@ -62,6 +62,9 @@ class IsopolygonCalculator(ABC):
         return facilities_df
 
     def _validate_distance_type(self, distance_type: str) -> str:
+
+        distance_type = distance_type.lower().strip()
+
         if distance_type not in self.VALID_DISTANCE_TYPES:
             raise ValueError(
                 f"distance_type must be one of {self.VALID_DISTANCE_TYPES}"
@@ -100,11 +103,8 @@ class IsopolygonCalculator(ABC):
 
     def _validate_distance_upper_limits(self) -> None:
         """Checks that distance_values are within the permitted limits:
-        100.000 meters for length and 60 minutes for time.
-
-        TODO: this is requested by the Mapbox Isochrone API but was enforced for
-        every distance calculator in original code. Keep here or move to
-        MapboxIsopolygonCalculator?
+        100.000 meters for length and 60 minutes for time. This is requested by
+        the Mapbox Isochrone API.
         """
 
         if self.distance_type == "length" and max(self.distance_values) > 100000:

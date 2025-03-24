@@ -37,9 +37,9 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     def __init__(
         self,
         facilities_df: DataFrame,
-        distance_type: str,  # length or travel_time
+        distance_type: str,
         distance_values: list[int],  # in minutes or meters
-        route_profile: str,  # driving, walking or cycling
+        route_profile: str,  # must be an element of VALID_ROUTE_PROFILES
         mapbox_api_token: str,
         base_url: str = "https://api.mapbox.com/isochrone/v1/",
     ):
@@ -184,6 +184,9 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
             ) from e
 
     def _validate_route_profile(self, route_profile: str) -> str:
+
+        route_profile = route_profile.lower().strip()
+
         if route_profile not in self.VALID_ROUTE_PROFILES:
             raise ValueError(
                 f"route_profile must be one of {self.VALID_ROUTE_PROFILES}"
