@@ -103,32 +103,21 @@ class TestFacilities:
         fake_centroids = fake_facilities_gdf.geometry.centroid
 
         # Check elements "node", should have coordinates directly from Point geometry
-        assert (
-            facilities_df.loc[1777614876, "longitude"]
-            == fake_centroids.loc["node", 1777614876].x
-        )
-        assert (
-            facilities_df.loc[1777614876, "latitude"]
-            == fake_centroids.loc["node", 1777614876].y
-        )
-        assert (
-            facilities_df.loc[1777614896, "longitude"]
-            == fake_centroids.loc["node", 1777614896].x
-        )
-        assert (
-            facilities_df.loc[1777614896, "latitude"]
-            == fake_centroids.loc["node", 1777614896].y
-        )
+        assert facilities_df.loc[1777614876, ["longitude", "latitude"]].tolist() == [
+            fake_facilities_gdf.loc["node", 1777614876].geometry.x,
+            fake_facilities_gdf.loc["node", 1777614876].geometry.y,
+        ]
+
+        assert facilities_df.loc[1777614896, ["longitude", "latitude"]].tolist() == [
+            fake_facilities_gdf.loc["node", 1777614896].geometry.x,
+            fake_facilities_gdf.loc["node", 1777614896].geometry.y,
+        ]
 
         # Check element "way", should have coordinates as the centroid of the Polygon geometry
-        assert (
-            facilities_df.loc[527394448, "longitude"]
-            == fake_centroids.loc["way", 527394448].x
-        )
-        assert (
-            facilities_df.loc[527394448, "latitude"]
-            == fake_centroids.loc["way", 527394448].y
-        )
+        assert facilities_df.loc[527394448, ["longitude", "latitude"]].tolist() == [
+            fake_facilities_gdf.loc["way", 527394448].geometry.centroid.x,
+            fake_facilities_gdf.loc["way", 527394448].geometry.centroid.y,
+        ]
 
     def test_estimate_potential_facilities_format(self, simple_polygon):
         """Test the format of the potential facilities GeoDataFrame"""
