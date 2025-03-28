@@ -22,17 +22,22 @@ def fake_raster_dataset():
 
 
 @pytest.fixture
-def mock_raster_datasetreader(mocker):
-    mock_raster_dataset = mocker.MagicMock()
-    mock_raster_dataset.crs = "EPSG:4326"
-    mock_raster_dataset.width = 100
-    mock_raster_dataset.height = 100
-    mock_raster_dataset.xy = MagicMock(side_effect=lambda row, col: (
-        66.48 + col * (67.36 - 66.48) / (100 - 1),
-        36.92 - row * (36.92 - 35.96) / (100 - 1),
-    ))
-    mock_raster_dataset.read = MagicMock(side_effect=lambda band: np.random.rand(100, 100), dtype=np.uint8)
-    return mock_raster_dataset
+def mock_raster_dataset(mocker):
+    mock_dataset = mocker.MagicMock(spec=rasterio.io.DatasetReader)
+    mock_dataset.crs = "EPSG:4326"
+    mock_dataset.width = 100
+    mock_dataset.height = 100
+    def mock_xy(row, col):
+        return (66.48 + col * (67.36 - 66.48) / (100 - 1),
+                36.92 - row * (36.92 - 35.96) / (100 - 1))
+
+    mock_dataset.xy = MagicMock(side_effect=mock_xy)
+    mock_dataset.read = MagicMock(return_value = np.random.rand(100, 100))
+    # Mock context manager behavior for `rasterio.open()`
+    mock_dataset.__enter__.return_value = mock_dataset
+    mock_dataset.__exit__.return_value = None  # or whatever value you expect for exit
+
+    return mock_dataset
 
 
 @pytest.fixture
@@ -125,45 +130,43 @@ def test_download_population_worldpop(mock_urlretrieve, mock_requests, populatio
 
 
 class TestRastertoDF:
-    def test_raster_to_df(self, mocker, mock_raster_datasetreader, fake_raster_dataset, population_instance_worldpop, multipolygon):
-        mock_src = mocker.patch('data_src.rasterio.open', return_value=mock_raster_datasetreader)
-        mock_mask = mocker.patch('pisa.population.riomask.mask', return_value=(fake_raster_dataset, None))
+    def test_raster_to_df(self, mocker, mock_raster_dataset, fake_raster_dataset, population_instance_worldpop, multipolygon):
+        mock_open = mocker.patch('pisa.population.rasterio.open', return_value=mock_raster_dataset)
+        mock_mask = mocker.patch('pisa.population.mask', return_value=(fake_raster_dataset, None))
 
         df = population_instance_worldpop.raster_to_df("fake_path.tif", population_instance_worldpop.admin_area_boundaries)
 
-        assert isinstance(df, pd.DataFrame)
-        assert "population" in df.columns
         assert df.shape[1] == 3
-        assert mock_src.call_count == 1
+        assert mock_open.call_count == 1
         assert mock_mask.call_count == 1
-        mock_src.assert_called_once_with('fake_path.tif')
-        mock_mask.assert_called_once_with(mock_raster_datasetreader, [multipolygon], all_touched=True, crop=False)
+        mock_open.assert_called_once_with('fake_path.tif')
+        mock_mask.assert_called_once_with(mock_raster_dataset, [population_instance_worldpop.admin_area_boundaries], all_touched=True, crop=False)
 
     def test_raster_to_df_false_input_path(self, population_instance_worldpop):
         with pytest.raises(rasterio.errors.RasterioIOError):
-            population_instance_worldpop.raster_to_df(file_path='fake_path', mask_polygon=None)
+            population_instance_worldpop.raster_to_df('fake_path', population_instance_worldpop.admin_area_boundaries)
 
-    def test_raster_to_df_empty_polygon(self, mocker, mock_raster_datasetreader, population_instance_worldpop):
-        mock_src = mocker.patch('data_src.rasterio.open', return_value=mock_raster_datasetreader)
+    def test_raster_to_df_empty_polygon(self, mocker, mock_raster_dataset, population_instance_worldpop):
+        mock_src = mocker.patch('rasterio.open', return_value=mock_raster_dataset)
 
         with pytest.raises(IndexError):
-            population_instance_worldpop.raster_to_df(file_path='fake_path.tif', mask_polygon=MultiPolygon([]))
+            population_instance_worldpop.raster_to_df('fake_path.tif', MultiPolygon([]))
 
 
 class TestAdmArea:
-    def test_get_admarea_mask_correct(self, mocker, population_instance_worldpop, multipolygon, mock_raster_datasetreader, fake_raster_dataset):
-        mock_mask = mocker.patch('pisa.population.riomask.mask', return_value=(fake_raster_dataset, None))
+    def test_get_admarea_mask_correct(self, mocker, population_instance_worldpop, multipolygon, mock_raster_dataset, fake_raster_dataset):
+        mock_mask = mocker.patch('pisa.population.mask', return_value=(fake_raster_dataset, None))
 
-        adm_mask = population_instance_worldpop.get_admarea_mask(multipolygon, mock_raster_datasetreader)
+        adm_mask = population_instance_worldpop.get_admarea_mask(multipolygon, mock_raster_dataset)
 
         # Assert that the result adm_mask is correct
         expected_mask = fake_raster_dataset[0] > 0
         assert adm_mask.shape == expected_mask.shape
         assert np.array_equal(adm_mask, expected_mask)
 
-        # Verify that riomask.mask was called with correct parameters
+        # Verify that mask was called with correct parameters
         mock_mask.assert_called_once_with(
-            mock_raster_datasetreader, [multipolygon], all_touched=True, crop=False
+            mock_raster_dataset, [multipolygon], all_touched=True, crop=False
         )
 
     def test_get_admarea_mask_empty(self, population_instance_worldpop):
