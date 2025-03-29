@@ -11,17 +11,25 @@ Note:
 
 """
 
+import json
 import logging
+import time
 from abc import ABC, abstractmethod
 
 import geopandas as gpd
 import networkx as nx
 import osmnx as ox
 import pandas as pd
+import requests
 from geopandas import GeoSeries
 from networkx import MultiDiGraph
 from pandas import DataFrame
 from shapely import Polygon
+from shapely.geometry import shape
+
+from pisa.utils import disk_cache
+
+logger = logging.getLogger(__name__)
 
 
 class IsopolygonCalculator(ABC):
@@ -381,3 +389,198 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
             skeleton = nodes_gdf.geometry.union_all()
 
         return skeleton
+
+
+class MapboxIsopolygonCalculator(IsopolygonCalculator):
+    """From Mapbox docs: When you provide geographic coordinates to a Mapbox API,
+    they should be formatted in the order longitude, latitude and specified as decimal degrees
+    in the WGS84 coordinate system. This pattern matches existing standards, including GeoJSON and KML.
+    Mapbox APIs use GeoJSON formatting wherever possible to represent geospatial data.
+    """
+
+    VALID_ROUTE_PROFILES = {"driving", "walking", "cycling"}
+
+    def __init__(
+        self,
+        facilities_df: DataFrame,
+        distance_type: str,
+        distance_values: list[int],  # in minutes or meters
+        route_profile: str,  # must be an element of VALID_ROUTE_PROFILES
+        mapbox_api_token: str,
+        base_url: str = "https://api.mapbox.com/isochrone/v1/",
+    ):
+
+        self.mapbox_api_token = self._validate_mapbox_token_not_empty(mapbox_api_token)
+
+        self.route_profile = self._validate_route_profile(route_profile)
+
+        super().__init__(facilities_df, distance_type, distance_values)
+
+        self.distance_values = self._validate_mapbox_distance_values(
+            self.distance_values
+        )
+
+        self.base_url = base_url
+
+        self.contour_type = (
+            "contours_meters" if self.distance_type == "length" else "contours_minutes"
+        )
+
+    def calculate_isopolygons(self) -> DataFrame:
+        """Calculates isopolygons for all facilities using Mapbox API.
+
+        This method generates isopolygons (polygons of equal distance/time) for each facility
+        using the Mapbox Isochrone API.
+
+        Returns:
+            Dataframe: A pandas DataFrame where:
+                - Each row represents a facility
+                - Each column represents a distance value prefixed with "ID_"
+                - Each cell contains the corresponding isopolygon geometry
+        Note:
+            - Requires valid Mapbox API credentials
+            - Subject to Mapbox API rate limits (300 requests per minute)
+            - Uses the distance values specified in self.distance_values
+        """
+
+        columns = [f"ID_{d}" for d in self.distance_values]
+        number_of_facilities = len(self.facilities_df)
+
+        # DataFrame with each row per facility and one column per distance
+        isopolygons = DataFrame(index=range(number_of_facilities), columns=columns)
+
+        # The Isochrone API supports 1 coordinate per request
+        for idx, facility in self.facilities_df.iterrows():
+
+            self._handle_rate_limit(request_count=idx)
+
+            request_url = self._build_request_url(facility.longitude, facility.latitude)
+            features = self._fetch_isopolygons(request_url)
+
+            for feature in features:
+                isopolygon = shape(feature["geometry"])
+
+                # countour is a distance value (e.g. 1000 (for distance) or 60 (for time))
+                contour = feature["properties"]["contour"]
+
+                # TODO: can we remove this "ID_" prefix?
+                isopolygons.at[idx, f"ID_{contour}"] = isopolygon
+
+        return isopolygons
+
+    def _build_request_url(self, longitude: float, latitude: float) -> str:
+        """Builds the Mapbox API request URL for isopolygon calculation."""
+        return (
+            f"{self.base_url}mapbox/{self.route_profile}/{longitude},"
+            f"{latitude}?{self.contour_type}={','.join(map(str, self.distance_values))}"
+            f"&polygons=true&denoise=1&access_token={self.mapbox_api_token}"
+        )
+
+    def _handle_rate_limit(self, request_count: int) -> None:
+        """Handles Mapbox API rate limiting, a maximum of 300 requests per minute."""
+
+        if (request_count + 1) % 300 == 0:
+            logger.info("Reached Mapbox API request limit. Waiting for 1 minute...")
+            time.sleep(60)
+            logger.info("Resuming requests")
+
+    @disk_cache("mapbox_cache")
+    def _fetch_isopolygons(self, request_url: str) -> list:
+        """
+        Makes a GET request to the Mapbox Isochrone API endpoint and handles various potential errors.
+
+        Args:
+            request_url (str): The complete URL for the Mapbox Isochrone API request.
+
+        Returns:
+            list: GeoJSON Feature object.
+
+        Raises:
+            ValueError: If the Mapbox access token is invalid (401 error).
+            PermissionError: If the token lacks permission to access the resource (403 error).
+            requests.exceptions.HTTPError: For other HTTP-related errors.
+            TimeoutError: If the request times out (>60 seconds).
+            RuntimeError: For unexpected errors during the API request.
+        """
+
+        try:
+            # Make the request
+            response = requests.get(request_url, timeout=60)
+
+            # Check for HTTP errors
+            response.raise_for_status()
+
+            # Try to parse the JSON
+            request_pack = json.loads(response.content)
+
+            # Check if features exist in the response
+            if "features" not in request_pack:
+                raise KeyError(
+                    "Response does not contain 'features' key. API may have changed or returned unexpected format."
+                )
+
+            return request_pack["features"]
+
+        except requests.exceptions.HTTPError as e:
+            # Handle specific HTTP status codes
+            if response.status_code == 401:
+                raise ValueError("Unauthorized: Invalid Mapbox access token") from e
+            elif response.status_code == 403:
+                raise PermissionError(
+                    "Forbidden: The Mapbox token doesn't have access to this resource"
+                ) from e
+            else:
+                raise requests.exceptions.HTTPError(
+                    f"HTTP Error {response.status_code}: {e}"
+                ) from e
+
+        except requests.exceptions.Timeout as e:
+            raise TimeoutError(
+                "Request timed out: Mapbox servers took too long to respond."
+            ) from e
+
+        except Exception as e:
+            # Last resort for unexpected errors
+            logging.error(f"Unexpected error in Mapbox API request: {e}", exc_info=True)
+            raise RuntimeError(
+                f"Unexpected error when connecting to Mapbox: {str(e)}"
+            ) from e
+
+    @staticmethod
+    def _validate_mapbox_distance_values(distance_values: list[int]) -> list[int]:
+        """Checks if distance_values meet Mapbox API requirements:
+        a maximum of 4 values in increasing order.
+
+        Args:
+            distance_values (list[int]): List of integer distances to validate
+
+        Returns:
+            list[int]: Sorted list of distance values
+
+        Raises:
+            ValueError: If more than 4 distance values are provided
+
+        """
+
+        if len(distance_values) > 4:
+            raise ValueError("Mapbox API accepts a maximum of 4 distance_values")
+
+        distance_values.sort()
+
+        return distance_values
+
+    def _validate_route_profile(self, route_profile: str) -> str:
+
+        route_profile = route_profile.lower().strip()
+
+        if route_profile not in self.VALID_ROUTE_PROFILES:
+            raise ValueError(
+                f"route_profile must be one of {self.VALID_ROUTE_PROFILES}"
+            )
+        return route_profile
+
+    @staticmethod
+    def _validate_mapbox_token_not_empty(mapbox_api_token: str) -> str:
+        if not mapbox_api_token:
+            raise ValueError("Mapbox API token is required")
+        return mapbox_api_token

@@ -1,11 +1,7 @@
-"""
-Testing error handling that forces request to fulfill constraints of MapboxAPI
-"""
-
 import pandas as pd
 import pytest
 
-from pisa.isopolygons_mapbox import MapboxIsopolygonCalculator
+from pisa.isopolygons import MapboxIsopolygonCalculator
 
 
 @pytest.fixture
