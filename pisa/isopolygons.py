@@ -193,7 +193,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
                     AttributeError
                 ):  # Probably trying to catch 'MultiPolygon' object has no attribute 'exterior' from _inflate_skeleton, but it wasn't specified in the code before
 
-                    logging.info(f"problem with node {road_node}")  # stops execution
+                    logger.info(f"problem with node {road_node}")  # stops execution
 
         return isopolygons
 
@@ -541,7 +541,7 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
         except Exception as e:
             # Last resort for unexpected errors
-            logging.error(f"Unexpected error in Mapbox API request: {e}", exc_info=True)
+            logger.error(f"Unexpected error in Mapbox API request: {e}", exc_info=True)
             raise RuntimeError(
                 f"Unexpected error when connecting to Mapbox: {str(e)}"
             ) from e
