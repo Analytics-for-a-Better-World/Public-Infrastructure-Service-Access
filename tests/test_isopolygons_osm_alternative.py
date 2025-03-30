@@ -31,7 +31,7 @@ class TestOsmCalculateIsopolygonsAlternative:
         self.graph_nodes, self.graph_edges = ox.graph_to_gdfs(self.graph)
 
         self.isopolygon_calculator = OsmIsopolygonCalculatorAlternative(
-            facilities_lon_lat=dataframe_with_lon_and_lat,
+            facilities_df=dataframe_with_lon_and_lat,
             distance_type="length",
             distance_values=[5, 20, 50],
             road_network=self.graph,
