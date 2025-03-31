@@ -13,39 +13,62 @@ from shapely import MultiPolygon, Polygon
 from hdx.api.configuration import Configuration
 from hdx.data.resource import Resource
 
+from pisa.administrative_area import AdministrativeArea
+
+
 @dataclass
+class DataSource(Enum):
+    WORLD_POP = 'world_pop'
+    FACEBOOK = 'facebook'
+
+
 class Population:
+    """Population main class with shared methods. It initiates the correct subclass & methods based on data_source that
+    was passed to the Population class. Subclasses must implement the method get_population_data()
+    If you want to add new data source (e.g. geojson): create new subclass with method get_population_data(),
+    add the datasource in the DataSource class and update the get_population_handler() method in the Population class.
+    """
+    def __init__(
+        self,
+        data_source: str,
+        admin_area: AdministrativeArea,
+        admin_boundaries: Polygon | MultiPolygon,
+        population_resolution: int=5,
+    ):
+        try:
+            self.data_source = DataSource(data_source)  # Convert string to Enum
+        except ValueError:
+            raise ValueError(f"Invalid data source: '{data_source}'. Must be one of {[ds.value for ds in DataSource]}")
+        self.iso3_country_code = admin_area.get_iso3_country_code()
+        self.admin_area_boundaries = admin_boundaries
+        self.population_resolution = population_resolution
 
-    data_source: str
-    iso3_country_code: str
-    admin_area_boundaries: Polygon | MultiPolygon
-    population_resolution: int = 5
+        self.population_handler = self._get_population_handler()
 
-    class DataSource(Enum):
-        WORLD_POP = 'world_pop'
-        FACEBOOK = 'facebook'
+    def _get_population_handler(self):
+        if self.data_source.value == DataSource.WORLD_POP.value:
+            return WorldpopPopulation(
+                iso3_country_code=self.iso3_country_code,
+                admin_boundaries=self.admin_area_boundaries,
+            )
+        elif self.data_source.value == DataSource.FACEBOOK.value:
+            return FacebookPopulation(
+                iso3_country_code=self.iso3_country_code,
+                admin_boundaries=self.admin_area_boundaries,
+            )
 
     def get_population_gdf(self) -> GeoDataFrame:
         """Integrates the methods to get the population numbers for the selected area into one flow and
         returns grouped population data for the admin area as a GeoDataFrame."""
-
-        population_df = self.get_population_data_with_selected_method()
-
+        population_df = self.population_handler.get_population_data()
         return self.group_population(population_df, self.population_resolution)
-
-    def get_population_data_with_selected_method(self) -> pd.DataFrame:
-        """Select correct method according to the data_source given and return the population data as a DataFrame."""
-        if self.data_source == self.DataSource.WORLD_POP.value:
-            return self.get_population_worldpop()
-        elif self.data_source == self.DataSource.FACEBOOK.value:
-            return self.get_population_facebook()
-        else:
-            raise ValueError(
-                f"Invalid data source: {self.data_source}. Must be one of {[ds.value for ds in Population.DataSource]}.")
 
     @staticmethod
     def group_population(population_df: pd.DataFrame, population_resolution: int) -> GeoDataFrame:
-        """ Group population data by longitude and latitude and return as a GeoDataFrame."""
+        """ Group population data by longitude and latitude based on the population resolution. The population resolution
+        is an integer that indicates the number of digits after the decimal point to which latitude and longitude get rounded
+        and then grouped. The population of all rows with the same unique combination of latitude and longitude after
+        rounding by population resolution is summed. The resulting dataframe is returned as a GeoDataFrame."""
         population_df.loc[:, ["longitude", "latitude"]] = population_df[["longitude", "latitude"]].round(
             population_resolution)
 
@@ -58,7 +81,17 @@ class Population:
         population = GeoDataFrame(population, geometry=points_from_xy(population.longitude, population.latitude))
         return population
 
-    def get_population_facebook(self) -> pd.DataFrame:
+
+class FacebookPopulation:
+    def __init__(
+        self,
+        iso3_country_code: str,
+        admin_boundaries: Polygon | MultiPolygon,
+    ):
+        self.iso3_country_code = iso3_country_code
+        self.admin_boundaries = admin_boundaries
+
+    def get_population_data(self) -> pd.DataFrame:
         """Download & process data from the chosen datasource 'facebook'. Returns a DataFrame with population data."""
 
         downloaded_data = self.download_population_facebook(
@@ -68,14 +101,14 @@ class Population:
         processed_data = self.process_population_facebook(
             downloaded_data,
             iso3_country_code=self.iso3_country_code,
-            admin_area_boundaries=self.admin_area_boundaries,
+            admin_area_boundaries=self.admin_boundaries,
         )
 
         return processed_data
 
     @staticmethod
     def download_population_facebook(
-        iso3_country_code: str
+            iso3_country_code: str
     ) -> pd.DataFrame:
         """Download population data from 2020 from facebook for a country defined by the iso3_country_code."""
         try:
@@ -98,15 +131,28 @@ class Population:
         return df
 
     @staticmethod
-    def process_population_facebook(downloaded_data: pd.DataFrame, iso3_country_code: str, admin_area_boundaries: Polygon | MultiPolygon) -> pd.DataFrame:
+    def process_population_facebook(downloaded_data: pd.DataFrame, iso3_country_code: str,
+                                    admin_area_boundaries: Polygon | MultiPolygon) -> pd.DataFrame:
         """ Create geodataframe, clip with admin area boundaries to keep only those areas inside the admin area boundaries
          and convert back to pandas dataframe"""
-        gdf = GeoDataFrame(downloaded_data, geometry=points_from_xy(downloaded_data["longitude"], downloaded_data["latitude"]))
+        gdf = GeoDataFrame(downloaded_data,
+                           geometry=points_from_xy(downloaded_data["longitude"], downloaded_data["latitude"]))
         gdf = clip(gdf, admin_area_boundaries)
-        df = gdf.drop(columns=["geometry"]).rename(columns={f"{iso3_country_code.lower()}_general_2020": "population"})
+        df = gdf.drop(columns=["geometry"]).rename(
+            columns={f"{iso3_country_code.lower()}_general_2020": "population"})
         return df
 
-    def get_population_worldpop(self) -> pd.DataFrame:
+
+class WorldpopPopulation:
+    def __init__(
+        self,
+        iso3_country_code: str,
+        admin_boundaries: Polygon | MultiPolygon,
+    ):
+        self.iso3_country_code = iso3_country_code
+        self.admin_boundaries = admin_boundaries
+
+    def get_population_data(self) -> pd.DataFrame:
         """Download & process data from the chosen datasource 'worldpop'. Returns a DataFrame with population data."""
 
         downloaded_data = self.download_population_worldpop(
@@ -115,7 +161,7 @@ class Population:
 
         processed_data = self.process_population_worldpop(
             downloaded_data,
-            admin_area_boundaries=self.admin_area_boundaries,
+            admin_area_boundaries=self.admin_boundaries,
         )
 
         return processed_data
@@ -143,18 +189,10 @@ class Population:
 
         return filehandle
 
-
     @staticmethod
     def process_population_worldpop(file_path: str, admin_area_boundaries: Polygon | MultiPolygon) -> pd.DataFrame:
-        """Processes the downloaded worldpop data into the required format of a dataframe"""
-        df = Population.raster_to_df(file_path, admin_area_boundaries)
-        return df
-
-
-    @staticmethod
-    def raster_to_df(file_path: str, admin_area_boundaries: Polygon | MultiPolygon) -> pd.DataFrame:
         """
-        Convert raster file to a dataframe of longitude, latitude
+        Processes the downloaded worldpop data raster file into the required format of a dataframe of longitude, latitude
         and statistical population count
 
         Function takes the bounds of the raster file in the raster_fpath, draws an evenly spaced sequence of points between
@@ -174,8 +212,8 @@ class Population:
             xs, ys = np.meshgrid(x, y)
             zs = src.read(1)
             # Adm area mask
-            mask = Population.get_admarea_mask(admin_area_boundaries, src)
-            xs, ys, zs = xs[mask], ys[mask], zs[mask]
+            adm_mask = WorldpopPopulation.get_admarea_mask(admin_area_boundaries, src)
+            xs, ys, zs = xs[adm_mask], ys[adm_mask], zs[adm_mask]
             data = {
                 "longitude": pd.Series(xs),
                 "latitude": pd.Series(ys),
@@ -186,8 +224,7 @@ class Population:
         return df
 
     @staticmethod
-    def get_admarea_mask(
-        vector_polygon: Polygon | MultiPolygon, raster_layer: rasterio.DatasetReader) -> np.ndarray:
+    def get_admarea_mask(vector_polygon: Polygon | MultiPolygon, raster_layer: rasterio.DatasetReader) -> np.ndarray:
         """
         Extract mask from raster for a given MultiPolygon
 
@@ -195,12 +232,9 @@ class Population:
         points outside the given (Multi)Polygon
         """
         gtraster, bound = mask(
-        raster_layer, [vector_polygon], all_touched = True, crop = False
+            raster_layer, [vector_polygon], all_touched = True, crop = False)
 
-        )
         # Keep only non zero values
         adm_mask = gtraster[0] > 0
         return adm_mask
 
-    # if you want to add new data source (e.g. geojson):
-    # create method get_population_gson(), add the datasource in the DataSource class and add a call to it in get_population_data()

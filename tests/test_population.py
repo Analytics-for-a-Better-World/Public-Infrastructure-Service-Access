@@ -4,7 +4,9 @@ import pandas as pd
 import numpy as np
 import rasterio
 from shapely.geometry import Polygon, MultiPolygon
-from pisa.population import Population
+
+from pisa.administrative_area import AdministrativeArea
+from pisa.population import Population, FacebookPopulation, WorldpopPopulation
 
 
 @pytest.fixture
@@ -42,16 +44,16 @@ def mock_raster_dataset(mocker):
 
 @pytest.fixture
 def population_instance_facebook(multipolygon):
-    iso3 = "ABC"
-    admin_area = multipolygon
-    return Population("facebook", iso3, admin_area)
+    iso3 = 'ABC'
+    admin_boundaries = multipolygon
+    return FacebookPopulation(iso3, admin_boundaries)
 
 
 @pytest.fixture
 def population_instance_worldpop(multipolygon):
-    iso3 = "ABC"
-    admin_area = multipolygon
-    return Population("world_pop", iso3, admin_area)
+    iso3 = 'ABC'
+    admin_boundaries = multipolygon
+    return WorldpopPopulation(iso3, admin_boundaries)
 
 
 @patch("pisa.population.Resource.search_in_hdx")
@@ -79,7 +81,7 @@ class TestProcessPopulationFacebook:
         )
         result = population_instance_facebook.process_population_facebook(data,
                                                                           population_instance_facebook.iso3_country_code,
-                                                                          population_instance_facebook.admin_area_boundaries)
+                                                                          population_instance_facebook.admin_boundaries)
 
         assert isinstance(result, pd.DataFrame)
         assert "population" in result.columns
@@ -96,7 +98,7 @@ class TestProcessPopulationFacebook:
 
         result = population_instance_facebook.process_population_facebook(data,
                                                                           population_instance_facebook.iso3_country_code,
-                                                                          population_instance_facebook.admin_area_boundaries)
+                                                                          population_instance_facebook.admin_boundaries)
 
         assert result['population'].sum() == 6
 
@@ -111,7 +113,7 @@ class TestProcessPopulationFacebook:
 
         result = population_instance_facebook.process_population_facebook(population_df,
                                                                           population_instance_facebook.iso3_country_code,
-                                                                          population_instance_facebook.admin_area_boundaries)
+                                                                          population_instance_facebook.admin_boundaries)
 
         assert result['population'].sum() == 0
 
@@ -129,28 +131,28 @@ def test_download_population_worldpop(mock_urlretrieve, mock_requests, populatio
     mock_urlretrieve.assert_called()
 
 
-class TestRastertoDF:
-    def test_raster_to_df(self, mocker, mock_raster_dataset, fake_raster_dataset, population_instance_worldpop, multipolygon):
+class TestProcessPopulationWorldpop:
+    def test_process_population_worldpop(self, mocker, mock_raster_dataset, fake_raster_dataset, population_instance_worldpop, multipolygon):
         mock_open = mocker.patch('pisa.population.rasterio.open', return_value=mock_raster_dataset)
         mock_mask = mocker.patch('pisa.population.mask', return_value=(fake_raster_dataset, None))
 
-        df = population_instance_worldpop.raster_to_df("fake_path.tif", population_instance_worldpop.admin_area_boundaries)
+        df = population_instance_worldpop.process_population_worldpop("fake_path.tif", population_instance_worldpop.admin_boundaries)
 
         assert df.shape[1] == 3
         assert mock_open.call_count == 1
         assert mock_mask.call_count == 1
         mock_open.assert_called_once_with('fake_path.tif')
-        mock_mask.assert_called_once_with(mock_raster_dataset, [population_instance_worldpop.admin_area_boundaries], all_touched=True, crop=False)
+        mock_mask.assert_called_once_with(mock_raster_dataset, [population_instance_worldpop.admin_boundaries], all_touched=True, crop=False)
 
-    def test_raster_to_df_false_input_path(self, population_instance_worldpop):
+    def test_process_population_worldpop_false_input_path(self, population_instance_worldpop):
         with pytest.raises(rasterio.errors.RasterioIOError):
-            population_instance_worldpop.raster_to_df('fake_path', population_instance_worldpop.admin_area_boundaries)
+            population_instance_worldpop.process_population_worldpop('fake_path', population_instance_worldpop.admin_boundaries)
 
-    def test_raster_to_df_empty_polygon(self, mocker, mock_raster_dataset, population_instance_worldpop):
+    def test_process_population_worldpop_empty_polygon(self, mocker, mock_raster_dataset, population_instance_worldpop):
         mock_src = mocker.patch('rasterio.open', return_value=mock_raster_dataset)
 
         with pytest.raises(IndexError):
-            population_instance_worldpop.raster_to_df('fake_path.tif', MultiPolygon([]))
+            population_instance_worldpop.process_population_worldpop('fake_path.tif', MultiPolygon([]))
 
 
 class TestAdmArea:
@@ -175,11 +177,11 @@ class TestAdmArea:
 
 class TestGroupPopulation:
     @pytest.mark.parametrize("nof_digits, count_of_areas_included", [(1, 1), (2, 2), (3, 3), (4, 4)])
-    def test_group_pop_length(self, population_instance_worldpop, population_dataframe, nof_digits, count_of_areas_included):
-        group_pop = population_instance_worldpop.group_population(population_dataframe, population_resolution=nof_digits)
+    def test_group_pop_length(self, population_dataframe, nof_digits, count_of_areas_included):
+        group_pop = Population.group_population(population_dataframe, population_resolution=nof_digits)
         assert group_pop.shape[0] == count_of_areas_included
 
     @pytest.mark.parametrize("nof_digits, longitude, latitude, population_sum", [(1, 6.9, 53.1, 14), (2, 6.88, 53.06, 12), (3, 6.876, 53.062, 9), (4, 6.8796, 53.0600, 3)])
-    def test_group_pop_values(self, population_instance_worldpop, population_dataframe, nof_digits, longitude, latitude, population_sum):
-        group_pop = population_instance_worldpop.group_population(population_dataframe, population_resolution=nof_digits)
+    def test_group_pop_values(self, population_dataframe, nof_digits, longitude, latitude, population_sum):
+        group_pop = Population.group_population(population_dataframe, population_resolution=nof_digits)
         assert group_pop.loc[(group_pop['longitude'] == longitude) & (group_pop['latitude'] == latitude)]['population'].values[0] == population_sum
