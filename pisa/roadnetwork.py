@@ -9,7 +9,7 @@ import numpy as np
 import geopandas as gpd
 from shapely.geometry import MultiPolygon
 
-def get_road_network(AdmArea, network_type: str) -> None:
+def get_road_network(network_type: str) -> None:
         """
         Retrieve open street map road network for a network_type
         and calculate road travel time
@@ -35,7 +35,7 @@ def get_road_network(AdmArea, network_type: str) -> None:
             raise Exception("Invalid network type")
         # Get network
         road_network = ox.graph_from_polygon(
-            AdmArea.geometry, network_type=network_type
+            network_type=network_type
         )
         # Add travel time edge attribute in minutes
         road_network = ox.add_edge_speeds(road_network, fallback=default_speed)
