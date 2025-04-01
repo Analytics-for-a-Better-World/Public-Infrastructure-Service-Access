@@ -33,26 +33,10 @@ class Population(ABC):
         admin_boundaries: Polygon | MultiPolygon,
         population_resolution: int=5,
     ):
-
-        self._validate_input(admin_area, admin_boundaries)
-
         self.admin_area = admin_area
         self.iso3_country_code = admin_area.get_iso3_country_code()
         self.admin_boundaries = admin_boundaries
         self.population_resolution = population_resolution
-
-    def _validate_input(self, admin_area, admin_boundaries) -> None:
-        """Checks if input is correct"""
-
-        if not isinstance(admin_area, AdministrativeArea):
-            raise ValueError(
-                "Admin_area must be of type 'AdministrativeArea'"
-            )
-
-        if not isinstance(admin_boundaries, (Polygon or MultiPolygon)):
-            raise ValueError(
-                "Admin_boundaries must be of type Polygon or Multipolygon"
-            )
 
     def get_population_gdf(self) -> GeoDataFrame:
         """Integrates the methods to get the population numbers for the selected area into one flow and
