@@ -43,17 +43,20 @@ def mock_raster_dataset(mocker):
 
 
 @pytest.fixture
-def population_instance_facebook(multipolygon):
-    iso3 = 'ABC'
-    admin_boundaries = multipolygon
-    return FacebookPopulation(iso3, admin_boundaries)
+def mock_adm_area():
+    return AdministrativeArea("Timor-Leste", admin_level=0)
 
 
 @pytest.fixture
-def population_instance_worldpop(multipolygon):
-    iso3 = 'ABC'
+def population_instance_facebook(multipolygon, mock_adm_area):
     admin_boundaries = multipolygon
-    return WorldpopPopulation(iso3, admin_boundaries)
+    return FacebookPopulation(mock_adm_area, admin_boundaries)
+
+
+@pytest.fixture
+def population_instance_worldpop(multipolygon, mock_adm_area):
+    admin_boundaries = multipolygon
+    return WorldpopPopulation(mock_adm_area, admin_boundaries)
 
 
 @patch("pisa.population.Resource.search_in_hdx")

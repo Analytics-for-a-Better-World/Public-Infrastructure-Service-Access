@@ -1,4 +1,5 @@
 import urllib
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 
@@ -22,45 +23,41 @@ class DataSource(Enum):
     FACEBOOK = 'facebook'
 
 
-class Population:
-    """Population main class with shared methods. It initiates the correct subclass & methods based on data_source that
-    was passed to the Population class. Subclasses must implement the method get_population_data()
-    If you want to add new data source (e.g. geojson): create new subclass with method get_population_data(),
-    add the datasource in the DataSource class and update the get_population_handler() method in the Population class.
+class Population(ABC):
+    """Abstract base class for Population. Subclasses must implement the method get_population_data()
+    If you want to add new data source (e.g. geojson): create new subclass with method get_population_data().
     """
     def __init__(
         self,
-        data_source: str,
         admin_area: AdministrativeArea,
         admin_boundaries: Polygon | MultiPolygon,
         population_resolution: int=5,
     ):
-        try:
-            self.data_source = DataSource(data_source)  # Convert string to Enum
-        except ValueError:
-            raise ValueError(f"Invalid data source: '{data_source}'. Must be one of {[ds.value for ds in DataSource]}")
+
+        self._validate_input(admin_area, admin_boundaries)
+
+        self.admin_area = admin_area
         self.iso3_country_code = admin_area.get_iso3_country_code()
-        self.admin_area_boundaries = admin_boundaries
+        self.admin_boundaries = admin_boundaries
         self.population_resolution = population_resolution
 
-        self.population_handler = self._get_population_handler()
+    def _validate_input(self, admin_area, admin_boundaries) -> None:
+        """Checks if input is correct"""
 
-    def _get_population_handler(self):
-        if self.data_source.value == DataSource.WORLD_POP.value:
-            return WorldpopPopulation(
-                iso3_country_code=self.iso3_country_code,
-                admin_boundaries=self.admin_area_boundaries,
+        if not isinstance(admin_area, AdministrativeArea):
+            raise ValueError(
+                "Admin_area must be of type 'AdministrativeArea'"
             )
-        elif self.data_source.value == DataSource.FACEBOOK.value:
-            return FacebookPopulation(
-                iso3_country_code=self.iso3_country_code,
-                admin_boundaries=self.admin_area_boundaries,
+
+        if not isinstance(admin_boundaries, (Polygon or MultiPolygon)):
+            raise ValueError(
+                "Admin_boundaries must be of type Polygon or Multipolygon"
             )
 
     def get_population_gdf(self) -> GeoDataFrame:
         """Integrates the methods to get the population numbers for the selected area into one flow and
         returns grouped population data for the admin area as a GeoDataFrame."""
-        population_df = self.population_handler.get_population_data()
+        population_df = self.get_population_data()
         return self.group_population(population_df, self.population_resolution)
 
     @staticmethod
@@ -81,15 +78,18 @@ class Population:
         population = GeoDataFrame(population, geometry=points_from_xy(population.longitude, population.latitude))
         return population
 
+    @abstractmethod
+    def get_population_data(self) -> pd.DataFrame:
+        """Must be implemented in subclasses"""
+        pass
 
-class FacebookPopulation:
+
+class FacebookPopulation(Population):
     def __init__(
-        self,
-        iso3_country_code: str,
-        admin_boundaries: Polygon | MultiPolygon,
-    ):
-        self.iso3_country_code = iso3_country_code
-        self.admin_boundaries = admin_boundaries
+            self,
+            admin_area: AdministrativeArea,
+            admin_boundaries: Polygon | MultiPolygon):
+        super().__init__(admin_area, admin_boundaries)
 
     def get_population_data(self) -> pd.DataFrame:
         """Download & process data from the chosen datasource 'facebook'. Returns a DataFrame with population data."""
@@ -101,7 +101,7 @@ class FacebookPopulation:
         processed_data = self.process_population_facebook(
             downloaded_data,
             iso3_country_code=self.iso3_country_code,
-            admin_area_boundaries=self.admin_boundaries,
+            admin_boundaries=self.admin_boundaries,
         )
 
         return processed_data
@@ -132,25 +132,23 @@ class FacebookPopulation:
 
     @staticmethod
     def process_population_facebook(downloaded_data: pd.DataFrame, iso3_country_code: str,
-                                    admin_area_boundaries: Polygon | MultiPolygon) -> pd.DataFrame:
+                                    admin_boundaries: Polygon | MultiPolygon) -> pd.DataFrame:
         """ Create geodataframe, clip with admin area boundaries to keep only those areas inside the admin area boundaries
          and convert back to pandas dataframe"""
         gdf = GeoDataFrame(downloaded_data,
                            geometry=points_from_xy(downloaded_data["longitude"], downloaded_data["latitude"]))
-        gdf = clip(gdf, admin_area_boundaries)
+        gdf = clip(gdf, admin_boundaries)
         df = gdf.drop(columns=["geometry"]).rename(
             columns={f"{iso3_country_code.lower()}_general_2020": "population"})
         return df
 
 
-class WorldpopPopulation:
+class WorldpopPopulation(Population):
     def __init__(
-        self,
-        iso3_country_code: str,
-        admin_boundaries: Polygon | MultiPolygon,
-    ):
-        self.iso3_country_code = iso3_country_code
-        self.admin_boundaries = admin_boundaries
+            self,
+            admin_area: AdministrativeArea,
+            admin_boundaries: Polygon | MultiPolygon):
+        super().__init__(admin_area, admin_boundaries)
 
     def get_population_data(self) -> pd.DataFrame:
         """Download & process data from the chosen datasource 'worldpop'. Returns a DataFrame with population data."""
@@ -161,7 +159,7 @@ class WorldpopPopulation:
 
         processed_data = self.process_population_worldpop(
             downloaded_data,
-            admin_area_boundaries=self.admin_boundaries,
+            admin_boundaries=self.admin_boundaries,
         )
 
         return processed_data
@@ -190,7 +188,7 @@ class WorldpopPopulation:
         return filehandle
 
     @staticmethod
-    def process_population_worldpop(file_path: str, admin_area_boundaries: Polygon | MultiPolygon) -> pd.DataFrame:
+    def process_population_worldpop(file_path: str, admin_boundaries: Polygon | MultiPolygon) -> pd.DataFrame:
         """
         Processes the downloaded worldpop data raster file into the required format of a dataframe of longitude, latitude
         and statistical population count
@@ -212,7 +210,7 @@ class WorldpopPopulation:
             xs, ys = np.meshgrid(x, y)
             zs = src.read(1)
             # Adm area mask
-            adm_mask = WorldpopPopulation.get_admarea_mask(admin_area_boundaries, src)
+            adm_mask = WorldpopPopulation.get_admarea_mask(admin_boundaries, src)
             xs, ys, zs = xs[adm_mask], ys[adm_mask], zs[adm_mask]
             data = {
                 "longitude": pd.Series(xs),
