@@ -17,12 +17,6 @@ from hdx.data.resource import Resource
 from pisa.administrative_area import AdministrativeArea
 
 
-@dataclass
-class DataSource(Enum):
-    WORLD_POP = 'world_pop'
-    FACEBOOK = 'facebook'
-
-
 class Population(ABC):
     """Abstract base class for Population. Subclasses must implement the method get_population_data()
     If you want to add new data source (e.g. geojson): create new subclass with method get_population_data().
@@ -38,11 +32,11 @@ class Population(ABC):
         self.admin_boundaries = admin_boundaries
         self.population_resolution = population_resolution
 
-    def get_population_gdf(self) -> GeoDataFrame:
+    def get_population_gdf(self) -> tuple[GeoDataFrame, pd.DataFrame]:
         """Integrates the methods to get the population numbers for the selected area into one flow and
         returns grouped population data for the admin area as a GeoDataFrame."""
         population_df = self.get_population_data()
-        return self.group_population(population_df, self.population_resolution)
+        return self.group_population(population_df, self.population_resolution), population_df
 
     @staticmethod
     def group_population(population_df: pd.DataFrame, population_resolution: int) -> GeoDataFrame:
@@ -72,8 +66,9 @@ class FacebookPopulation(Population):
     def __init__(
             self,
             admin_area: AdministrativeArea,
-            admin_boundaries: Polygon | MultiPolygon):
-        super().__init__(admin_area, admin_boundaries)
+            admin_boundaries: Polygon | MultiPolygon,
+            population_resolution: int=5):
+        super().__init__(admin_area, admin_boundaries, population_resolution)
 
     def get_population_data(self) -> pd.DataFrame:
         """Download & process data from the chosen datasource 'facebook'. Returns a DataFrame with population data."""
@@ -131,8 +126,9 @@ class WorldpopPopulation(Population):
     def __init__(
             self,
             admin_area: AdministrativeArea,
-            admin_boundaries: Polygon | MultiPolygon):
-        super().__init__(admin_area, admin_boundaries)
+            admin_boundaries: Polygon | MultiPolygon,
+            population_resolution: int=5):
+        super().__init__(admin_area, admin_boundaries, population_resolution)
 
     def get_population_data(self) -> pd.DataFrame:
         """Download & process data from the chosen datasource 'worldpop'. Returns a DataFrame with population data."""
