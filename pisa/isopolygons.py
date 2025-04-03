@@ -27,6 +27,7 @@ from pandas import DataFrame
 from shapely import Polygon
 from shapely.geometry import shape
 
+from pisa.constants import VALID_DISTANCE_TYPES, VALID_TRANSPORT_MODES
 from pisa.utils import disk_cache
 
 logger = logging.getLogger(__name__)
@@ -34,8 +35,6 @@ logger = logging.getLogger(__name__)
 
 class IsopolygonCalculator(ABC):
     """Abstract base class for isopolygon calculation."""
-
-    VALID_DISTANCE_TYPES = {"length", "travel_time"}
 
     def __init__(
         self,
@@ -73,10 +72,8 @@ class IsopolygonCalculator(ABC):
 
         distance_type = distance_type.lower().strip()
 
-        if distance_type not in self.VALID_DISTANCE_TYPES:
-            raise ValueError(
-                f"distance_type must be one of {self.VALID_DISTANCE_TYPES}"
-            )
+        if distance_type not in VALID_DISTANCE_TYPES:
+            raise ValueError(f"distance_type must be one of {VALID_DISTANCE_TYPES}")
         return distance_type
 
     @staticmethod
@@ -398,14 +395,12 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     Mapbox APIs use GeoJSON formatting wherever possible to represent geospatial data.
     """
 
-    VALID_ROUTE_PROFILES = {"driving", "walking", "cycling"}
-
     def __init__(
         self,
         facilities_df: DataFrame,
         distance_type: str,
         distance_values: list[int],  # in minutes or meters
-        route_profile: str,  # must be an element of VALID_ROUTE_PROFILES
+        route_profile: str,  # must be an element of VALID_TRANSPORT_MODES
         mapbox_api_token: str,
         base_url: str = "https://api.mapbox.com/isochrone/v1/",
     ):
@@ -573,10 +568,8 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
         route_profile = route_profile.lower().strip()
 
-        if route_profile not in self.VALID_ROUTE_PROFILES:
-            raise ValueError(
-                f"route_profile must be one of {self.VALID_ROUTE_PROFILES}"
-            )
+        if route_profile not in VALID_TRANSPORT_MODES:
+            raise ValueError(f"route_profile must be one of {VALID_TRANSPORT_MODES}")
         return route_profile
 
     @staticmethod
