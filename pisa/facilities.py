@@ -17,7 +17,9 @@ class Facilities:
 
     administrative_area: Polygon | MultiPolygon
     data_src: str = "osm"
-    osm_tags: dict = field(default_factory=lambda: {"amenity": "hospital"})
+    osm_tags: dict = field(
+        default_factory=lambda: {"amenity": "hospital", "building": "hospital"}
+    )
 
     def get_existing_facilities(self) -> DataFrame:
         """Get facilities from specified data source"""
@@ -70,7 +72,9 @@ class Facilities:
 
         # index facilities_df is the OSMID of the facility.
         # We don't strictly need it, but it could be useful for debugging.
-        return facilities_df.set_index("id").rename_axis("osmid")
+        return facilities_df.set_index("id").rename_axis("osmid")[
+            ["longitude", "latitude"]
+        ]
 
     def estimate_potential_facilities(self, spacing: float) -> gpd.GeoDataFrame:
         """Create grid of potential facility locations
