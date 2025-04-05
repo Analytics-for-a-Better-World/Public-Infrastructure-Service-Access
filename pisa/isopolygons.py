@@ -27,7 +27,7 @@ from pandas import DataFrame
 from shapely import Polygon
 from shapely.geometry import shape
 
-from pisa.constants import VALID_DISTANCE_TYPES, VALID_TRANSPORT_MODES
+from pisa.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
 from pisa.utils import disk_cache
 
 logger = logging.getLogger(__name__)
@@ -568,8 +568,8 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
         route_profile = route_profile.lower().strip()
 
-        if route_profile not in VALID_TRANSPORT_MODES:
-            raise ValueError(f"route_profile must be one of {VALID_TRANSPORT_MODES}")
+        if route_profile not in VALID_MODES_OF_TRANSPORT:
+            raise ValueError(f"route_profile must be one of {VALID_MODES_OF_TRANSPORT}")
         return route_profile
 
     @staticmethod
