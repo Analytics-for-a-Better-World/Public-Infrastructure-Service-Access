@@ -48,12 +48,14 @@ def mock_raster_dataset(mocker):
 
 @pytest.fixture
 def population_instance_facebook(multipolygon):
-    return FacebookPopulation(admin_area_boundaries=multipolygon, country_code="XYZ")
+    return FacebookPopulation(
+        admin_area_boundaries=multipolygon, iso3_country_code="XYZ"
+    )
 
 
 @pytest.fixture
 def population_instance_worldpop(multipolygon):
-    return WorldpopPopulation(multipolygon, country_code="XYZ")
+    return WorldpopPopulation(multipolygon, iso3_country_code="XYZ")
 
 
 @patch("pisa.population.Resource.search_in_hdx")
@@ -88,7 +90,7 @@ class TestProcessPopulationFacebook:
         result = population_instance_facebook.process_population_facebook(
             data,
             population_instance_facebook.iso3_country_code,
-            population_instance_facebook.admin_boundaries,
+            population_instance_facebook.admin_area_boundaries,
         )
 
         assert isinstance(result, pd.DataFrame)
@@ -109,7 +111,7 @@ class TestProcessPopulationFacebook:
         result = population_instance_facebook.process_population_facebook(
             data,
             population_instance_facebook.iso3_country_code,
-            population_instance_facebook.admin_boundaries,
+            population_instance_facebook.admin_area_boundaries,
         )
 
         assert result["population"].sum() == 6
@@ -128,7 +130,7 @@ class TestProcessPopulationFacebook:
         result = population_instance_facebook.process_population_facebook(
             population_df,
             population_instance_facebook.iso3_country_code,
-            population_instance_facebook.admin_boundaries,
+            population_instance_facebook.admin_area_boundaries,
         )
 
         assert result["population"].sum() == 0
@@ -169,7 +171,7 @@ class TestProcessPopulationWorldpop:
         )
 
         df = population_instance_worldpop.process_population_worldpop(
-            "fake_path.tif", population_instance_worldpop.admin_boundaries
+            "fake_path.tif", population_instance_worldpop.admin_area_boundaries
         )
 
         assert df.shape[1] == 3
@@ -178,7 +180,7 @@ class TestProcessPopulationWorldpop:
         mock_open.assert_called_once_with("fake_path.tif")
         mock_mask.assert_called_once_with(
             mock_raster_dataset,
-            [population_instance_worldpop.admin_boundaries],
+            [population_instance_worldpop.admin_area_boundaries],
             all_touched=True,
             crop=False,
         )
@@ -188,7 +190,7 @@ class TestProcessPopulationWorldpop:
     ):
         with pytest.raises(rasterio.errors.RasterioIOError):
             population_instance_worldpop.process_population_worldpop(
-                "fake_path", population_instance_worldpop.admin_boundaries
+                "fake_path", population_instance_worldpop.admin_area_boundaries
             )
 
     def test_process_population_worldpop_empty_polygon(
