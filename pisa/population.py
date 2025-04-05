@@ -19,7 +19,12 @@ class Population(ABC):
     If you want to add new data source (e.g. geojson): create new subclass with method get_population_data().
     """
 
-    def __init__(self, admin_boundaries: Polygon | MultiPolygon, country_code: str, population_resolution: int = 5):
+    def __init__(
+        self,
+        admin_boundaries: Polygon | MultiPolygon,
+        country_code: str,
+        population_resolution: int = 5,
+    ):
         self.admin_boundaries = admin_boundaries
         self.iso3_country_code = country_code
         self.population_resolution = population_resolution
@@ -69,11 +74,11 @@ class Population(ABC):
 class FacebookPopulation(Population):
     def __init__(
         self,
-        admin_boundaries: Polygon | MultiPolygon,
+        admin_area_boundaries: Polygon | MultiPolygon,
         country_code: str,
         population_resolution: int = 5,
     ):
-        super().__init__(admin_boundaries, country_code, population_resolution)
+        super().__init__(admin_area_boundaries, country_code, population_resolution)
 
     def get_population_data(self) -> pd.DataFrame:
         """Download & process data from the chosen datasource 'facebook'. Returns a DataFrame with population data."""

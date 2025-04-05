@@ -48,7 +48,7 @@ def mock_raster_dataset(mocker):
 
 @pytest.fixture
 def population_instance_facebook(multipolygon):
-    return FacebookPopulation(admin_boundaries=multipolygon, country_code="XYZ")
+    return FacebookPopulation(admin_area_boundaries=multipolygon, country_code="XYZ")
 
 
 @pytest.fixture
