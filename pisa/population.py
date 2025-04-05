@@ -26,14 +26,11 @@ class Population(ABC):
     def get_population_gdf(self) -> tuple[GeoDataFrame, pd.DataFrame]:
         """Integrates the methods to get the population numbers for the selected area into one flow and
         returns grouped population data for the admin area as a GeoDataFrame."""
-        population_df = self.get_population_data()
-        return (
-            self.group_population(population_df, self.population_resolution),
-            population_df,
-        )
+        population_df = self._get_population_df()
+        return self._group_population(population_df, self.population_resolution)
 
     @staticmethod
-    def group_population(
+    def _group_population(
         population_df: pd.DataFrame, population_resolution: int
     ) -> GeoDataFrame:
         """Group population data by longitude and latitude based on the population resolution. The population resolution
@@ -60,14 +57,14 @@ class Population(ABC):
         return population
 
     @abstractmethod
-    def get_population_data(self) -> pd.DataFrame:
+    def _get_population_df(self) -> pd.DataFrame:
         """Must be implemented in subclasses"""
         pass
 
 
 class FacebookPopulation(Population):
 
-    def get_population_data(self) -> pd.DataFrame:
+    def _get_population_df(self) -> pd.DataFrame:
         """Download & process data from the chosen datasource 'facebook'. Returns a DataFrame with population data."""
 
         downloaded_data = self.download_population_facebook(
@@ -77,7 +74,7 @@ class FacebookPopulation(Population):
         processed_data = self.process_population_facebook(
             downloaded_data,
             iso3_country_code=self.iso3_country_code,
-            admin_boundaries=self.admin_boundaries,
+            admin_area_boundaries=self.admin_area_boundaries,
         )
 
         return processed_data
@@ -108,7 +105,7 @@ class FacebookPopulation(Population):
     def process_population_facebook(
         downloaded_data: pd.DataFrame,
         iso3_country_code: str,
-        admin_boundaries: Polygon | MultiPolygon,
+        admin_area_boundaries: Polygon | MultiPolygon,
     ) -> pd.DataFrame:
         """Create geodataframe, clip with admin area boundaries to keep only those areas inside the admin area boundaries
         and convert back to pandas dataframe"""
@@ -118,7 +115,7 @@ class FacebookPopulation(Population):
                 downloaded_data["longitude"], downloaded_data["latitude"]
             ),
         )
-        gdf = clip(gdf, admin_boundaries)
+        gdf = clip(gdf, admin_area_boundaries)
         df = gdf.drop(columns=["geometry"]).rename(
             columns={f"{iso3_country_code.lower()}_general_2020": "population"}
         )
@@ -127,7 +124,7 @@ class FacebookPopulation(Population):
 
 class WorldpopPopulation(Population):
 
-    def get_population_data(self) -> pd.DataFrame:
+    def _get_population_df(self) -> pd.DataFrame:
         """Download & process data from the chosen datasource 'worldpop'. Returns a DataFrame with population data."""
 
         downloaded_data = self.download_population_worldpop(
@@ -136,7 +133,7 @@ class WorldpopPopulation(Population):
 
         processed_data = self.process_population_worldpop(
             downloaded_data,
-            admin_boundaries=self.admin_boundaries,
+            admin_area_boundaries=self.admin_area_boundaries,
         )
 
         return processed_data
@@ -162,7 +159,7 @@ class WorldpopPopulation(Population):
 
     @staticmethod
     def process_population_worldpop(
-        file_path: str, admin_boundaries: Polygon | MultiPolygon
+        file_path: str, admin_area_boundaries: Polygon | MultiPolygon
     ) -> pd.DataFrame:
         """
         Processes the downloaded worldpop data raster file into the required format of a dataframe of longitude, latitude
@@ -185,7 +182,7 @@ class WorldpopPopulation(Population):
             xs, ys = np.meshgrid(x, y)
             zs = src.read(1)
             # Adm area mask
-            adm_mask = WorldpopPopulation.get_admarea_mask(admin_boundaries, src)
+            adm_mask = WorldpopPopulation.get_admarea_mask(admin_area_boundaries, src)
             xs, ys, zs = xs[adm_mask], ys[adm_mask], zs[adm_mask]
             data = {
                 "longitude": pd.Series(xs),

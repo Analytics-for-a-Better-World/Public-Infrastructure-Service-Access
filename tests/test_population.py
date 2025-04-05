@@ -244,7 +244,7 @@ class TestGroupPopulation:
     def test_group_pop_length(
         self, population_dataframe, nof_digits, count_of_areas_included
     ):
-        group_pop = Population.group_population(
+        group_pop = Population._group_population(
             population_dataframe, population_resolution=nof_digits
         )
         assert group_pop.shape[0] == count_of_areas_included
@@ -261,7 +261,7 @@ class TestGroupPopulation:
     def test_group_pop_values(
         self, population_dataframe, nof_digits, longitude, latitude, population_sum
     ):
-        group_pop = Population.group_population(
+        group_pop = Population._group_population(
             population_dataframe, population_resolution=nof_digits
         )
         assert (
