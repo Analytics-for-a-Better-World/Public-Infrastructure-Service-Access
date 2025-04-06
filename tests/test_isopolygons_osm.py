@@ -56,7 +56,7 @@ def edges_gdf() -> gpd.GeoSeries:
 
 
 @pytest.fixture
-def dataframe_with_lon_and_lat() -> pd.DataFrame:
+def fake_facilities_df() -> pd.DataFrame:
     """Location (longitude and latitude) of two ficticious facilities"""
 
     points = [
@@ -70,7 +70,7 @@ def dataframe_with_lon_and_lat() -> pd.DataFrame:
 class TestOsmCalculateIsopolygons:
 
     @pytest.fixture(autouse=True)
-    def setup(self, dataframe_with_lon_and_lat):
+    def setup(self, fake_facilities_df):
 
         self.graph = ox.load_graphml(
             "tests/test_data/walk_network_4_nodes_6_edges.graphml"
@@ -79,7 +79,7 @@ class TestOsmCalculateIsopolygons:
         self.graph_nodes, self.graph_edges = ox.graph_to_gdfs(self.graph)
 
         self.isopolygon_calculator = OsmIsopolygonCalculator(
-            facilities_lon_lat=dataframe_with_lon_and_lat,
+            facilities_df=fake_facilities_df,
             distance_type="length",
             distance_values=[5, 20, 50],
             road_network=self.graph,

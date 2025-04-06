@@ -11,46 +11,116 @@ Note:
 
 """
 
+import json
 import logging
+import time
 from abc import ABC, abstractmethod
 
 import geopandas as gpd
 import networkx as nx
 import osmnx as ox
 import pandas as pd
+import requests
 from geopandas import GeoSeries
 from networkx import MultiDiGraph
 from pandas import DataFrame
 from shapely import Polygon
+from shapely.geometry import shape
+
+from pisa.utils import disk_cache
+
+logger = logging.getLogger(__name__)
 
 
 class IsopolygonCalculator(ABC):
     """Abstract base class for isopolygon calculation."""
 
+    VALID_DISTANCE_TYPES = {"length", "travel_time"}
+
     def __init__(
         self,
-        facilities_lon_lat: DataFrame,
-        distance_type: str,  # e.g. travel_time or length
-        distance_values: list[int],
+        facilities_df: DataFrame,  # must have columns "longitude" and "latitude"
+        distance_type: str,  # must be an element of VALID_DISTANCE_TYPES
+        distance_values: int | list[int],  # in meters or minutes
     ):
+        self.facilities_df = self._validate_facilities_df_format(facilities_df)
 
-        self.facilities_longitude_array = facilities_lon_lat.longitude.values
-        self.facilities_latitude_array = facilities_lon_lat.latitude.values
-        self.distance_type = distance_type
-        self.distance_values = distance_values
+        self.distance_type = self._validate_distance_type(distance_type)
 
-        self._validate_input()
+        self.distance_values = self._validate_distance_values_are_ints(distance_values)
 
-    def _validate_input(self) -> None:
-        """Checks that distance values are within the permitted limits:
-        100.000 meters for length and 60 minutes for time."""
+        self._validate_distance_upper_limits()
+
+    @staticmethod
+    def _validate_facilities_df_format(facilities_df: DataFrame) -> DataFrame:
+        """Checks that facilities_df has columns "longitude and latitude, and
+        has one or more rows"""
+
+        if (
+            "longitude" not in facilities_df.columns
+            or "latitude" not in facilities_df.columns
+        ):
+            raise ValueError(
+                "facilities_df must have columns 'longitude' and 'latitude'"
+            )
+
+        if len(facilities_df) == 0:
+            raise ValueError("facilities_df must have at least one row")
+
+        return facilities_df
+
+    def _validate_distance_type(self, distance_type: str) -> str:
+
+        distance_type = distance_type.lower().strip()
+
+        if distance_type not in self.VALID_DISTANCE_TYPES:
+            raise ValueError(
+                f"distance_type must be one of {self.VALID_DISTANCE_TYPES}"
+            )
+        return distance_type
+
+    @staticmethod
+    def _validate_distance_values_are_ints(distance_values) -> list[int]:
+        """
+        Ensures that distance_values are in the correct format for calculating isopolygons.
+        It converts single integer inputs into a list format.
+
+        The requirement that all distance_values be integers comes from the Mapbox Isochrone API.
+
+        Args:
+            distance_values (int | list[int]): Either a single integer or a list of integers representing
+                distances for isopolygon calculations.
+        Returns:
+            list[int]: A list containing the validated distance values. If input was a single integer,
+                returns a single-element list.
+        Raises:
+            TypeError: If distance_values is neither an integer nor a list of integers.
+            TypeError: If any element in the distance_values list is not an integer.
+
+        """
+
+        if isinstance(distance_values, int):
+            return [distance_values]
+
+        if isinstance(distance_values, list):
+            if not all(isinstance(x, int) for x in distance_values):
+                raise TypeError("distance_values must be a list of integers")
+            return distance_values
+
+        raise TypeError("distance_values must be a list of integers")
+
+    def _validate_distance_upper_limits(self) -> None:
+        """Checks that distance_values are within the permitted limits:
+        100.000 meters for length and 60 minutes for time. This is requested by
+        the Mapbox Isochrone API.
+        """
 
         if self.distance_type == "length" and max(self.distance_values) > 100000:
             raise ValueError(
                 "One or more distance values are larger than the permitted 100.000 meters limit."
             )
 
-        if self.distance_type == "minutes" and max(self.distance_values) > 60:
+        if self.distance_type == "travel_time" and max(self.distance_values) > 60:
             raise ValueError(
                 "One or more distance values are larger than the permitted 60 minutes limit."
             )
@@ -66,14 +136,14 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
 
     def __init__(
         self,
-        facilities_lon_lat: DataFrame,
+        facilities_df: DataFrame,
         distance_type: str,
         distance_values: list[int],
         road_network: MultiDiGraph,
         node_buffer: float = 0.001,
         edge_buffer: float = 0.0005,
     ):
-        super().__init__(facilities_lon_lat, distance_type, distance_values)
+        super().__init__(facilities_df, distance_type, distance_values)
         self.road_network = road_network
         self.node_buff = node_buffer
         self.edge_buff = edge_buffer
@@ -81,8 +151,8 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         # Find the nearest node in the road network for each facility
         self.nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
-            X=self.facilities_longitude_array,
-            Y=self.facilities_latitude_array,
+            X=self.facilities_df.longitude.values,
+            Y=self.facilities_df.latitude.values,
         )
 
     def calculate_isopolygons(self) -> DataFrame:
@@ -123,7 +193,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
                     AttributeError
                 ):  # Probably trying to catch 'MultiPolygon' object has no attribute 'exterior' from _inflate_skeleton, but it wasn't specified in the code before
 
-                    logging.info(f"problem with node {road_node}")  # stops execution
+                    logger.info(f"problem with node {road_node}")  # stops execution
 
         return isopolygons
 
@@ -229,21 +299,21 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
 
     def __init__(
         self,
-        facilities_lon_lat: DataFrame,
+        facilities_df: DataFrame,
         distance_type: str,
         distance_values: list[int],
         road_network: MultiDiGraph,
         buffer: float = 50,  # in meters
     ):
-        super().__init__(facilities_lon_lat, distance_type, distance_values)
+        super().__init__(facilities_df, distance_type, distance_values)
         self.road_network = road_network
         self.buffer = buffer
 
-        # For each facility, find the nearest node in the road network
+        # Find the nearest node in the road network for each facility
         self.nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
-            X=self.facilities_longitude_array,
-            Y=self.facilities_latitude_array,
+            X=self.facilities_df.longitude.values,
+            Y=self.facilities_df.latitude.values,
         )
 
     def calculate_isopolygons(self) -> DataFrame:
@@ -322,17 +392,195 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
 
 
 class MapboxIsopolygonCalculator(IsopolygonCalculator):
+    """From Mapbox docs: When you provide geographic coordinates to a Mapbox API,
+    they should be formatted in the order longitude, latitude and specified as decimal degrees
+    in the WGS84 coordinate system. This pattern matches existing standards, including GeoJSON and KML.
+    Mapbox APIs use GeoJSON formatting wherever possible to represent geospatial data.
+    """
+
+    VALID_ROUTE_PROFILES = {"driving", "walking", "cycling"}
 
     def __init__(
         self,
-        facilities_lon_lat: DataFrame,
+        facilities_df: DataFrame,
         distance_type: str,
-        distance_values: list[int],
-        route_profile: str,  # ?
+        distance_values: list[int],  # in minutes or meters
+        route_profile: str,  # must be an element of VALID_ROUTE_PROFILES
         mapbox_api_token: str,
+        base_url: str = "https://api.mapbox.com/isochrone/v1/",
     ):
-        super().__init__(facilities_lon_lat, distance_type, distance_values)
-        self.route_profile = route_profile
-        self.mapbox_api_token = mapbox_api_token
 
-    def calculate_isopolygons(self) -> DataFrame: ...
+        self.mapbox_api_token = self._validate_mapbox_token_not_empty(mapbox_api_token)
+
+        self.route_profile = self._validate_route_profile(route_profile)
+
+        super().__init__(facilities_df, distance_type, distance_values)
+
+        self.distance_values = self._validate_mapbox_distance_values(
+            self.distance_values
+        )
+
+        self.base_url = base_url
+
+        self.contour_type = (
+            "contours_meters" if self.distance_type == "length" else "contours_minutes"
+        )
+
+    def calculate_isopolygons(self) -> DataFrame:
+        """Calculates isopolygons for all facilities using Mapbox API.
+
+        This method generates isopolygons (polygons of equal distance/time) for each facility
+        using the Mapbox Isochrone API.
+
+        Returns:
+            Dataframe: A pandas DataFrame where:
+                - Each row represents a facility
+                - Each column represents a distance value prefixed with "ID_"
+                - Each cell contains the corresponding isopolygon geometry
+        Note:
+            - Requires valid Mapbox API credentials
+            - Subject to Mapbox API rate limits (300 requests per minute)
+            - Uses the distance values specified in self.distance_values
+        """
+
+        columns = [f"ID_{d}" for d in self.distance_values]
+        number_of_facilities = len(self.facilities_df)
+
+        # DataFrame with each row per facility and one column per distance
+        isopolygons = DataFrame(index=range(number_of_facilities), columns=columns)
+
+        # The Isochrone API supports 1 coordinate per request
+        for idx, facility in self.facilities_df.iterrows():
+
+            self._handle_rate_limit(request_count=idx)
+
+            request_url = self._build_request_url(facility.longitude, facility.latitude)
+            features = self._fetch_isopolygons(request_url)
+
+            for feature in features:
+                isopolygon = shape(feature["geometry"])
+
+                # countour is a distance value (e.g. 1000 (for distance) or 60 (for time))
+                contour = feature["properties"]["contour"]
+
+                # TODO: can we remove this "ID_" prefix?
+                isopolygons.at[idx, f"ID_{contour}"] = isopolygon
+
+        return isopolygons
+
+    def _build_request_url(self, longitude: float, latitude: float) -> str:
+        """Builds the Mapbox API request URL for isopolygon calculation."""
+        return (
+            f"{self.base_url}mapbox/{self.route_profile}/{longitude},"
+            f"{latitude}?{self.contour_type}={','.join(map(str, self.distance_values))}"
+            f"&polygons=true&denoise=1&access_token={self.mapbox_api_token}"
+        )
+
+    def _handle_rate_limit(self, request_count: int) -> None:
+        """Handles Mapbox API rate limiting, a maximum of 300 requests per minute."""
+
+        if (request_count + 1) % 300 == 0:
+            logger.info("Reached Mapbox API request limit. Waiting for 1 minute...")
+            time.sleep(60)
+            logger.info("Resuming requests")
+
+    @disk_cache("mapbox_cache")
+    def _fetch_isopolygons(self, request_url: str) -> list:
+        """
+        Makes a GET request to the Mapbox Isochrone API endpoint and handles various potential errors.
+
+        Args:
+            request_url (str): The complete URL for the Mapbox Isochrone API request.
+
+        Returns:
+            list: GeoJSON Feature object.
+
+        Raises:
+            ValueError: If the Mapbox access token is invalid (401 error).
+            PermissionError: If the token lacks permission to access the resource (403 error).
+            requests.exceptions.HTTPError: For other HTTP-related errors.
+            TimeoutError: If the request times out (>60 seconds).
+            RuntimeError: For unexpected errors during the API request.
+        """
+
+        try:
+            # Make the request
+            response = requests.get(request_url, timeout=60)
+
+            # Check for HTTP errors
+            response.raise_for_status()
+
+            # Try to parse the JSON
+            request_pack = json.loads(response.content)
+
+            # Check if features exist in the response
+            if "features" not in request_pack:
+                raise KeyError(
+                    "Response does not contain 'features' key. API may have changed or returned unexpected format."
+                )
+
+            return request_pack["features"]
+
+        except requests.exceptions.HTTPError as e:
+            # Handle specific HTTP status codes
+            if response.status_code == 401:
+                raise ValueError("Unauthorized: Invalid Mapbox access token") from e
+            elif response.status_code == 403:
+                raise PermissionError(
+                    "Forbidden: The Mapbox token doesn't have access to this resource"
+                ) from e
+            else:
+                raise requests.exceptions.HTTPError(
+                    f"HTTP Error {response.status_code}: {e}"
+                ) from e
+
+        except requests.exceptions.Timeout as e:
+            raise TimeoutError(
+                "Request timed out: Mapbox servers took too long to respond."
+            ) from e
+
+        except Exception as e:
+            # Last resort for unexpected errors
+            logger.error(f"Unexpected error in Mapbox API request: {e}", exc_info=True)
+            raise RuntimeError(
+                f"Unexpected error when connecting to Mapbox: {str(e)}"
+            ) from e
+
+    @staticmethod
+    def _validate_mapbox_distance_values(distance_values: list[int]) -> list[int]:
+        """Checks if distance_values meet Mapbox API requirements:
+        a maximum of 4 values in increasing order.
+
+        Args:
+            distance_values (list[int]): List of integer distances to validate
+
+        Returns:
+            list[int]: Sorted list of distance values
+
+        Raises:
+            ValueError: If more than 4 distance values are provided
+
+        """
+
+        if len(distance_values) > 4:
+            raise ValueError("Mapbox API accepts a maximum of 4 distance_values")
+
+        distance_values.sort()
+
+        return distance_values
+
+    def _validate_route_profile(self, route_profile: str) -> str:
+
+        route_profile = route_profile.lower().strip()
+
+        if route_profile not in self.VALID_ROUTE_PROFILES:
+            raise ValueError(
+                f"route_profile must be one of {self.VALID_ROUTE_PROFILES}"
+            )
+        return route_profile
+
+    @staticmethod
+    def _validate_mapbox_token_not_empty(mapbox_api_token: str) -> str:
+        if not mapbox_api_token:
+            raise ValueError("Mapbox API token is required")
+        return mapbox_api_token
