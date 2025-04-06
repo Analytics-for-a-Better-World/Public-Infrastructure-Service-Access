@@ -38,7 +38,7 @@ def test_invalid_facilities_df(facilities_df, error_message, valid_mapbox_api_to
             facilities_df=facilities_df,
             distance_type="length",
             distance_values=[1000],
-            route_profile="driving",
+            mode_of_transport="driving",
             mapbox_api_token=valid_mapbox_api_token,
         )
 
@@ -47,7 +47,7 @@ def test_invalid_facilities_df(facilities_df, error_message, valid_mapbox_api_to
     "param_name,invalid_value",
     [
         ("distance_type", "blah"),
-        ("route_profile", "flying"),
+        ("mode_of_transport", "flying"),
     ],
 )
 def test_invalid_distance_type_or_route_profile(
@@ -57,7 +57,7 @@ def test_invalid_distance_type_or_route_profile(
         "facilities_df": valid_facilities_df,
         "distance_type": "length",
         "distance_values": [1000],
-        "route_profile": "driving",
+        "mode_of_transport": "driving",
         "mapbox_api_token": valid_mapbox_api_token,
     }
     params[param_name] = invalid_value
@@ -74,7 +74,7 @@ def test_too_many_distance_values(valid_facilities_df, valid_mapbox_api_token):
             facilities_df=valid_facilities_df,
             distance_type="length",
             distance_values=[20, 15, 40, 60, 10],
-            route_profile="driving",
+            mode_of_transport="driving",
             mapbox_api_token=valid_mapbox_api_token,
         )
 
@@ -95,7 +95,7 @@ def test_wrong_format_distance_values(
             facilities_df=valid_facilities_df,
             distance_type="length",
             distance_values=distance_values,
-            route_profile="driving",
+            mode_of_transport="driving",
             mapbox_api_token=valid_mapbox_api_token,
         )
 
@@ -120,7 +120,7 @@ def test_empty_string_mapbox_api_token(valid_facilities_df):
             facilities_df=valid_facilities_df,
             distance_type="length",
             distance_values=[1000],
-            route_profile="driving",
+            mode_of_transport="driving",
             mapbox_api_token="",
         )
 
@@ -130,7 +130,7 @@ def test_scalar_distance_value_is_handled(valid_facilities_df, valid_mapbox_api_
         facilities_df=valid_facilities_df,
         distance_type="length",
         distance_values=10,
-        route_profile="driving",
+        mode_of_transport="driving",
         mapbox_api_token=valid_mapbox_api_token,
     )
     assert calculator.distance_values == [10]

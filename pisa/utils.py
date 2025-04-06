@@ -4,6 +4,8 @@ import os
 import pickle
 from functools import wraps
 
+from pisa.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
+
 logger = logging.getLogger(__name__)
 
 
@@ -68,3 +70,21 @@ def disk_cache(cache_dir="cache"):
         return wrapper
 
     return decorator
+
+
+def _validate_distance_type(distance_type: str) -> str:
+
+    distance_type = distance_type.lower().strip()
+
+    if distance_type not in VALID_DISTANCE_TYPES:
+        raise ValueError(f"distance_type must be one of {VALID_DISTANCE_TYPES}")
+    return distance_type
+
+
+def _validate_mode_of_transport(mode_of_transport: str) -> str:
+
+    mode_of_transport = mode_of_transport.lower().strip()
+
+    if mode_of_transport not in VALID_MODES_OF_TRANSPORT:
+        raise ValueError(f"route_profile must be one of {VALID_MODES_OF_TRANSPORT}")
+    return mode_of_transport
