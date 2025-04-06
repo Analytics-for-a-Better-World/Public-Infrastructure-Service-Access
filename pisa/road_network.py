@@ -37,9 +37,7 @@ def get_road_network(AdmArea, network_type: str) -> None:
 
     # Recast travel time to minutes
     time = nx.get_edge_attributes(road_network, "travel_time")
-    time_in_minutes = dict(
-        zip(list(time.keys()), list(map(lambda x: round(x / 60, 2), time.values())))
-    )
+    time_in_minutes = {k: round(v / 60, 2) for k, v in time.items()}
     nx.set_edge_attributes(road_network, time_in_minutes, "travel_time")
 
     return road_network
