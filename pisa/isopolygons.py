@@ -27,15 +27,13 @@ from pandas import DataFrame
 from shapely import Polygon
 from shapely.geometry import shape
 
-from pisa.utils import disk_cache
+from pisa.utils import _validate_distance_type, disk_cache, _validate_mode_of_transport
 
 logger = logging.getLogger(__name__)
 
 
 class IsopolygonCalculator(ABC):
     """Abstract base class for isopolygon calculation."""
-
-    VALID_DISTANCE_TYPES = {"length", "travel_time"}
 
     def __init__(
         self,
@@ -45,7 +43,7 @@ class IsopolygonCalculator(ABC):
     ):
         self.facilities_df = self._validate_facilities_df_format(facilities_df)
 
-        self.distance_type = self._validate_distance_type(distance_type)
+        self.distance_type = _validate_distance_type(distance_type)
 
         self.distance_values = self._validate_distance_values_are_ints(distance_values)
 
@@ -68,16 +66,6 @@ class IsopolygonCalculator(ABC):
             raise ValueError("facilities_df must have at least one row")
 
         return facilities_df
-
-    def _validate_distance_type(self, distance_type: str) -> str:
-
-        distance_type = distance_type.lower().strip()
-
-        if distance_type not in self.VALID_DISTANCE_TYPES:
-            raise ValueError(
-                f"distance_type must be one of {self.VALID_DISTANCE_TYPES}"
-            )
-        return distance_type
 
     @staticmethod
     def _validate_distance_values_are_ints(distance_values) -> list[int]:
@@ -398,21 +386,19 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     Mapbox APIs use GeoJSON formatting wherever possible to represent geospatial data.
     """
 
-    VALID_ROUTE_PROFILES = {"driving", "walking", "cycling"}
-
     def __init__(
         self,
         facilities_df: DataFrame,
         distance_type: str,
         distance_values: list[int],  # in minutes or meters
-        route_profile: str,  # must be an element of VALID_ROUTE_PROFILES
+        mode_of_transport: str,  # must be an element of VALID_TRANSPORT_MODES
         mapbox_api_token: str,
         base_url: str = "https://api.mapbox.com/isochrone/v1/",
     ):
 
         self.mapbox_api_token = self._validate_mapbox_token_not_empty(mapbox_api_token)
 
-        self.route_profile = self._validate_route_profile(route_profile)
+        self.route_profile = _validate_mode_of_transport(mode_of_transport)
 
         super().__init__(facilities_df, distance_type, distance_values)
 
@@ -568,16 +554,6 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         distance_values.sort()
 
         return distance_values
-
-    def _validate_route_profile(self, route_profile: str) -> str:
-
-        route_profile = route_profile.lower().strip()
-
-        if route_profile not in self.VALID_ROUTE_PROFILES:
-            raise ValueError(
-                f"route_profile must be one of {self.VALID_ROUTE_PROFILES}"
-            )
-        return route_profile
 
     @staticmethod
     def _validate_mapbox_token_not_empty(mapbox_api_token: str) -> str:
