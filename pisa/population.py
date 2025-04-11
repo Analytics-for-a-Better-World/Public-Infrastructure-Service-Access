@@ -23,7 +23,7 @@ class Population(ABC):
     iso3_country_code: str
     population_resolution: int = 5
 
-    def get_population_gdf(self) -> tuple[GeoDataFrame, pd.DataFrame]:
+    def get_population_gdf(self) -> GeoDataFrame:
         """Integrates the methods to get the population numbers for the selected area into one flow and
         returns grouped population data for the admin area as a GeoDataFrame."""
         population_df = self._get_population_df()
