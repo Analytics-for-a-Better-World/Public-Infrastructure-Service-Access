@@ -59,16 +59,18 @@ class TestFacilities:
         """Test initialization with custom location tags"""
         custom_tags = {"amenity": "school"}
         facilities = Facilities(
-            administrative_area=simple_polygon, data_src="osm", osm_tags=custom_tags
+            admin_area_boundaries=simple_polygon, data_src="osm", osm_tags=custom_tags
         )
 
-        assert facilities.administrative_area == simple_polygon
+        assert facilities.admin_area_boundaries == simple_polygon
         assert facilities.data_src == "osm"
         assert facilities.osm_tags == custom_tags
 
     def test_get_existing_facilities_invalid_data_src(self, simple_polygon):
         """Test error when using invalid data source"""
-        facilities = Facilities(administrative_area=simple_polygon, data_src="invalid")
+        facilities = Facilities(
+            admin_area_boundaries=simple_polygon, data_src="invalid"
+        )
 
         with pytest.raises(
             NotImplementedError, match="Data source 'invalid' not implemented"
@@ -82,7 +84,7 @@ class TestFacilities:
         mocked_osm_response.return_value = fake_facilities_gdf
 
         facilities_df = Facilities._get_existing_facilities_osm(
-            osm_tags={"amenity": "hospital"}, administrative_area=multi_polygon
+            osm_tags={"amenity": "hospital"}, admin_area_boundaries=multi_polygon
         )
 
         mocked_osm_response.assert_called_once()
@@ -112,7 +114,7 @@ class TestFacilities:
 
     def test_estimate_potential_facilities_format(self, simple_polygon):
         """Test the format of the potential facilities GeoDataFrame"""
-        facilities = Facilities(administrative_area=simple_polygon)
+        facilities = Facilities(admin_area_boundaries=simple_polygon)
         result = facilities.estimate_potential_facilities(spacing=0.5)
 
         assert isinstance(result, pd.DataFrame)
@@ -123,7 +125,7 @@ class TestFacilities:
     def test_estimate_potential_facilities_grid(self, simple_polygon):
         """Test the creation of the grid to estimate potential facilities"""
         test_spacing = 0.5
-        facilities = Facilities(administrative_area=simple_polygon)
+        facilities = Facilities(admin_area_boundaries=simple_polygon)
         result = facilities.estimate_potential_facilities(spacing=test_spacing)
 
         # Check grid points are within boundaries
@@ -139,7 +141,8 @@ class TestFacilities:
         for i in range(len(result) - 1):
             if result.iloc[i].longitude == result.iloc[i + 1].longitude:
                 assert (
-                    result.iloc[i + 1].latitude - result.iloc[i].latitude == test_spacing
+                    result.iloc[i + 1].latitude - result.iloc[i].latitude
+                    == test_spacing
                 )
             if result.iloc[i].latitude == result.iloc[i + 1].latitude:
                 assert (
@@ -156,7 +159,7 @@ class TestFacilities:
     def test_estimate_potential_facilities_grid_multipolygon(self, multi_polygon):
         """Test the creation of the grid to estimate potential facilities (MultiPolygon)"""
         test_spacing = 0.5
-        facilities = Facilities(administrative_area=multi_polygon)
+        facilities = Facilities(admin_area_boundaries=multi_polygon)
         result = facilities.estimate_potential_facilities(spacing=test_spacing)
 
         # Check grid points are within boundaries
