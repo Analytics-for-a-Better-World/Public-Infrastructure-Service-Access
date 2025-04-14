@@ -1,5 +1,6 @@
-import pandas as pd
 import geopandas as gpd
+import pandas as pd
+
 
 def population_served(
     grouped_population: gpd.GeoDataFrame,
@@ -32,7 +33,7 @@ def population_served(
 
     grouped_population = grouped_population.copy()
     grouped_population.index.name = "population_id"
-    grouped_population = grouped_population.to_crs(crs)
+    grouped_population = grouped_population.to_crs(crs) if grouped_population.crs else grouped_population.set_crs(crs)
 
     isopolygons = isopolygons.copy()
     isopolygons.index.name = "facility_id"
