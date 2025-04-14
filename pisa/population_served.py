@@ -28,8 +28,12 @@ def population_served(
             1      i1          [p2]           []
             2      i2          []             [p1, p2]
     """
+    crs = "EPSG:4326"
+
     grouped_population = grouped_population.copy()
     grouped_population.index.name = "population_id"
+    grouped_population = grouped_population.to_crs(crs)
+
     isopolygons = isopolygons.copy()
     isopolygons.index.name = "facility_id"
 
@@ -38,8 +42,7 @@ def population_served(
     # For each distance, find the population that falls within the facility isopolygons
     for col in isopolygons.columns:
         # Get the isopolygon geometries and project the population to the same CRS as the isopolygon
-        temp_isopolygons = gpd.GeoDataFrame(isopolygons[col], geometry=col, crs="EPSG:4326").dropna()
-        grouped_population = grouped_population.set_crs(temp_isopolygons.crs)
+        temp_isopolygons = gpd.GeoDataFrame(isopolygons[col], geometry=col, crs=crs).dropna()
 
         # Get the population IDs that fall within each isopolygon
         served_gdf = grouped_population.sjoin(temp_isopolygons, how="right", predicate="within").dropna()
