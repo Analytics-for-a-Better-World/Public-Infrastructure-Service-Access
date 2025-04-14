@@ -42,16 +42,17 @@ def population_served(
 
     # For each distance, find the population that falls within the facility isopolygons
     for col in isopolygons.columns:
-        # Get the isopolygon geometries and project the population to the same CRS as the isopolygon
-        temp_isopolygons = gpd.GeoDataFrame(isopolygons[col], geometry=col, crs=crs).dropna()
+        if col.startswith("ID_"):
+            # Get the isopolygon geometries and project the population to the same CRS as the isopolygon
+            temp_isopolygons = gpd.GeoDataFrame(isopolygons[col], geometry=col, crs=crs).dropna()
 
-        # Get the population IDs that fall within each isopolygon
-        served_gdf = grouped_population.sjoin(temp_isopolygons, how="right", predicate="within").dropna()
-        served_dict[col] = (
-            served_gdf.groupby("isopolygon_idx", group_keys=True)["population_idx"]
-            .apply(list)
-            .to_dict()
-        )
+            # Get the population IDs that fall within each isopolygon
+            served_gdf = grouped_population.sjoin(temp_isopolygons, how="right", predicate="within").dropna()
+            served_dict[col] = (
+                served_gdf.groupby("isopolygon_idx", group_keys=True)["population_idx"]
+                .apply(list)
+                .to_dict()
+            )
 
     served_df = pd.DataFrame(index=isopolygons.index, data=served_dict).map(
         lambda d: list(map(int, d)) if isinstance(d, list) else []
