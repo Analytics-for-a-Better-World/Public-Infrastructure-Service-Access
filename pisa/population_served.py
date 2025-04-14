@@ -32,11 +32,11 @@ def population_served(
     crs = "EPSG:4326"
 
     grouped_population = grouped_population.copy()
-    grouped_population.index.name = "population_id"
+    grouped_population.index.name = "population_idx"
     grouped_population = grouped_population.to_crs(crs) if grouped_population.crs else grouped_population.set_crs(crs)
 
     isopolygons = isopolygons.copy()
-    isopolygons.index.name = "facility_id"
+    isopolygons.index.name = "isopolygon_idx"
 
     served_dict = {}
 
@@ -48,7 +48,7 @@ def population_served(
         # Get the population IDs that fall within each isopolygon
         served_gdf = grouped_population.sjoin(temp_isopolygons, how="right", predicate="within").dropna()
         served_dict[col] = (
-            served_gdf.groupby("facility_id", group_keys=True)["population_id"]
+            served_gdf.groupby("isopolygon_idx", group_keys=True)["population_idx"]
             .apply(list)
             .to_dict()
         )
@@ -56,5 +56,5 @@ def population_served(
     served_df = pd.DataFrame(index=isopolygons.index, data=served_dict).map(
         lambda d: list(map(int, d)) if isinstance(d, list) else []
     )
-    served_df = served_df.reset_index().rename(columns={"facility_id": "Cluster_ID"})
+    served_df = served_df.reset_index().rename(columns={"isopolygon_idx": "Cluster_ID"})
     return served_df
