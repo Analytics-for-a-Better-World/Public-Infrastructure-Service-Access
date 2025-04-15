@@ -2,7 +2,7 @@ import geopandas as gpd
 import pandas as pd
 
 
-def population_served(
+def population_served_by_isopolygons(
     grouped_population: gpd.GeoDataFrame,
     isopolygons: pd.DataFrame,
 ) -> pd.DataFrame:
