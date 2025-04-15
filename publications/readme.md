@@ -11,8 +11,9 @@
 ### Amref Health Africa
 - [A Decision Support Tool for Domain-Driven Mobile Clinic Routing: A Case Study in Kenya](https://aisel.aisnet.org/sigdsa2024/12/)
 
-### Thesis Work
+### Other relevant publications
 
+- [Enhancing digital road networks for better transportation in developing countries](https://www.researchgate.net/publication/384542150_Enhancing_digital_road_networks_for_better_transportation_in_developing_countries)
 - [Method for analyzing climate criticality of infrastructure networks by Teun van der Laan, 2024](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/Final_Master_Thesis_UvA%20(1)%20-%20Teun.pdf)
 - [Optimization of Cold Storage Locations in Madhya Pradesh to Reduce Tomato Losses by Nick Koelemeij, 2024](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/MSc_Thesis_Nick_Koelemeij__15th_of_July__2024_.pdf)
 - [Optimizing Stroke Care Accessibility for At-Risk Populations by Merel Bonewit, 2024](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/Bonewit%2C%20Merel%20Msc.pdf)
