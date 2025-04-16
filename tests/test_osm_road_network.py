@@ -64,31 +64,35 @@ def adm_area():
 
 
 @pytest.mark.parametrize(
-    ["mode_of_transport", "distance_type"],
+    ["mode_of_transport", "distance_type", "fallback_speed"],
     [
-        ["driving", "length"],
-        ["walking", "length"],
-        ["cycling", "length"],
-        ["driving", "travel_time"],
-        ["walking", "travel_time"],
-        ["cycling", "travel_time"],
+        ["driving", "length", None],
+        ["walking", "length", None],
+        ["cycling", "length", None],
+        ["driving", "travel_time", 15],
+        ["walking", "travel_time", 15],
+        ["cycling", "travel_time", 15],
     ],
 )
-def test_osm_road_network(adm_area, mode_of_transport, distance_type, mocker, mock_graph):
+def test_osm_road_network(adm_area, mode_of_transport, distance_type, fallback_speed, mocker, mock_graph):
     mocker.patch("gpbp.layers.ox.graph_from_polygon", return_value=mock_graph)
 
     road_network = OsmRoadNetwork(
         admin_area_boundaries=adm_area.geometry,
         mode_of_transport=mode_of_transport,
         distance_type=distance_type,
+        fallback_speed=fallback_speed,
     ).get_osm_road_network()
 
-    if mode_of_transport == "driving":
-        default_speed = DEFAULT_FALLBACK_DRIVING_SPEED
-    elif mode_of_transport == "walking":
-        default_speed = DEFAULT_FALLBACK_WALKING_SPEED
-    elif mode_of_transport == "cycling":
-        default_speed = DEFAULT_FALLBACK_CYCLING_SPEED
+    if fallback_speed is not None:
+        default_speed = fallback_speed
+    else:
+        if mode_of_transport == "driving":
+            default_speed = DEFAULT_FALLBACK_DRIVING_SPEED
+        elif mode_of_transport == "walking":
+            default_speed = DEFAULT_FALLBACK_WALKING_SPEED
+        elif mode_of_transport == "cycling":
+            default_speed = DEFAULT_FALLBACK_CYCLING_SPEED
 
     if distance_type == "travel_time":
         for _, _, data in road_network.edges(data=True):
