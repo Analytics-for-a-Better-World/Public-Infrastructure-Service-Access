@@ -84,6 +84,3 @@ def test_osm_road_network(adm_area, mode_of_transport, distance_type, fallback_s
             assert data["speed_kph"] == fallback_speed
             expected_travel_time = data["length"] / (data["speed_kph"] * 1000 / 60)  # length in meters, speed in kph
             assert round(data["travel_time"], 2) == round(expected_travel_time, 2)
-            assert data["speed_kph"] == fallback_speed
-            expected_travel_time = data["length"] / (data["speed_kph"] * 1000 / 60)  # length in meters, speed in kph
-            assert round(data["travel_time"], 2) == round(expected_travel_time, 2)

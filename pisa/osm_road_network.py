@@ -24,7 +24,7 @@ class OsmRoadNetwork:
     distance_type: str
         The type of distance to be calculated.
 
-    fallback_speed: Optional[str]
+    fallback_speed: int | float | None
         The speed to be used for road types where OSM does not provide a speed attribute.
         If not provided, the default speed for the specified mode of transport will be used.
         This default speed is specified in the constants.py file.
@@ -37,6 +37,8 @@ class OsmRoadNetwork:
         distance_type: str,  # must be an element of VALID_DISTANCE_TYPES
         fallback_speed: int | float | None = None,
     ):
+        self.admin_area_boundaries = admin_area_boundaries
+
         # validate distance type
         self.distance_type = _validate_distance_type(distance_type)
 
@@ -45,21 +47,16 @@ class OsmRoadNetwork:
 
         self.network_type = self._set_network_type(mode_of_transport)
 
-        self.admin_area_boundaries = admin_area_boundaries
+        logger.info(
+            f"OSM road network set with parameters network_type to '{self.network_type}' and distance_type to '{self.distance_type}'"
+        )
 
+        # validate fallback speed
         if self.distance_type == "travel_time":
             if fallback_speed is not None:
                 fallback_speed = _validate_fallback_speed_input(fallback_speed, mode_of_transport)
-                logger.info("""Setting fallback speed to f"{fallback_speed}" """)
+                logger.info(f"Setting fallback speed to {fallback_speed}")
             self.fallback_speed = fallback_speed
-
-        logger.info(
-            """OSM road network set with parameters 
-                    
-                    network_type f"{self.network_type}",
-                    distance_type f"{self.distance_type}",                    
-            """
-        )
 
     def get_osm_road_network(self) -> nx.MultiDiGraph:
         """Returns the processed OSM road network."""
