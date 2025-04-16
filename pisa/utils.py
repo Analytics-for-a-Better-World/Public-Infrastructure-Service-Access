@@ -37,7 +37,6 @@ def disk_cache(cache_dir="cache"):
     def decorator(func):
         @wraps(func)
         def wrapper(*args, **kwargs):
-
             # Ensure the cache directory exists
             os.makedirs(cache_dir, exist_ok=True)
 
@@ -73,7 +72,6 @@ def disk_cache(cache_dir="cache"):
 
 
 def _validate_distance_type(distance_type: str) -> str:
-
     distance_type = distance_type.lower().strip()
 
     if distance_type not in VALID_DISTANCE_TYPES:
@@ -82,9 +80,30 @@ def _validate_distance_type(distance_type: str) -> str:
 
 
 def _validate_mode_of_transport(mode_of_transport: str) -> str:
-
     mode_of_transport = mode_of_transport.lower().strip()
 
     if mode_of_transport not in VALID_MODES_OF_TRANSPORT:
-        raise ValueError(f"route_profile must be one of {VALID_MODES_OF_TRANSPORT}")
+        raise ValueError(f"mode_of_transport must be one of {VALID_MODES_OF_TRANSPORT}")
     return mode_of_transport
+
+
+def _validate_fallback_speed_input(fallback_speed: int | float, mode_of_transport: str) -> int | float:
+    """Validate that the user-provided fallback speed is sensible for the given mode of transport."""
+    if not isinstance(fallback_speed, (int, float)):
+        raise ValueError("Fallback speed must be a number")
+
+    if mode_of_transport not in VALID_MODES_OF_TRANSPORT:
+        raise ValueError(f"Invalid mode of transport '{mode_of_transport}'. Must be one of {VALID_MODES_OF_TRANSPORT}")
+
+    transport_specific_bounds = {
+        "driving": (0, 200),
+        "walking": (0, 20),
+        "cycling": (0, 50),
+    }
+    min_speed, max_speed = transport_specific_bounds[mode_of_transport]
+    if not min_speed <= fallback_speed <= max_speed:
+        raise ValueError(
+            f"Fallback speed {fallback_speed} is not sensible for {mode_of_transport}. "
+            f"Valid range is {transport_specific_bounds[mode_of_transport]}"
+        )
+    return fallback_speed

@@ -7,6 +7,11 @@ import pytest
 from shapely.geometry import Polygon
 
 from pisa.administrative_area import AdministrativeArea
+from pisa.constants import (
+    DEFAULT_FALLBACK_CYCLING_SPEED,
+    DEFAULT_FALLBACK_DRIVING_SPEED,
+    DEFAULT_FALLBACK_WALKING_SPEED,
+)
 from pisa.osm_road_network import OsmRoadNetwork
 
 
@@ -78,18 +83,18 @@ def test_osm_road_network(adm_area, mode_of_transport, distance_type, mocker, mo
         distance_type=distance_type,
     ).get_osm_road_network()
 
-    # default_speed = OsmRoadNetwork._get_network_type(mode_of_transport)[1]
     if mode_of_transport == "driving":
-        default_speed = 50
+        default_speed = DEFAULT_FALLBACK_DRIVING_SPEED
     elif mode_of_transport == "walking":
-        default_speed = 4
+        default_speed = DEFAULT_FALLBACK_WALKING_SPEED
     elif mode_of_transport == "cycling":
-        default_speed = 15
+        default_speed = DEFAULT_FALLBACK_CYCLING_SPEED
 
     if distance_type == "travel_time":
         for _, _, data in road_network.edges(data=True):
             assert data["speed_kph"] == default_speed
-            expected_travel_time = data["length"] / (
-                data["speed_kph"] * 1000 / 60
-            )  # length in meters, speed in kph
+            expected_travel_time = data["length"] / (data["speed_kph"] * 1000 / 60)  # length in meters, speed in kph
+            assert round(data["travel_time"], 2) == round(expected_travel_time, 2)
+            assert data["speed_kph"] == default_speed
+            expected_travel_time = data["length"] / (data["speed_kph"] * 1000 / 60)  # length in meters, speed in kph
             assert round(data["travel_time"], 2) == round(expected_travel_time, 2)
