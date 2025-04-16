@@ -4,11 +4,6 @@ import networkx as nx
 import osmnx as ox
 from shapely import MultiPolygon, Polygon
 
-from pisa.constants import (
-    DEFAULT_FALLBACK_CYCLING_SPEED,
-    DEFAULT_FALLBACK_DRIVING_SPEED,
-    DEFAULT_FALLBACK_WALKING_SPEED,
-)
 from pisa.utils import _validate_distance_type, _validate_fallback_speed_input, _validate_mode_of_transport
 
 logger = logging.getLogger(__name__)
@@ -53,12 +48,10 @@ class OsmRoadNetwork:
         self.admin_area_boundaries = admin_area_boundaries
 
         if self.distance_type == "travel_time":
-            if fallback_speed is None:
-                self.fallback_speed = self._set_fallback_speed(self.network_type)
-            else:
+            if fallback_speed is not None:
                 fallback_speed = _validate_fallback_speed_input(fallback_speed, mode_of_transport)
                 logger.info("""Setting fallback speed to f"{fallback_speed}" """)
-                self.fallback_speed = fallback_speed
+            self.fallback_speed = fallback_speed
 
         logger.info(
             """OSM road network set with parameters 
@@ -97,7 +90,7 @@ class OsmRoadNetwork:
             raise ValueError("Invalid mode of transport.")
 
     @staticmethod
-    def _add_time_to_edges(road_network: nx.MultiDiGraph, fallback_speed: int | float) -> nx.MultiDiGraph:
+    def _add_time_to_edges(road_network: nx.MultiDiGraph, fallback_speed: int | float | None) -> nx.MultiDiGraph:
         """Add travel time edge attribute and change unit to minutes"""
         road_network = ox.add_edge_speeds(road_network, fallback=fallback_speed)
         road_network = ox.add_edge_travel_times(road_network)
@@ -107,16 +100,3 @@ class OsmRoadNetwork:
         nx.set_edge_attributes(road_network, time_in_minutes, "travel_time")
 
         return road_network
-
-    @staticmethod
-    def _set_fallback_speed(network_type: str) -> int:
-        """If no fallback speed is provided, set the default based on the network type and the value specified in the constants.py file."""
-        if network_type == "drive":
-            return DEFAULT_FALLBACK_DRIVING_SPEED
-        elif network_type == "walk":
-            return DEFAULT_FALLBACK_WALKING_SPEED
-        elif network_type == "bike":
-            return DEFAULT_FALLBACK_CYCLING_SPEED
-        else:
-            logger.error(f"Invalid network type '{network_type}'. ")
-            raise ValueError("Invalid network type.")
