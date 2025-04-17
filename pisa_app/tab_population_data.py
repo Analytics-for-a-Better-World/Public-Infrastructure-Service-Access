@@ -29,8 +29,17 @@ def population_data(ss):
                                                    ).get_population_gdf()
 
         elif fb_pop_button:
-            ss.population_gdf = FacebookPopulation(ss.admin_area_boundaries, country_code, ss.population_resolution
-                                                   ).get_population_gdf()
+            try:
+                ss.population_gdf = FacebookPopulation(ss.admin_area_boundaries, country_code, ss.population_resolution
+                                                       ).get_population_gdf()
+            except ValueError:
+                st.warning(
+                    (
+                        f"No facebook population data available for the selected country {ss.country}. "
+                    ),
+                    icon="⚠️",
+                )
+                return
 
         ss.pop_map_obj = gpbp.visualisation.plot_population_heatmap(ss.population_gdf)
 
