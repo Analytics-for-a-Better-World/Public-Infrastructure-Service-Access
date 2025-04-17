@@ -7,6 +7,8 @@ import osmnx as ox
 from pandas import DataFrame
 from shapely import MultiPolygon, Polygon
 
+from pisa.constants import OSM_TAGS
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -18,7 +20,7 @@ class Facilities:
     admin_area_boundaries: Polygon | MultiPolygon
     data_src: str = "osm"
     osm_tags: dict = field(
-        default_factory=lambda: {"amenity": "hospital", "building": "hospital"}
+        default_factory=lambda: OSM_TAGS
     )
 
     def get_existing_facilities(self) -> DataFrame:
