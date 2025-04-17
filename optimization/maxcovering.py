@@ -67,7 +67,7 @@ import gurobipy as gb
 import pyomo.environ as pyo
 
 # own modules
-import optdata as od
+from optimization import optdata as od
 
 verbose_gurobi_code = {gb.GRB.LOADED: 'loaded',
                        gb.GRB.OPTIMAL: 'optimal',
