@@ -24,7 +24,16 @@ def existing_facilities(ss):
 
     if osm_button:
         ss.facilities = Facilities(admin_area_boundaries=ss.admin_area_boundaries)
-        ss.existing_facilities_df = ss.facilities.get_existing_facilities()
+        try:
+            ss.existing_facilities_df = ss.facilities.get_existing_facilities()
+        except ValueError:
+            st.warning(
+                (
+                    f"No facilities found in the selected country {ss.country}. "
+                ),
+                icon="⚠️",
+            )
+            return
 
         ss.fac_map_obj = gpbp.visualisation.plot_facilities(
             ss.existing_facilities_df
