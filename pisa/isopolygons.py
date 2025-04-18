@@ -27,7 +27,7 @@ from pandas import DataFrame
 from shapely import Polygon
 from shapely.geometry import shape
 
-from pisa.utils import _validate_distance_type, disk_cache, _validate_mode_of_transport
+from pisa.utils import disk_cache, validate_distance_type, validate_mode_of_transport
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class IsopolygonCalculator(ABC):
     ):
         self.facilities_df = self._validate_facilities_df_format(facilities_df)
 
-        self.distance_type = _validate_distance_type(distance_type)
+        self.distance_type = validate_distance_type(distance_type)
 
         self.distance_values = self._validate_distance_values_are_ints(distance_values)
 
@@ -398,7 +398,7 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
         self.mapbox_api_token = self._validate_mapbox_token_not_empty(mapbox_api_token)
 
-        self.route_profile = _validate_mode_of_transport(mode_of_transport)
+        self.route_profile = validate_mode_of_transport(mode_of_transport)
 
         super().__init__(facilities_df, distance_type, distance_values)
 

@@ -2,7 +2,7 @@ import pytest
 from shapely.geometry import MultiPolygon, Polygon
 
 from gpbp.utils import generate_grid_in_polygon, group_population
-from pisa.utils import _validate_fallback_speed_input
+from pisa.utils import validate_fallback_speed
 
 
 @pytest.fixture
@@ -31,9 +31,18 @@ class TestGenerateGridInPolygon:
         grid = generate_grid_in_polygon(0.5, multipolygon)
         point_in_grid = (0.5, 0.5)
         point_not_in_grid = (0.5, 1.5)
-        assert grid.loc[(grid["longitude"] == point_in_grid[0]) & (grid["latitude"] == point_in_grid[1])].shape[0] == 1
         assert (
-            grid.loc[(grid["longitude"] == point_not_in_grid[0]) & (grid["latitude"] == point_not_in_grid[1])].shape[0]
+            grid.loc[
+                (grid["longitude"] == point_in_grid[0])
+                & (grid["latitude"] == point_in_grid[1])
+            ].shape[0]
+            == 1
+        )
+        assert (
+            grid.loc[
+                (grid["longitude"] == point_not_in_grid[0])
+                & (grid["latitude"] == point_not_in_grid[1])
+            ].shape[0]
             == 0
         )
 
@@ -52,43 +61,60 @@ class TestGenerateGridInPolygon:
 
 
 class TestGroupPopulation:
-    @pytest.mark.parametrize("nof_digits, count_of_areas_included", [(1, 1), (2, 2), (3, 3), (4, 4)])
-    def test_group_pop_length(self, population_dataframe, nof_digits, count_of_areas_included):
+    @pytest.mark.parametrize(
+        "nof_digits, count_of_areas_included", [(1, 1), (2, 2), (3, 3), (4, 4)]
+    )
+    def test_group_pop_length(
+        self, population_dataframe, nof_digits, count_of_areas_included
+    ):
         group_pop = group_population(population_dataframe, nof_digits=nof_digits)
         assert group_pop.shape[0] == count_of_areas_included
 
     @pytest.mark.parametrize(
         "nof_digits, longitude, latitude, population_sum",
-        [(1, 6.9, 53.1, 14), (2, 6.88, 53.06, 12), (3, 6.876, 53.062, 9), (4, 6.8796, 53.0600, 3)],
+        [
+            (1, 6.9, 53.1, 14),
+            (2, 6.88, 53.06, 12),
+            (3, 6.876, 53.062, 9),
+            (4, 6.8796, 53.0600, 3),
+        ],
     )
-    def test_group_pop_values(self, population_dataframe, nof_digits, longitude, latitude, population_sum):
+    def test_group_pop_values(
+        self, population_dataframe, nof_digits, longitude, latitude, population_sum
+    ):
         group_pop = group_population(population_dataframe, nof_digits=nof_digits)
         assert (
-            group_pop.loc[(group_pop["longitude"] == longitude) & (group_pop["latitude"] == latitude)][
-                "population"
-            ].values[0]
+            group_pop.loc[
+                (group_pop["longitude"] == longitude)
+                & (group_pop["latitude"] == latitude)
+            ]["population"].values[0]
             == population_sum
         )
 
 
-def test_validate_fallback_speed_input_valid():
-    assert _validate_fallback_speed_input(10, "driving") == 10
-    assert _validate_fallback_speed_input(10, "walking") == 10
-    assert _validate_fallback_speed_input(10, "cycling") == 10
-    assert _validate_fallback_speed_input(60, "driving") == 60
-    assert _validate_fallback_speed_input(30.5, "driving") == 30.5
+@pytest.mark.parametrize(
+    "speed, network_type, expected",
+    [
+        (None, "bike", None),
+        (10, "drive", 10),
+        (10, "walk", 10),
+        (10, "bike", 10),
+        (60, "drive", 60),
+        (30.5, "drive", 30.5),
+    ],
+)
+def test_validate_fallback_speed_input_valid(speed, network_type, expected):
+    assert validate_fallback_speed(speed, network_type) == expected
 
 
 def test_validate_fallback_speed_input_invalid():
     with pytest.raises(ValueError):
-        _validate_fallback_speed_input(-4, "driving")
+        validate_fallback_speed(-4, "drive")
     with pytest.raises(ValueError):
-        _validate_fallback_speed_input("walking", "walking")
+        validate_fallback_speed("walk", "walk")
     with pytest.raises(ValueError):
-        _validate_fallback_speed_input(1000, "cycling")
+        validate_fallback_speed(1000, "bike")
     with pytest.raises(ValueError):
-        _validate_fallback_speed_input(60, "walking")
+        validate_fallback_speed(60, "walk")
     with pytest.raises(ValueError):
-        _validate_fallback_speed_input(60, "cycling")
-        _validate_fallback_speed_input(60, "cycling")
-        _validate_fallback_speed_input(60, "cycling")
+        validate_fallback_speed(60, "bike")

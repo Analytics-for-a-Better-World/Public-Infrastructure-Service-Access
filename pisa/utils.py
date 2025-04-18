@@ -71,7 +71,7 @@ def disk_cache(cache_dir="cache"):
     return decorator
 
 
-def _validate_distance_type(distance_type: str) -> str:
+def validate_distance_type(distance_type: str) -> str:
     distance_type = distance_type.lower().strip()
 
     if distance_type not in VALID_DISTANCE_TYPES:
@@ -79,7 +79,7 @@ def _validate_distance_type(distance_type: str) -> str:
     return distance_type
 
 
-def _validate_mode_of_transport(mode_of_transport: str) -> str:
+def validate_mode_of_transport(mode_of_transport: str) -> str:
     mode_of_transport = mode_of_transport.lower().strip()
 
     if mode_of_transport not in VALID_MODES_OF_TRANSPORT:
@@ -87,23 +87,29 @@ def _validate_mode_of_transport(mode_of_transport: str) -> str:
     return mode_of_transport
 
 
-def _validate_fallback_speed_input(fallback_speed: int | float, mode_of_transport: str) -> int | float:
-    """Validate that the user-provided fallback speed is sensible for the given mode of transport."""
-    if not isinstance(fallback_speed, (int, float)):
-        raise ValueError("Fallback speed must be a number")
+def validate_fallback_speed(
+    fallback_speed: int | float | None, network_type: str
+) -> int | float | None:
+    """
+    If no custom fallback speed is provided, return None. Else, validate that the
+    user-provided fallback speed is within reasonable bounds for the given mode of transport.
+    """
 
-    if mode_of_transport not in VALID_MODES_OF_TRANSPORT:
-        raise ValueError(f"Invalid mode of transport '{mode_of_transport}'. Must be one of {VALID_MODES_OF_TRANSPORT}")
+    if fallback_speed is not None:
 
-    transport_specific_bounds = {
-        "driving": (0, 200),
-        "walking": (0, 20),
-        "cycling": (0, 50),
-    }
-    min_speed, max_speed = transport_specific_bounds[mode_of_transport]
-    if not min_speed <= fallback_speed <= max_speed:
-        raise ValueError(
-            f"Fallback speed {fallback_speed} is not sensible for {mode_of_transport}. "
-            f"Valid range is {transport_specific_bounds[mode_of_transport]}"
-        )
+        if not isinstance(fallback_speed, (int, float)):
+            raise ValueError("Fallback speed must be a number")
+
+        transport_specific_bounds = {
+            "drive": (0, 200),
+            "walk": (0, 20),
+            "bike": (0, 50),
+        }
+        min_speed, max_speed = transport_specific_bounds[network_type]
+        if not min_speed <= fallback_speed <= max_speed:
+            raise ValueError(
+                f"Fallback speed {fallback_speed} is out of bounds for {network_type}. "
+                f"Valid range is {transport_specific_bounds[network_type]}"
+            )
+
     return fallback_speed

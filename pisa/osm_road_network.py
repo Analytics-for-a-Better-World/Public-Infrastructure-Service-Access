@@ -4,7 +4,11 @@ import networkx as nx
 import osmnx as ox
 from shapely import MultiPolygon, Polygon
 
-from pisa.utils import _validate_distance_type, _validate_fallback_speed_input, _validate_mode_of_transport
+from pisa.utils import (
+    validate_distance_type,
+    validate_fallback_speed,
+    validate_mode_of_transport,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -26,8 +30,7 @@ class OsmRoadNetwork:
 
     fallback_speed: int | float | None
         The speed to be used for road types where OSM does not provide a speed attribute.
-        If not provided, the default speed for the specified mode of transport will be used.
-        This default speed is specified in the constants.py file.
+        If not provided, osmnx will do the imputation (recommended).
     """
 
     def __init__(
@@ -39,24 +42,18 @@ class OsmRoadNetwork:
     ):
         self.admin_area_boundaries = admin_area_boundaries
 
-        # validate distance type
-        self.distance_type = _validate_distance_type(distance_type)
-
-        # validate mode of transport
-        mode_of_transport = _validate_mode_of_transport(mode_of_transport)
+        self.distance_type = validate_distance_type(distance_type)
 
         self.network_type = self._set_network_type(mode_of_transport)
 
-        logger.info(
-            f"OSM road network set with parameters network_type to '{self.network_type}' and distance_type to '{self.distance_type}'"
-        )
-
-        # validate fallback speed
         if self.distance_type == "travel_time":
-            if fallback_speed is not None:
-                fallback_speed = _validate_fallback_speed_input(fallback_speed, mode_of_transport)
-                logger.info(f"Setting fallback speed to {fallback_speed}")
-            self.fallback_speed = fallback_speed
+            self.fallback_speed = validate_fallback_speed(
+                fallback_speed, network_type=self.network_type
+            )
+
+        logger.info(
+            f"OSM road network set with parameters network_type '{self.network_type}' and distance_type '{self.distance_type}'"
+        )
 
     def get_osm_road_network(self) -> nx.MultiDiGraph:
         """Returns the processed OSM road network."""
@@ -71,23 +68,29 @@ class OsmRoadNetwork:
     def _download_osm_road_network(self) -> nx.MultiDiGraph:
         """Download the OSM road network from OpenStreetMap for the specified administrative area."""
 
-        return ox.graph_from_polygon(polygon=self.admin_area_boundaries, network_type=self.network_type)
+        return ox.graph_from_polygon(
+            polygon=self.admin_area_boundaries, network_type=self.network_type
+        )
 
     @staticmethod
     def _set_network_type(mode_of_transport: str) -> str:
-        """Set valid network type based on input"""
+        """Set valid network_type based on valid values for mode_of_transport"""
+
+        # validate mode of transport
+        mode_of_transport = validate_mode_of_transport(mode_of_transport)
+
         if mode_of_transport == "driving":
             return "drive"
-        elif mode_of_transport == "walking":
+        if mode_of_transport == "walking":
             return "walk"
-        elif mode_of_transport == "cycling":
-            return "bike"
-        else:
-            logger.error(f"Invalid mode of transport '{mode_of_transport}'. ")
-            raise ValueError("Invalid mode of transport.")
+        # Info: only other option in current implementation is cycling.
+        # If more modes of transport are added, adapt this function
+        return "bike"
 
     @staticmethod
-    def _add_time_to_edges(road_network: nx.MultiDiGraph, fallback_speed: int | float | None) -> nx.MultiDiGraph:
+    def _add_time_to_edges(
+        road_network: nx.MultiDiGraph, fallback_speed: int | float | None
+    ) -> nx.MultiDiGraph:
         """Add travel time edge attribute and change unit to minutes"""
         road_network = ox.add_edge_speeds(road_network, fallback=fallback_speed)
         road_network = ox.add_edge_travel_times(road_network)
