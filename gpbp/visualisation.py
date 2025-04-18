@@ -9,8 +9,8 @@ from matplotlib import cm
 from matplotlib.colors import to_hex
 
 
-def plot_facilities(loc_gdf: gpd.GeoDataFrame, tiles="OpenStreetMap") -> folium.Map:
-    start_coords = (loc_gdf.latitude.mean(), loc_gdf.longitude.mean())
+def plot_facilities(admin_area, loc_gdf: gpd.GeoDataFrame, tiles="OpenStreetMap") -> folium.Map:
+    start_coords = list(admin_area.centroid.coords)[0][::-1]
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=6,

@@ -4,6 +4,8 @@ from dataclasses import dataclass, field
 import geopandas as gpd
 import numpy as np
 import osmnx as ox
+import pandas as pd
+from osmnx._errors import InsufficientResponseError
 from pandas import DataFrame
 from shapely import MultiPolygon, Polygon
 
@@ -56,9 +58,16 @@ class Facilities:
         logger.info(f"Retrieving existing facilities with tags {osm_tags} using OSM.")
 
         # retrieves facilities GeodataFrame from osm
-        facilities_gdf = ox.features_from_polygon(
-            polygon=admin_area_boundaries, tags=osm_tags
-        )
+        try:
+            facilities_gdf = ox.features_from_polygon(
+                polygon=admin_area_boundaries, tags=osm_tags
+            )
+        except InsufficientResponseError:
+            facilities_gdf = gpd.GeoDataFrame(
+                pd.DataFrame(columns=["id", "element", "amenity", "geometry"]),
+                geometry=[],
+                crs="EPSG:4326"
+            )
 
         # from the geometry column create longitude and latitude columns,
         # independently on whether the element is node or way
