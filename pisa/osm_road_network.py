@@ -79,18 +79,16 @@ class OsmRoadNetwork:
         # validate mode of transport
         mode_of_transport = validate_mode_of_transport(mode_of_transport)
 
-        if mode_of_transport == "driving":
-            return "drive"
-        if mode_of_transport == "walking":
-            return "walk"
-        # Info: only other option in current implementation is cycling.
-        # If more modes of transport are added, adapt this function
-        return "bike"
+        transform_dct = {
+            "driving": "drive",
+            "walking": "walk",
+            "cycling": "bike",
+        }
+
+        return transform_dct[mode_of_transport]
 
     @staticmethod
-    def _add_time_to_edges(
-        road_network: nx.MultiDiGraph, fallback_speed: int | float | None
-    ) -> nx.MultiDiGraph:
+    def _add_time_to_edges(road_network: nx.MultiDiGraph, fallback_speed: int | float | None) -> nx.MultiDiGraph:
         """Add travel time edge attribute and change unit to minutes"""
         road_network = ox.add_edge_speeds(road_network, fallback=fallback_speed)
         road_network = ox.add_edge_travel_times(road_network)
