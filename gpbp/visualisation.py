@@ -8,8 +8,10 @@ from shapely.geometry import MultiPolygon
 from matplotlib import cm
 from matplotlib.colors import to_hex
 
+from pisa.administrative_area import AdministrativeArea
 
-def plot_facilities(admin_area, loc_gdf: gpd.GeoDataFrame, tiles="OpenStreetMap") -> folium.Map:
+
+def plot_facilities(admin_area: AdministrativeArea, loc_gdf: gpd.GeoDataFrame, tiles="OpenStreetMap") -> folium.Map:
     start_coords = list(admin_area.centroid.coords)[0][::-1]
     folium_map = folium.Map(
         location=start_coords,
