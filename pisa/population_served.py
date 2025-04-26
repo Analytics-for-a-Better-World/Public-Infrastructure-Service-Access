@@ -2,7 +2,7 @@ import geopandas as gpd
 import pandas as pd
 
 
-def population_served_by_isopolygons(
+def get_population_served_by_isopolygons(
     grouped_population: gpd.GeoDataFrame,
     isopolygons: pd.DataFrame,
 ) -> pd.DataFrame:
@@ -38,24 +38,37 @@ def population_served_by_isopolygons(
     isopolygons = isopolygons.copy()
     isopolygons.index.name = "isopolygon_idx"
 
-    served_dict = {}
-
-    # For each distance, find the population that falls within the facility isopolygons
-    for col in isopolygons.columns:
-        if col.startswith("ID_"):
-            # Get the isopolygon geometries and project the population to the same CRS as the isopolygon
-            temp_isopolygons = gpd.GeoDataFrame(isopolygons[col], geometry=col, crs=crs).dropna()
-
-            # Get the population IDs that fall within each isopolygon
-            served_gdf = grouped_population.sjoin(temp_isopolygons, how="right", predicate="within").dropna()
-            served_dict[col] = (
-                served_gdf.groupby("isopolygon_idx", group_keys=True)["population_idx"]
-                .apply(list)
-                .to_dict()
-            )
-
-    served_df = pd.DataFrame(index=isopolygons.index, data=served_dict).map(
-        lambda d: list(map(int, d)) if isinstance(d, list) else []
+    # Melt isopolygons to long format for all ID_ columns
+    distance_cols = [col for col in isopolygons.columns if col.startswith("ID_")]
+    melted_isopolygons = (
+        isopolygons[distance_cols]
+        .reset_index()
+        .melt(id_vars=["isopolygon_idx"], var_name="distance_id", value_name="geometry")
+        .dropna(subset=["geometry"])
     )
-    served_df = served_df.reset_index().rename(columns={"isopolygon_idx": "Cluster_ID"})
-    return served_df
+    melted_isopolygons = gpd.GeoDataFrame(melted_isopolygons, geometry="geometry", crs=crs)
+
+    # Find spatial overlap between grouped population points and isopolygons
+    population_isopolygon_overlap = (
+        grouped_population
+        .sjoin(melted_isopolygons, how="right", predicate="within")
+    )
+
+    # Collect population points per isopolygon and distance, unstack ID_ columns into wide format
+    population_isopolygon_overlap = (
+        population_isopolygon_overlap.groupby(["isopolygon_idx", "distance_id"])["population_idx"]
+        .apply(lambda x: list(x) if len(x) > 0 else [])
+        .unstack("distance_id")
+    )
+    population_isopolygon_overlap.columns.name = None
+    population_isopolygon_overlap = (
+        population_isopolygon_overlap.reset_index()
+        .rename(columns={"isopolygon_idx": "Cluster_ID"})
+    )
+
+    # Clean up lists: replace [nan] with [] and convert float lists to int lists
+    population_isopolygon_overlap[distance_cols] = population_isopolygon_overlap[distance_cols].applymap(
+        lambda x: [] if pd.isna(x).any() else [int(i) for i in x]
+    )
+    
+    return population_isopolygon_overlap
