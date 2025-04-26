@@ -66,9 +66,13 @@ def get_population_served_by_isopolygons(
         .rename(columns={"isopolygon_idx": "Cluster_ID"})
     )
 
-    # Clean up lists: replace [nan] with [] and convert float lists to int lists
-    population_isopolygon_overlap[distance_cols] = population_isopolygon_overlap[distance_cols].applymap(
-        lambda x: [] if pd.isna(x).any() else [int(i) for i in x]
-    )
+    # Clean up lists: replace [nan] and nan with [] and convert float lists to int lists
+    def sanitize_lists(x):
+        """Convert list of floats to list of ints, or return empty list if NaN."""
+        if isinstance(x, list):
+            return [] if pd.isna(x).any() else [int(i) for i in x]
+        else:
+            return []
+    population_isopolygon_overlap[distance_cols] = population_isopolygon_overlap[distance_cols].applymap(sanitize_lists)
     
     return population_isopolygon_overlap
