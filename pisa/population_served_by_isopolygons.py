@@ -6,28 +6,50 @@ def get_population_served_by_isopolygons(
     grouped_population: gpd.GeoDataFrame,
     isopolygons: pd.DataFrame,
 ) -> pd.DataFrame:
-    """Get the list of population IDs that fall within the isopolygons of each facility.
+    """Identify population points that fall within each facility's isopolygons.
+    
+    This function performs a spatial join between population points and isopolygons
+    representing service areas at various distances from facilities. It returns a DataFrame
+    showing, for each facility (cluster) and distance threshold, which population points
+    are contained within the corresponding service area.
 
-    Each column of isopolygons is expected to represent the isopolygons of a facility at a specific distance.
+    Parameters
+    ----------
+    grouped_population : gpd.GeoDataFrame
+        GeoDataFrame containing population points with geometry column.
+        The index values are used as identifiers in the result.
+    isopolygons : pd.DataFrame
+        DataFrame where each column starting with 'ID_' contains Shapely Polygon objects
+        representing service areas at different distances. Each row represents a facility
+        isopolygon. The index values are used as Cluster_ID in the result.
 
-    Example usage:
-        grouped_population:
-            index   geometry
-            p0      POINT (...)
-            p1      POINT (...)
-            p2      POINT (...)
-        
-        isopolygons:
-            index   ID_10           ID_20
-            i0      POLYGON (...)   POLYGON (...)
-            i1      POLYGON (...)   POLYGON (...)
-            i2      POLYGON (...)   POLYGON (...)
+    Returns
+    -------
+    pd.DataFrame
+        DataFrame with columns:
+        - Cluster_ID: The index from the isopolygons input
+        - One column for each 'ID_' column in isopolygons, containing lists of 
+          population indices that fall within the corresponding polygon
 
-        get_population_served_by_isopolygons(grouped_population, isopolygons):
-            index   Cluster_ID   ID_10           ID_20
-            0      i0          [p0, p1]       [p0, p1]
-            1      i1          [p2]           []
-            2      i2          []             [p1, p2]
+    Example usage
+    --------------
+    grouped_population:
+        index   geometry
+        p0      POINT (...)
+        p1      POINT (...)
+        p2      POINT (...)
+    
+    isopolygons:
+        index   ID_10           ID_20
+        i0      POLYGON (...)   POLYGON (...)
+        i1      POLYGON (...)   POLYGON (...)
+        i2      POLYGON (...)   POLYGON (...)
+
+    get_population_served_by_isopolygons(grouped_population, isopolygons):
+        index   Cluster_ID   ID_10           ID_20
+        0      i0          [p0, p1]       [p0, p1]
+        1      i1          [p2]           []
+        2      i2          []             [p1, p2]
     """
     crs = "EPSG:4326"
 
