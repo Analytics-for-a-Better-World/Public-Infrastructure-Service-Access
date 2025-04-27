@@ -31,6 +31,9 @@ def get_population_served_by_isopolygons(
     """
     crs = "EPSG:4326"
 
+    if grouped_population.empty or isopolygons.empty:
+        raise ValueError("Input dataframes cannot be empty.")
+
     grouped_population = grouped_population.copy()
     grouped_population.index.name = "population_idx"
     grouped_population = grouped_population.to_crs(crs) if grouped_population.crs else grouped_population.set_crs(crs)
