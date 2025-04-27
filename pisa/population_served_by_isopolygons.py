@@ -23,7 +23,7 @@ def get_population_served_by_isopolygons(
             i1      POLYGON (...)   POLYGON (...)
             i2      POLYGON (...)   POLYGON (...)
 
-        population_served(grouped_population, isopolygons):
+        get_population_served_by_isopolygons(grouped_population, isopolygons):
             index   Cluster_ID   ID_10           ID_20
             0      i0          [p0, p1]       [p0, p1]
             1      i1          [p2]           []
