@@ -4,11 +4,7 @@ import networkx as nx
 import osmnx as ox
 from shapely import MultiPolygon, Polygon
 
-from pisa.utils import (
-    validate_distance_type,
-    validate_fallback_speed,
-    validate_mode_of_transport,
-)
+from pisa.utils import validate_distance_type, validate_fallback_speed, validate_mode_of_transport
 
 logger = logging.getLogger(__name__)
 
@@ -47,9 +43,7 @@ class OsmRoadNetwork:
         self.network_type = self._set_network_type(mode_of_transport)
 
         if self.distance_type == "travel_time":
-            self.fallback_speed = validate_fallback_speed(
-                fallback_speed, network_type=self.network_type
-            )
+            self.fallback_speed = validate_fallback_speed(fallback_speed, network_type=self.network_type)
 
         logger.info(
             f"OSM road network set with parameters network_type '{self.network_type}' and distance_type '{self.distance_type}'"
@@ -68,9 +62,7 @@ class OsmRoadNetwork:
     def _download_osm_road_network(self) -> nx.MultiDiGraph:
         """Download the OSM road network from OpenStreetMap for the specified administrative area."""
 
-        return ox.graph_from_polygon(
-            polygon=self.admin_area_boundaries, network_type=self.network_type
-        )
+        return ox.graph_from_polygon(polygon=self.admin_area_boundaries, network_type=self.network_type)
 
     @staticmethod
     def _set_network_type(mode_of_transport: str) -> str:
