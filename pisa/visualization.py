@@ -68,10 +68,13 @@ def plot_isochrones(isochrones: list[MultiPolygon], tiles="OpenStreetMap"):
     colors = cm.rainbow(np.linspace(0, 1, len(isochrones)))
     colors = list(map(to_hex, list(colors)))
     geo_j = gpd.GeoSeries(isochrones).to_json()
-    style_function = lambda x: {
-        "fillColor": colors[int(x["id"])],
-        "line_color": colors[int(x["id"])],
-    }
+
+    def style_function(x):
+        return {
+            "fillColor": colors[int(x["id"])],
+            "line_color": colors[int(x["id"])],
+        }
+
     folium.GeoJson(data=geo_j, style_function=style_function).add_to(folium_map)
     folium.Marker(location=start_coords)
     return folium_map
