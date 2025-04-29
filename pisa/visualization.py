@@ -5,16 +5,46 @@ import pandas as pd
 from folium.plugins import HeatMap
 from matplotlib import cm
 from matplotlib.colors import to_hex
-from shapely.geometry import MultiPolygon
+from shapely.geometry import MultiPolygon, Polygon
 
 
-def plot_facilities(loc_gdf: gpd.GeoDataFrame, tiles="OpenStreetMap") -> folium.Map:
-    start_coords = (loc_gdf.latitude.mean(), loc_gdf.longitude.mean())
-    folium_map = folium.Map(location=start_coords, zoom_start=6, tiles=tiles)
+def plot_facilities(
+    df_facilities: pd.DataFrame, admin_area_boundaries: MultiPolygon | Polygon, tiles="OpenStreetMap"
+) -> folium.Map:
+    """Plot facilities on a map with administrative area boundaries."""
+
+    # Initialize the map
+    start_coords = list(admin_area_boundaries.centroid.coords)[0][::-1]
+    folium_map = folium.Map(location=start_coords, tiles=tiles)
+
+    # Add a polygon layer for the administrative area boundaries
+    def style_function(x):
+        return {
+            "fillColor": "green",
+            "color": "green",
+            "weight": 2,
+            "fillOpacity": 0.1,
+        }
+
+    folium.GeoJson(
+        admin_area_boundaries,
+        style_function=style_function,
+    ).add_to(folium_map)
+
+    # Fit bounding box around the administrative area
+    bounds = admin_area_boundaries.bounds
+    folium_map.fit_bounds(
+        [
+            [bounds[1], bounds[0]],  # southwest corner
+            [bounds[3], bounds[2]],  # northeast corner
+        ],
+    )
+
+    # Add a marker for each facility
     try:
-        for i in range(0, len(loc_gdf)):
+        for i in range(0, len(df_facilities)):
             folium.CircleMarker(
-                [loc_gdf.iloc[i]["latitude"], loc_gdf.iloc[i]["longitude"]],
+                [df_facilities.iloc[i]["latitude"], df_facilities.iloc[i]["longitude"]],
                 color="blue",
                 fill=True,
                 radius=2,
