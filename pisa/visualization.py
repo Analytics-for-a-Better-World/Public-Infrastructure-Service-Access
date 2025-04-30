@@ -1,7 +1,6 @@
 from typing import Optional
 
 import folium
-import geopandas as gpd
 import numpy as np
 import pandas as pd
 from folium.plugins import HeatMap
@@ -103,27 +102,49 @@ def plot_population(
     return folium_map
 
 
-def plot_isochrones(
-    isochrones: list[MultiPolygon], admin_area_boundaries: MultiPolygon | Polygon, tiles="OpenStreetMap"
-):
+def plot_isochrones(df_isopolygons: pd.DataFrame, admin_area_boundaries: MultiPolygon | Polygon, tiles="OpenStreetMap"):
     start_coords = _start_coordinates_from_admin_area(admin_area_boundaries)
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=10,
         tiles=tiles,
     )
-    colors = cm.rainbow(np.linspace(0, 1, len(isochrones)))
+
+    col_values = [int(col.replace("ID_", "")) for col in df_isopolygons.columns]
+    sorted_cols = [df_isopolygons.columns[i] for i in np.argsort(col_values)[::-1]]
+    df_isopolygons = df_isopolygons.loc[:, sorted_cols]
+    df_isopolygons = df_isopolygons.drop_duplicates()
+
+    # Create colors for each FACILITY (row index)
+    facility_indices = df_isopolygons.index.unique()
+    colors = cm.rainbow(np.linspace(0, 1, len(facility_indices)))
     colors = list(map(to_hex, list(colors)))
-    geo_j = gpd.GeoSeries(isochrones).to_json()
 
-    def style_function(x):
-        return {
-            "fillColor": colors[int(x["id"])],
-            "line_color": colors[int(x["id"])],
-        }
+    # Create a color dictionary to maintain consistent colors per facility
+    facility_colors = {idx: colors[i] for i, idx in enumerate(facility_indices)}
 
-    folium.GeoJson(data=geo_j, style_function=style_function).add_to(folium_map)
+    # Vary opacity by isochrone time
+    weights = np.linspace(0.4, 0.7, len(df_isopolygons.columns))
+
+    # Add each isopolygon column to the map separately
+    for i, col in enumerate(df_isopolygons.columns):
+        weight = weights[i]
+        for idx, poly in df_isopolygons[col].items():
+            if poly is not None:  # Skip None values
+                color = facility_colors[idx]
+                folium.GeoJson(
+                    data=poly,
+                    style_function=lambda x, color=color, weight=weight: {
+                        "fillColor": color,
+                        "color": color,
+                        "weight": 1,
+                        "fillOpacity": weight,
+                    },
+                ).add_to(folium_map)
+
+    # Add marker for reference point
     folium.Marker(location=start_coords)
+
     return folium_map
 
 
