@@ -1,3 +1,5 @@
+from typing import Optional
+
 import folium
 import geopandas as gpd
 import numpy as np
@@ -14,7 +16,7 @@ def plot_facilities(
     """Plot facilities on a map with administrative area boundaries."""
 
     # Initialize the map
-    start_coords = list(admin_area_boundaries.centroid.coords)[0][::-1]
+    start_coords = _start_coordinates_from_admin_area(admin_area_boundaries)
     folium_map = folium.Map(location=start_coords, tiles=tiles)
 
     # Add a polygon layer for the administrative area boundaries
@@ -23,7 +25,7 @@ def plot_facilities(
             "fillColor": "green",
             "color": "green",
             "weight": 2,
-            "fillOpacity": 0.1,
+            "fillOpacity": 0.05,
         }
 
     folium.GeoJson(
@@ -32,13 +34,8 @@ def plot_facilities(
     ).add_to(folium_map)
 
     # Fit bounding box around the administrative area
-    bounds = admin_area_boundaries.bounds
-    folium_map.fit_bounds(
-        [
-            [bounds[1], bounds[0]],  # southwest corner
-            [bounds[3], bounds[2]],  # northeast corner
-        ],
-    )
+    bounds = _bounding_box_from_admin_area(admin_area_boundaries)
+    folium_map.fit_bounds(bounds)
 
     # Add a marker for each facility
     try:
@@ -54,30 +51,48 @@ def plot_facilities(
     return folium_map
 
 
-def plot_population_heatmap(pop_df: pd.DataFrame, tiles="OpenStreetMap") -> folium.Map:
-    start_coords = (pop_df.latitude.mean(), pop_df.longitude.mean())
+def plot_population_heatmap(
+    df_population: pd.DataFrame, admin_area_boundaries: MultiPolygon | Polygon, tiles="OpenStreetMap"
+) -> folium.Map:
+    start_coords = _start_coordinates_from_admin_area(admin_area_boundaries)
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=6,
         tiles=tiles,
     )
+
+    # Fit bounding box around the administrative area
+    bounds = _bounding_box_from_admin_area(admin_area_boundaries)
+    folium_map.fit_bounds(bounds)
+
     HeatMap(
-        pop_df.reindex(["latitude", "longitude", "population"], axis="columns").values,
+        df_population.reindex(["latitude", "longitude", "population"], axis="columns").values,
         min_opacity=0.1,
     ).add_to(folium.FeatureGroup(name="Heat Map").add_to(folium_map))
     folium.LayerControl().add_to(folium_map)
     return folium_map
 
 
-def plot_population(pop_df: pd.DataFrame, tiles="OpenStreetMap") -> folium.Map:
-    start_coords = (pop_df.latitude.mean(), pop_df.longitude.mean())
+def plot_population(
+    df_population: pd.DataFrame,
+    admin_area_boundaries: MultiPolygon | Polygon,
+    random_sample_n: Optional[int] = None,
+    tiles="OpenStreetMap",
+) -> folium.Map:
+    start_coords = _start_coordinates_from_admin_area(admin_area_boundaries)
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=6,
         tiles=tiles,
     )
-    pop_df["percent_rank"] = pop_df["population"].rank(pct=True)
-    for _, row in pop_df.iterrows():
+
+    # Fit bounding box around the administrative area
+    bounds = _bounding_box_from_admin_area(admin_area_boundaries)
+    folium_map.fit_bounds(bounds)
+
+    df_population["percent_rank"] = df_population["population"].rank(pct=True)
+    N = len(df_population) if random_sample_n is None else random_sample_n
+    for _, row in df_population.sample(N).iterrows():
         folium.Circle(
             [row["latitude"], row["longitude"]],
             radius=0.5,
@@ -88,8 +103,10 @@ def plot_population(pop_df: pd.DataFrame, tiles="OpenStreetMap") -> folium.Map:
     return folium_map
 
 
-def plot_isochrones(isochrones: list[MultiPolygon], tiles="OpenStreetMap"):
-    start_coords = list(isochrones[0].centroid.coords)[0][::-1]
+def plot_isochrones(
+    isochrones: list[MultiPolygon], admin_area_boundaries: MultiPolygon | Polygon, tiles="OpenStreetMap"
+):
+    start_coords = _start_coordinates_from_admin_area(admin_area_boundaries)
     folium_map = folium.Map(
         location=start_coords,
         zoom_start=10,
@@ -108,3 +125,17 @@ def plot_isochrones(isochrones: list[MultiPolygon], tiles="OpenStreetMap"):
     folium.GeoJson(data=geo_j, style_function=style_function).add_to(folium_map)
     folium.Marker(location=start_coords)
     return folium_map
+
+
+def _start_coordinates_from_admin_area(admin_area_boundaries: MultiPolygon | Polygon) -> list:
+    """Identify the start coordinates for the map."""
+    return list(admin_area_boundaries.centroid.coords)[0][::-1]
+
+
+def _bounding_box_from_admin_area(admin_area_boundaries: MultiPolygon | Polygon) -> list:
+    """Identify the bounding box for the map."""
+    bounds = admin_area_boundaries.bounds
+    return [
+        [bounds[1], bounds[0]],  # southwest
+        [bounds[3], bounds[2]],  # northeast
+    ]
