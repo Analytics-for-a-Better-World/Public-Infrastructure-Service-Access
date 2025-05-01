@@ -1,6 +1,10 @@
 import pytest
 
 from gpbp.utils import generate_grid_in_polygon, group_population
+from pisa.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
+from pisa.utils import _validate_distance_type
+from pisa.utils import _validate_mode_of_transport
+
 from shapely.geometry import Polygon, MultiPolygon
 
 @pytest.fixture
@@ -55,3 +59,25 @@ class TestGroupPopulation:
     def test_group_pop_values(self, population_dataframe, nof_digits, longitude, latitude, population_sum):
         group_pop = group_population(population_dataframe, nof_digits=nof_digits)
         assert group_pop.loc[(group_pop['longitude'] == longitude) & (group_pop['latitude'] == latitude)]['population'].values[0] == population_sum
+
+class TestValidateDistanceType:
+    def test_validate_distance_type(self):
+        assert _validate_distance_type("length")=="length"
+
+    def test_validate_distance_type(self):
+        assert _validate_distance_type("LeNgTh ")=="length"
+    
+    def test_validate_light_years(self):
+        with pytest.raises(ValueError):
+            _validate_distance_type("lightyears")
+    
+class TestValidateModeOfTransport:
+    def test_validate_mode_of_transport(self):
+        assert _validate_mode_of_transport("Driving")=="driving"
+
+    def test_validate_mode_of_transport(self):
+        assert _validate_mode_of_transport("WaLkInG ")=="walking"
+
+    def test_validate_horseback(self):
+        with pytest.raises(ValueError):
+            _validate_mode_of_transport("horseback")
