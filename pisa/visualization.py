@@ -45,8 +45,8 @@ def plot_facilities(
                 fill=True,
                 radius=2,
             ).add_to(folium_map)
-    except:
-        print("No facilities found")
+    except (KeyError, IndexError) as e:
+        print(f"Error plotting facilities: {e}")
     return folium_map
 
 
@@ -143,7 +143,7 @@ def plot_isochrones(df_isopolygons: pd.DataFrame, admin_area_boundaries: MultiPo
                 ).add_to(folium_map)
 
     # Add marker for reference point
-    folium.Marker(location=start_coords)
+    folium.Marker(location=start_coords).add_to(folium_map)
 
     return folium_map
 
