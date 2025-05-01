@@ -18,10 +18,15 @@ def get_set_of_available_pyomo_solvers():
     shell_command = "pyomo help --solvers"
     output = subprocess.check_output(shell_command, shell=True).decode()
     print(' done.')
+
+    def is_valid_solver_line(line):
+        stripped_line = line.strip()
+        return stripped_line.startswith("+") and not stripped_line.endswith(")")
+
     return {
         line.strip()[1:]
         for line in output.split()
-        if line.strip().startswith("+") and not line.strip().endswith(")")
+        if is_valid_solver_line(line)
     }
 
 
