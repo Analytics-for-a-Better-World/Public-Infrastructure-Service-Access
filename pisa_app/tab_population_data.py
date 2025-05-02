@@ -1,9 +1,8 @@
 import streamlit as st
 from streamlit_folium import st_folium
 
-import gpbp.visualisation
+from pisa.visualisation import plot_population_heatmap
 from pisa.population import WorldpopPopulation, FacebookPopulation
-from pisa_app.utils import fit_to_bounding_box
 
 
 def population_data(ss):
@@ -41,12 +40,7 @@ def population_data(ss):
                 )
                 return
 
-        ss.pop_map_obj = gpbp.visualisation.plot_population_heatmap(ss.population_gdf)
-
-        ss.pop_map_obj = fit_to_bounding_box(
-            ss.pop_map_obj,
-            *ss.admin_area_boundaries.bounds
-        )
+        ss.pop_map_obj = plot_population_heatmap(ss.population_gdf, ss.admin_area_boundaries)
 
         if (
                 ss.population_gdf is not None
@@ -61,7 +55,7 @@ def population_data(ss):
         st.metric("Population", f"{total_population:,}")
 
     st_folium(
-        st.session_state.pop_map_obj,
+        ss.pop_map_obj,
         width=500,
         height=500,
         key="pop_map",

@@ -2,9 +2,8 @@ import folium
 import streamlit as st
 from streamlit_folium import st_folium
 
-import gpbp.visualisation
+from pisa.visualisation import plot_facilities
 from pisa.facilities import Facilities
-from pisa_app.utils import fit_to_bounding_box
 
 
 def facility_data(ss):
@@ -24,24 +23,9 @@ def existing_facilities(ss):
 
     if osm_button:
         ss.facilities = Facilities(admin_area_boundaries=ss.admin_area_boundaries)
-        try:
-            ss.existing_facilities_df = ss.facilities.get_existing_facilities()
-        except ValueError:
-            st.warning(
-                (
-                    f"No facilities found in the selected country {ss.country}. "
-                ),
-                icon="⚠️",
-            )
-            return
+        ss.existing_facilities_df = ss.facilities.get_existing_facilities()
 
-        ss.fac_map_obj = gpbp.visualisation.plot_facilities(
-            ss.existing_facilities_df
-        )
-        ss.fac_map_obj = fit_to_bounding_box(
-            ss.fac_map_obj,
-            *ss.admin_area_boundaries.bounds
-        )
+        ss.fac_map_obj = plot_facilities(ss.existing_facilities_df, ss.admin_area_boundaries)
 
     if ss.adm_area and ss.existing_facilities_df is not None:
         st.metric("Number of existing facilities", ss.existing_facilities_df.shape[0])
@@ -50,6 +34,7 @@ def existing_facilities(ss):
         ss.fac_map_obj,
         width=500,
         height=500,
+        key="existing_facilities_map",
     )
 
 
@@ -66,18 +51,16 @@ def potential_facilities(ss):
     pot_fac_button = st.button("Compute potential locations")
     if pot_fac_button:
         ss.potential_facilities_gdf = ss.facilities.estimate_potential_facilities(ss.spacing)
-        for i in range(0, len(ss.potential_facilities_gdf)):
-            folium.CircleMarker(
-                [ss.potential_facilities_gdf.iloc[i]["latitude"], ss.potential_facilities_gdf.iloc[i]["longitude"]],
-                color="red",
-                fill=True,
-                radius=2,
-            ).add_to(ss.fac_map_obj)
+
+        ss.fac_map_obj = plot_facilities(ss.existing_facilities_df, ss.admin_area_boundaries,
+                                         ss.potential_facilities_gdf)
+
 
         st_folium(
             ss.fac_map_obj,
             width=500,
             height=500,
+            key="potential_facilities_map",
         )
 
     st.metric(
