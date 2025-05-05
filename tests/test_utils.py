@@ -31,3 +31,26 @@ def test_validate_fallback_speed_input_valid(speed, network_type, expected):
 def test_validate_fallback_speed_input_invalid(speed, network_type):
     with pytest.raises(ValueError):
         validate_fallback_speed(speed, network_type)
+
+
+class TestValidateDistanceType:
+    def test_validate_distance_type(self):
+        assert _validate_distance_type("length")=="length"
+
+    def test_validate_distance_type(self):
+        assert _validate_distance_type("LeNgTh ")=="length"
+    
+    def test_validate_light_years(self):
+        with pytest.raises(ValueError):
+            _validate_distance_type("lightyears")
+    
+class TestValidateModeOfTransport:
+    def test_validate_mode_of_transport(self):
+        assert _validate_mode_of_transport("Driving")=="driving"
+
+    def test_validate_mode_of_transport(self):
+        assert _validate_mode_of_transport("WaLkInG ")=="walking"
+
+    def test_validate_horseback(self):
+        with pytest.raises(ValueError):
+            _validate_mode_of_transport("horseback")
