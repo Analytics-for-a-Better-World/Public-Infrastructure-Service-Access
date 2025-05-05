@@ -10,7 +10,10 @@ from shapely.geometry import MultiPolygon, Polygon
 
 
 def plot_facilities(
-    df_facilities: pd.DataFrame, admin_area_boundaries: MultiPolygon | Polygon, tiles="OpenStreetMap"
+    df_facilities: pd.DataFrame,
+    admin_area_boundaries: MultiPolygon | Polygon,
+    df_potential_facilities: Optional[pd.DataFrame] = None,
+    tiles="OpenStreetMap",
 ) -> folium.Map:
     """Plot facilities on a map with administrative area boundaries."""
 
@@ -47,6 +50,16 @@ def plot_facilities(
             ).add_to(folium_map)
     except (KeyError, IndexError) as e:
         print(f"Error plotting facilities: {e}")
+
+    # Add a marker for each potential facility
+    if df_potential_facilities is not None:
+        for i in range(0, len(df_potential_facilities)):
+            folium.CircleMarker(
+                [df_potential_facilities.iloc[i]["latitude"], df_potential_facilities.iloc[i]["longitude"]],
+                color="red",
+                fill=True,
+                radius=2,
+            ).add_to(folium_map)
     return folium_map
 
 
@@ -144,6 +157,36 @@ def plot_isochrones(df_isopolygons: pd.DataFrame, admin_area_boundaries: MultiPo
 
     # Add marker for reference point
     folium.Marker(location=start_coords).add_to(folium_map)
+
+    return folium_map
+
+
+def plot_results(
+        open_locations: list,
+        current: pd.DataFrame,
+        total_fac: pd.DataFrame,
+        admin_area_boundaries: MultiPolygon | Polygon) -> folium.Map:
+    folium_map = folium.Map(
+        location=(0, 0),
+        zoom_start=1,
+    )
+
+    for location in open_locations:
+        existing = location in current['Cluster_ID'].values
+        location_data = total_fac.loc[location]
+
+        folium.Marker(
+            [location_data.latitude, location_data.longitude],
+            icon=folium.Icon(
+                color="blue" if existing else "darkpurple",
+                icon="hospital-o" if existing else "question",
+                prefix="fa",
+            ),
+        ).add_to(folium_map)
+
+    # Fit bounding box around the administrative area
+    bounds = _bounding_box_from_admin_area(admin_area_boundaries)
+    folium_map.fit_bounds(bounds)
 
     return folium_map
 
