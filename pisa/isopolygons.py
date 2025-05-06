@@ -430,15 +430,13 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         """
 
         columns = [f"ID_{d}" for d in self.distance_values]
-        number_of_facilities = len(self.facilities_df)
 
         # DataFrame with each row per facility and one column per distance
-        isopolygons = DataFrame(index=range(number_of_facilities), columns=columns)
+        isopolygons = DataFrame(index=self.facilities_df.index, columns=columns)
 
         # The Isochrone API supports 1 coordinate per request
-        for idx, facility in self.facilities_df.iterrows():
-
-            self._handle_rate_limit(request_count=idx)
+        for i, (idx, facility) in enumerate(self.facilities_df.iterrows()):
+            self._handle_rate_limit(request_count=i)
 
             request_url = self._build_request_url(facility.longitude, facility.latitude)
             features = self._fetch_isopolygons(request_url)
