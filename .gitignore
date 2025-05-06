@@ -15,6 +15,7 @@ docs/_build/
 
 # Virtual environment
 venv
+.env
 
 config.py
 
