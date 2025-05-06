@@ -1,6 +1,10 @@
 import pytest
 
-from pisa.utils import validate_fallback_speed
+from pisa.utils import (
+    validate_distance_type,
+    validate_fallback_speed,
+    validate_mode_of_transport,
+)
 
 
 @pytest.mark.parametrize(
@@ -34,23 +38,32 @@ def test_validate_fallback_speed_input_invalid(speed, network_type):
 
 
 class TestValidateDistanceType:
-    def test_validate_distance_type(self):
-        assert _validate_distance_type("length")=="length"
+    @pytest.mark.parametrize(
+        "input_distance, expected",
+        [
+            ("length", "length"),
+            ("LeNgTh ", "length"),
+        ],
+    )
+    def test_validate_distance_type(self, input_distance, expected):
+        assert validate_distance_type(input_distance) == expected
 
-    def test_validate_distance_type(self):
-        assert _validate_distance_type("LeNgTh ")=="length"
-    
     def test_validate_light_years(self):
         with pytest.raises(ValueError):
-            _validate_distance_type("lightyears")
-    
-class TestValidateModeOfTransport:
-    def test_validate_mode_of_transport(self):
-        assert _validate_mode_of_transport("Driving")=="driving"
+            validate_distance_type("lightyears")
 
-    def test_validate_mode_of_transport(self):
-        assert _validate_mode_of_transport("WaLkInG ")=="walking"
+
+class TestValidateModeOfTransport:
+    @pytest.mark.parametrize(
+        "input_mode, expected",
+        [
+            ("Driving", "driving"),
+            ("WaLkInG ", "walking"),
+        ],
+    )
+    def test_validate_mode_of_transport(self, input_mode, expected):
+        assert validate_mode_of_transport(input_mode) == expected
 
     def test_validate_horseback(self):
         with pytest.raises(ValueError):
-            _validate_mode_of_transport("horseback")
+            validate_mode_of_transport("horseback")
