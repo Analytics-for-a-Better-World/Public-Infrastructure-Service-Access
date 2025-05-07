@@ -38,6 +38,7 @@ shapely = "^2.0.6"
 plotly = "^5.22.0"
 streamlit-plotly-events = "^0.0.6"
 matplotlib = "^3.10.0"
+python-dotenv = "^1.1.0"
 
 
 [tool.poetry.group.dev.dependencies]

@@ -17,6 +17,14 @@
 
 ### Usage
 1. Some example usage can be seen in the ```examples/gpbp_showcase.ipynb``` notebook
+  - You will need to provide your Mapbox API key in the notebook to run it. You can sign up for a free Mapbox account [here](https://www.mapbox.com/signup/) and get your API key from the Mapbox account dashboard.
+  - You will also need to install the cbc solver to run the optimization and provide the path to the installation in the notebook.
+  - :warning: We strongly recommend using a `.env` file to store your API key and other sensitive information and never commit this information to Git. The `python-dotenv` package is already installed as a dependency. Next create a `.env` file in the root directory of the project and add your API key like this:
+    ```
+    MAPBOX_API_KEY=your_api_key_here
+    CBC_PATH=path_to_cbc_solver
+    ```
+    The .env file is *git-ignored* by default. 
 2. When in the ```gpbp_app``` folder you can run a [Streamlit](https://streamlit.io/) app to use
 the package using an interface. Specifically, while you are located in the repository folder, execute the following:
   - ```cd gpbp_app``` to enter the application folder
