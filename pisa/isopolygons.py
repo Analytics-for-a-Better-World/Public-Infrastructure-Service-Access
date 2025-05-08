@@ -58,9 +58,7 @@ class IsopolygonCalculator(ABC):
             "longitude" not in facilities_df.columns
             or "latitude" not in facilities_df.columns
         ):
-            raise ValueError(
-                "facilities_df must have columns 'longitude' and 'latitude'"
-            )
+            raise ValueError("facilities_df must have columns 'longitude' and 'latitude'")
 
         if len(facilities_df) == 0:
             raise ValueError("facilities_df must have at least one row")
@@ -136,12 +134,17 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         self.node_buff = node_buffer
         self.edge_buff = edge_buffer
 
-        # Find the nearest node in the road network for each facility
-        self.nearest_nodes = ox.distance.nearest_nodes(
+        # Find the nearest node in the road network and create a dictionary to store the match with the respective facility
+        nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
             X=self.facilities_df.longitude.values,
             Y=self.facilities_df.latitude.values,
         )
+        self.nearest_nodes_dict = {
+            facility_id: node
+            for facility_id, node in zip(self.facilities_df.index, nearest_nodes)
+        }
+        self.facility_id_name = self.facilities_df.index.name
 
     def calculate_isopolygons(self) -> DataFrame:
         """Calculates isopolygons for each facility at different distances (distance_values).
@@ -152,36 +155,34 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         N.B.: distances will be computed with respect to the nearest node to the facility,
         not the facility itself."""
 
-        index = pd.Index(self.nearest_nodes, name="nearest_node")
+        # Initialize an empty DataFrame to store isopolygons
+        index = self.nearest_nodes_dict.keys()
         columns = [f"ID_{d}" for d in self.distance_values]
         isopolygons = DataFrame(index=index, columns=columns)
+        isopolygons.index.name = self.facility_id_name
 
         # Construct isopolygon for each distance value
         for distance_value in self.distance_values:
-
-            for road_node in self.nearest_nodes:
-
+            for facility_id, road_node in self.nearest_nodes_dict.items():
                 nodes_gdf, edges_gdf = self._get_skeleton_nodes_and_edges(
                     self.road_network, road_node, distance_value, self.distance_type
                 )
 
                 try:
-
                     new_isopolygon = self._add_buffer_to_isopolygon_skeleton(
                         nodes_gdf=nodes_gdf,
                         edges_gdf=edges_gdf,
                         node_buffer=self.node_buff,
                         edge_buffer=self.edge_buff,
                     )
-                    isopolygons.loc[road_node, "ID_" + str(distance_value)] = (
+                    isopolygons.loc[facility_id, "ID_" + str(distance_value)] = (
                         new_isopolygon
                     )
 
-                except (
-                    AttributeError
-                ):  # Probably trying to catch 'MultiPolygon' object has no attribute 'exterior' from _inflate_skeleton, but it wasn't specified in the code before
-
-                    logger.info(f"problem with node {road_node}")  # stops execution
+                except AttributeError:  # Probably trying to catch 'MultiPolygon' object has no attribute 'exterior' from _inflate_skeleton, but it wasn't specified in the code before
+                    logger.info(
+                        f"problem with node {road_node} belonging to facility {facility_id}"
+                    )  # stops execution
 
         return isopolygons
 
@@ -297,12 +298,17 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         self.road_network = road_network
         self.buffer = buffer
 
-        # Find the nearest node in the road network for each facility
-        self.nearest_nodes = ox.distance.nearest_nodes(
+        # Find the nearest node in the road network and create a dictionary to store the match with the respective facility
+        nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
             X=self.facilities_df.longitude.values,
             Y=self.facilities_df.latitude.values,
         )
+        self.nearest_nodes_dict = {
+            facility_id: node
+            for facility_id, node in zip(self.facilities_df.index, nearest_nodes)
+        }
+        self.facility_id_name = self.facilities_df.index.name
 
     def calculate_isopolygons(self) -> DataFrame:
         """
@@ -316,18 +322,18 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
 
         """
 
-        index = pd.Index(self.nearest_nodes, name="nearest_node")
+        index = self.nearest_nodes_dict.keys()
         columns = [f"ID_{d}" for d in self.distance_values]
         isopolygons = pd.DataFrame(index=index, columns=columns)
+        isopolygons.index.name = self.facility_id_name
 
         for distance_value in self.distance_values:
-
             # Get skeletons for all nodes at this distance value
             skeletons = [
                 self._get_skeleton_nodes_and_edges(
                     self.road_network, node, distance_value, self.distance_type
                 )
-                for node in self.nearest_nodes
+                for node in self.nearest_nodes_dict.values()
             ]
 
             # "Inflate" skeletons to isopolygons at this distance value
@@ -395,16 +401,13 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         mapbox_api_token: str,
         base_url: str = "https://api.mapbox.com/isochrone/v1/",
     ):
-
         self.mapbox_api_token = self._validate_mapbox_token_not_empty(mapbox_api_token)
 
         self.route_profile = validate_mode_of_transport(mode_of_transport)
 
         super().__init__(facilities_df, distance_type, distance_values)
 
-        self.distance_values = self._validate_mapbox_distance_values(
-            self.distance_values
-        )
+        self.distance_values = self._validate_mapbox_distance_values(self.distance_values)
 
         self.base_url = base_url
 
@@ -557,4 +560,10 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     def _validate_mapbox_token_not_empty(mapbox_api_token: str) -> str:
         if not mapbox_api_token:
             raise ValueError("Mapbox API token is required")
+        return mapbox_api_token
+        return mapbox_api_token
+        return mapbox_api_token
+        return mapbox_api_token
+        return mapbox_api_token
+        return mapbox_api_token
         return mapbox_api_token
