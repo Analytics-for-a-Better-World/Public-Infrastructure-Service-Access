@@ -143,7 +143,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         )
         if any(distance_to_nearest_nodes > 10000):
             logger.warning(
-                "Some facilities are more than 10 km away from the nearest node on the OSM road network."
+                "Some facilities are more than 10 km away from the nearest node on the OSM road network. It makes sense to compare your results with the Mapbox API."
             )
 
         self.nearest_nodes_dict = {
@@ -313,7 +313,7 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         )
         if any(distance_to_nearest_nodes > 10000):
             logger.warning(
-                "Some facilities are more than 10 km away from the nearest node on the OSM road network."
+                "Some facilities are more than 10 km away from the nearest node on the OSM road network. It makes sense to compare your results with the Mapbox API."
             )
         self.nearest_nodes_dict = {
             facility_id: node
