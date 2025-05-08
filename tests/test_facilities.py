@@ -118,7 +118,6 @@ class TestFacilities:
         result = facilities.estimate_potential_facilities(spacing=0.5)
 
         assert isinstance(result, pd.DataFrame)
-        assert "ID" in result.columns
         assert "longitude" in result.columns
         assert "latitude" in result.columns
 

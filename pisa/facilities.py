@@ -116,9 +116,12 @@ class Facilities:
             geometry=gpd.points_from_xy(mesh[0].flatten(), mesh[1].flatten()),
         )
 
-        # Clip the grid to the admin area boundaries
+        # Clip the grid to the admin area boundaries - note that this is the reason why the row-index does not start at 0
         grid = gpd.clip(grid, self.admin_area_boundaries)
         grid = grid.drop(columns=["geometry"])
-        grid = grid.reset_index(drop=True).reset_index().rename(columns={"index": "ID"})
+
+        # create index column numbering the grid points
+        grid.index = range(len(grid))
+        grid.index.name = "ID"
 
         return grid
