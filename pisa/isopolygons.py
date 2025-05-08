@@ -135,11 +135,17 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         self.edge_buff = edge_buffer
 
         # Find the nearest node in the road network and create a dictionary to store the match with the respective facility
-        nearest_nodes = ox.distance.nearest_nodes(
+        nearest_nodes, distance_to_nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
             X=self.facilities_df.longitude.values,
             Y=self.facilities_df.latitude.values,
+            return_dist=True,
         )
+        if any(distance_to_nearest_nodes > 10000):
+            logger.warning(
+                "Some facilities are more than 10 km away from the nearest node on the OSM road network."
+            )
+
         self.nearest_nodes_dict = {
             facility_id: node
             for facility_id, node in zip(self.facilities_df.index, nearest_nodes)
@@ -299,11 +305,16 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         self.buffer = buffer
 
         # Find the nearest node in the road network and create a dictionary to store the match with the respective facility
-        nearest_nodes = ox.distance.nearest_nodes(
+        nearest_nodes, distance_to_nearest_nodes = ox.distance.nearest_nodes(
             G=self.road_network,
             X=self.facilities_df.longitude.values,
             Y=self.facilities_df.latitude.values,
+            return_dist=True,
         )
+        if any(distance_to_nearest_nodes > 10000):
+            logger.warning(
+                "Some facilities are more than 10 km away from the nearest node on the OSM road network."
+            )
         self.nearest_nodes_dict = {
             facility_id: node
             for facility_id, node in zip(self.facilities_df.index, nearest_nodes)
@@ -560,10 +571,4 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     def _validate_mapbox_token_not_empty(mapbox_api_token: str) -> str:
         if not mapbox_api_token:
             raise ValueError("Mapbox API token is required")
-        return mapbox_api_token
-        return mapbox_api_token
-        return mapbox_api_token
-        return mapbox_api_token
-        return mapbox_api_token
-        return mapbox_api_token
         return mapbox_api_token
