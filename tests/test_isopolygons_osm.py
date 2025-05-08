@@ -14,14 +14,14 @@ def nodes_gdf() -> gpd.GeoSeries:
     """The road network used for tests in this file has 4 nodes. These are three of them:"""
 
     data = {
-        "osmid": [5909483625, 5909483619, 5909483636],
+        "nearest_node_id": [5909483625, 5909483619, 5909483636],
         "geometry": [
             Point(-122.231243, 37.7687576),
             Point(-122.2314069, 37.7687054),
             Point(-122.2317839, 37.7689584),
         ],
     }
-    return gpd.GeoSeries(data["geometry"], index=data["osmid"], crs="EPSG:4326")
+    return gpd.GeoSeries(data["geometry"], index=data["nearest_node_id"], crs="EPSG:4326")
 
 
 @pytest.fixture
@@ -63,15 +63,14 @@ def fake_facilities_df() -> pd.DataFrame:
         (-122.2314069, 37.7687054),  # closest node 19
         (-122.23124, 37.76876),  # closest node 25
     ]
+    osmids = [5909483619, 5909483625]
 
-    return pd.DataFrame(points, columns=["longitude", "latitude"])
+    return pd.DataFrame(points, columns=["longitude", "latitude"], index=osmids)
 
 
 class TestOsmCalculateIsopolygons:
-
     @pytest.fixture(autouse=True)
     def setup(self, fake_facilities_df):
-
         self.graph = ox.load_graphml(
             "tests/test_data/walk_network_4_nodes_6_edges.graphml"
         )
@@ -90,15 +89,16 @@ class TestOsmCalculateIsopolygons:
         self.isopolygons = self.isopolygon_calculator.calculate_isopolygons()
 
     def test_format(self):
-
         np.array_equal(
-            self.isopolygon_calculator.nearest_nodes, [5909483625, 5909483619]
+            self.isopolygon_calculator.nearest_nodes_dict.keys(), [5909483625, 5909483619]
         )
 
         assert self.isopolygons.shape == (
             2,
             3,
-        ), "The output should have two rows (one per node in nearest_nodes) and three columns (one per distance)"
+        ), (
+            "The output should have two rows (one per node in nearest_nodes) and three columns (one per distance)"
+        )
 
         assert list(self.isopolygons.columns) == ["ID_5", "ID_20", "ID_50"]
 
@@ -106,17 +106,15 @@ class TestOsmCalculateIsopolygons:
         assert list(self.isopolygons.index) == [5909483619, 5909483625]
 
     def test_nodes_in_isopolygon_5909483619_5(self):
-
         # The only node less than 5m away from 5909483619 is itself
         nodes_within = self.graph_nodes[
             self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_5"])
         ]
-        assert set(nodes_within.index) == {
-            5909483619
-        }, "The only node in this isopolygon should be 5909483619"
+        assert set(nodes_within.index) == {5909483619}, (
+            "The only node in this isopolygon should be 5909483619"
+        )
 
     def test_no_edges_in_isopolygon_5909483619_5(self):
-
         # Since the only node less than 5m away from 5909483619 is itself, there
         # are no edges from the road network in this isopolygon
 
@@ -125,7 +123,6 @@ class TestOsmCalculateIsopolygons:
         ), "There should be no edges in this isopolygon"
 
     def test_nodes_in_isopolygon_5909483619_50(self):
-
         nodes_within = self.graph_nodes[
             self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_50"])
         ]
@@ -135,10 +132,11 @@ class TestOsmCalculateIsopolygons:
             5909483619,
             5909483625,
             5909483636,
-        }, "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon, but 5909483569 should not"
+        }, (
+            "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon, but 5909483569 should not"
+        )
 
     def test_nodes_in_isopolygon_5909483625_50(self):
-
         nodes_within = self.graph_nodes[
             self.graph_nodes.within(self.isopolygons.loc[5909483625, "ID_50"])
         ]
@@ -147,11 +145,12 @@ class TestOsmCalculateIsopolygons:
         assert set(nodes_within.index) == {
             5909483619,
             5909483625,
-        }, "Nodes 5909483619 and 5909483625 should be in this isopolygon, but 5909483636 and 5909483569 should not"
+        }, (
+            "Nodes 5909483619 and 5909483625 should be in this isopolygon, but 5909483636 and 5909483569 should not"
+        )
 
 
 class TestInflateSkeletonToIsopolygon:
-
     def test_excluded_node_is_left_out(self, nodes_gdf, edges_gdf, excluded_node):
         """Desired behavior: the node previously excluded because it was
         too far away is excluded from the resulting polygon"""
@@ -192,7 +191,6 @@ class TestInflateSkeletonToIsopolygon:
 
 
 class TestGetSkeletonNodesAndEdges:
-
     @pytest.fixture(autouse=True)
     def setup(self):
         """All tests use the same graph"""
