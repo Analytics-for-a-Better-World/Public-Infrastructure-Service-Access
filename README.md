@@ -57,7 +57,7 @@ This file is ignored by git by default for security.
 
 We provide two examples to understand and interact with the package: 
 
-1. Some example usage can be seen in the `examples/pisa_showcase_*.ipynb` notebooks. These notebook shows the basic package data flow and allow you to explore the outputs of each function. The notebooks differ in the tool used to generate isopolygons: OSM or Mapbox. Note that Mapbox requires an API key (see [External Dependencies](#external-dependencies)).
+1. Some example usage can be seen in the `examples/pisa_showcase_*.ipynb` notebooks. These notebooks show the basic package data flow and allow you to explore the outputs of each function. The notebooks differ in the tool used to generate isopolygons: OSM or Mapbox. Note that Mapbox requires an API key (see [External Dependencies](#external-dependencies)).
 2. A more visual example can be seen in the [Streamlit](https://streamlit.io/) app to interact with the package using a graphical interface. You can start the app by running `streamlit run pisa_app/main_page.py` from the main repository directory, which will automatically open a browser window.
 
 ## Deploying/running the web interface (Docker)
