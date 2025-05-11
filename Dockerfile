@@ -1,7 +1,3 @@
-############################################
-# BUILDER & RUNTIME (Single-stage build with Poetry)
-############################################
-
 FROM python:3.10-slim
 
 WORKDIR /app
@@ -19,22 +15,20 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Set environment variables for GDAL
-RUN export GDAL_VERSION=$(gdal-config --version) && \
-    echo "GDAL_VERSION=${GDAL_VERSION}" >> /etc/environment
 ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
 ENV C_INCLUDE_PATH=/usr/include/gdal
 
 # Install Poetry
 RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# Add Poetry to PATH
 ENV PATH="/root/.local/bin:$PATH"
 
-# Configure Poetry to not create a virtual environment inside Docker
+# Configure Poetry
 RUN poetry config virtualenvs.create false
 
-# Copy the entire project first to ensure README.md and other files are available
+# Copy the entire project and install dependencies
 COPY . ./
-
-# Install dependencies with Poetry
 RUN poetry install --no-interaction --no-ansi
 
 EXPOSE 8501
