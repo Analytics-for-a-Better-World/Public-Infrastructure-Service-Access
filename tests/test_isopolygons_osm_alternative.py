@@ -15,15 +15,14 @@ def dataframe_with_lon_and_lat() -> pd.DataFrame:
         (-122.2314069, 37.7687054),  # closest node 5909483619
         (-122.23124, 37.76876),  # closest node 5909483625
     ]
+    osmids = [5909483619, 5909483625]
 
-    return pd.DataFrame(points, columns=["longitude", "latitude"])
+    return pd.DataFrame(points, columns=["longitude", "latitude"], index=osmids)
 
 
 class TestOsmCalculateIsopolygonsAlternative:
-
     @pytest.fixture(autouse=True)
     def setup(self, dataframe_with_lon_and_lat):
-
         self.graph = ox.load_graphml(
             "tests/test_data/walk_network_4_nodes_6_edges.graphml"
         )
@@ -41,15 +40,16 @@ class TestOsmCalculateIsopolygonsAlternative:
         self.isopolygons = self.isopolygon_calculator.calculate_isopolygons()
 
     def test_format(self):
-
         np.array_equal(
-            self.isopolygon_calculator.nearest_nodes, [5909483625, 5909483619]
+            self.isopolygon_calculator.nearest_nodes_dict.keys(), [5909483625, 5909483619]
         )
 
         assert self.isopolygons.shape == (
             2,
             3,
-        ), "The output should have two rows (one per node in nearest_nodes) and three columns (one per distance)"
+        ), (
+            "The output should have two rows (one per node in nearest_nodes) and three columns (one per distance)"
+        )
 
         assert list(self.isopolygons.columns) == ["ID_5", "ID_20", "ID_50"]
 
@@ -57,17 +57,15 @@ class TestOsmCalculateIsopolygonsAlternative:
         assert list(self.isopolygons.index) == [5909483619, 5909483625]
 
     def test_nodes_in_isopolygon_5909483619_5(self):
-
         # The only node less than 5m away from 5909483619 is itself
         nodes_within = self.graph_nodes[
             self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_5"])
         ]
-        assert set(nodes_within.index) == {
-            5909483619
-        }, "The only node in this isopolygon should be 5909483619"
+        assert set(nodes_within.index) == {5909483619}, (
+            "The only node in this isopolygon should be 5909483619"
+        )
 
     def test_no_edges_in_isopolygon_5909483619_5(self):
-
         # Since the only node less than 5m away from 5909483619 is itself, there
         # are no edges from the road network in this isopolygon
 
@@ -76,7 +74,6 @@ class TestOsmCalculateIsopolygonsAlternative:
         ), "There should be no edges in this isopolygon"
 
     def test_nodes_in_isopolygon_5909483619_50(self):
-
         nodes_within = self.graph_nodes[
             self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_50"])
         ]
@@ -86,10 +83,11 @@ class TestOsmCalculateIsopolygonsAlternative:
             5909483619,
             5909483625,
             5909483636,
-        }, "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon, but 5909483569 should not"
+        }, (
+            "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon, but 5909483569 should not"
+        )
 
     def test_nodes_in_isopolygon_5909483625_50(self):
-
         nodes_within = self.graph_nodes[
             self.graph_nodes.within(self.isopolygons.loc[5909483625, "ID_50"])
         ]
@@ -98,11 +96,12 @@ class TestOsmCalculateIsopolygonsAlternative:
         assert set(nodes_within.index) == {
             5909483619,
             5909483625,
-        }, "Nodes 5909483619 and 5909483625 should be in this isopolygon, but 5909483636 and 5909483569 should not"
+        }, (
+            "Nodes 5909483619 and 5909483625 should be in this isopolygon, but 5909483636 and 5909483569 should not"
+        )
 
 
 class TestGetSkeletonNodesAndEdgesAlternative:
-
     @pytest.fixture(autouse=True)
     def setup(self):
         """All tests use the same graph"""
@@ -127,7 +126,6 @@ class TestGetSkeletonNodesAndEdgesAlternative:
         assert skeleton.within(self.road_nodes.loc[5909483619, "geometry"])
 
     def test_nodes_and_edges(self):
-
         skeleton = OsmIsopolygonCalculatorAlternative._get_skeleton_nodes_and_edges(
             self.road_network,
             center_node=5909483619,
