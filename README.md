@@ -14,7 +14,6 @@ This project uses [Poetry](https://python-poetry.org/) for dependency and packag
 2. Clone the repository: `git clone https://github.com/yourusername/Public-Infrastructure-Service-Access.git`
 3. Navigate to the repository folder: `cd Public-Infrastructure-Service-Access`
 4. Install the project and its dependencies: `poetry install`
-5. Activate the virtual environment: `poetry shell`
 
 #### Option 2: Using pip and venv
 
