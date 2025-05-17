@@ -1,41 +1,40 @@
-############################################
-# BUILDER
-############################################
-
-FROM python:3.10-slim AS builder
-
-WORKDIR /app
-
-# Install Poetry
-RUN apt update && apt install -y curl
-RUN curl -sSL https://install.python-poetry.org | python3 -
-ENV PATH="/root/.local/bin:$PATH"
-
-# Export dependencies as native `requirements.txt` file
-COPY pyproject.toml poetry.lock ./
-RUN poetry self add poetry-plugin-export
-# Export without hashes to work around bug: https://github.com/python-poetry/poetry/issues/3472
-RUN poetry export --without-hashes -f requirements.txt --output requirements.txt
-
-############################################
-# RUNTIME
-############################################
-
 FROM python:3.10-slim
 
 WORKDIR /app
 
-# Install dependencies
-COPY --from=builder /app/requirements.txt /app/requirements.txt
-RUN pip install -r requirements.txt
+# Install system dependencies required for geospatial packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    libgdal-dev \
+    gdal-bin \
+    libspatialindex-dev \
+    libproj-dev \
+    libgeos-dev \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
 
-# Copy local code to the container image.
+# Set environment variables for GDAL
+ENV CPLUS_INCLUDE_PATH=/usr/include/gdal
+ENV C_INCLUDE_PATH=/usr/include/gdal
+
+# Install Poetry
+RUN curl -sSL https://install.python-poetry.org | python3 -
+
+# Add Poetry to PATH
+ENV PATH="/root/.local/bin:$PATH"
+
+# Configure Poetry
+RUN poetry config virtualenvs.create false
+
+# Copy the entire project and install dependencies
 COPY . ./
+RUN poetry install --no-interaction --no-ansi
 
 EXPOSE 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
-WORKDIR /app/gpbp_app
+WORKDIR /app/pisa_app
 
 ENTRYPOINT ["streamlit", "run", "main_page.py", "--server.port=8501"]
