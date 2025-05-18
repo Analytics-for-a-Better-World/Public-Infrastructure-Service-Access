@@ -13,7 +13,7 @@ from pisa.population_served_by_isopolygons import get_population_served_by_isopo
 
 def pisa_optimization(ss):
     st.subheader("Optimization")
-    with (st.container()):
+    with st.container():
         st.radio(
             "Tool for calculating distances",
             options=["osm", "mapbox"],
