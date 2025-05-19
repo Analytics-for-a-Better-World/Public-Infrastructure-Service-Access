@@ -21,7 +21,7 @@
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
-    <link rel="next" title="API Reference" href="autoapi/index.html" /> 
+    <link rel="next" title="Contributing" href="contributing.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -44,6 +44,7 @@
 </div>
         </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
               <ul>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
 <li class="toctree-l1"><a class="reference internal" href="autoapi/index.html">API Reference</a></li>
 </ul>
 
@@ -77,42 +78,75 @@
 <h2>Local Development<a class="headerlink" href="#local-development" title="Link to this heading"></a></h2>
 <section id="installation">
 <h3>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h3>
+<p>This project can be installed in two ways:</p>
+<section id="option-1-using-poetry-recommended">
+<h4>Option 1: Using Poetry (Recommended)<a class="headerlink" href="#option-1-using-poetry-recommended" title="Link to this heading"></a></h4>
+<p>This project uses <a class="reference external" href="https://python-poetry.org/">Poetry</a> for dependency and packaging management.</p>
 <ol class="arabic simple">
-<li><p>Clone the repository</p></li>
-<li><p>This project uses <a class="reference external" href="https://python-poetry.org/">Poetry</a> for dependency and packaging management. You can use these <a class="reference external" href="https://python-poetry.org/docs/#installation">installation instructions</a> to add it to your system.</p></li>
+<li><p>Install Poetry by following the <a class="reference external" href="https://python-poetry.org/docs/#installation">official installation instructions</a></p></li>
+<li><p>Clone the repository: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/yourusername/Public-Infrastructure-Service-Access.git</span></code></p></li>
+<li><p>Navigate to the repository folder: <code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">Public-Infrastructure-Service-Access</span></code></p></li>
+<li><p>Install the project and its dependencies: <code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">install</span></code></p></li>
 </ol>
+</section>
+<section id="option-2-using-pip-and-venv">
+<h4>Option 2: Using pip and venv<a class="headerlink" href="#option-2-using-pip-and-venv" title="Link to this heading"></a></h4>
+<p>If you prefer traditional Python package management:</p>
+<ol class="arabic simple">
+<li><p>Clone the repository: <code class="docutils literal notranslate"><span class="pre">git</span> <span class="pre">clone</span> <span class="pre">https://github.com/yourusername/Public-Infrastructure-Service-Access.git</span></code></p></li>
+<li><p>Navigate to the repository folder: <code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">Public-Infrastructure-Service-Access</span></code></p></li>
+<li><p>Create a virtual environment: <code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">venv</span> <span class="pre">venv</span></code></p></li>
+<li><p>Activate the virtual environment:</p>
 <ul class="simple">
-<li><p>If you choose to use poetry you can execute the following commands in a terminal while you are located in the repository folder:
-<code class="docutils literal notranslate"><span class="pre">poetry</span> <span class="pre">install</span></code>
-This will create a virtual environment and install all the necessary library dependencies.</p></li>
-<li><p>If you <strong>do not</strong> choose to use poetry we first recommend creating a virtual environment and
-then install the package and necessary dependencies by installing the <strong>.whl</strong> file in the <strong>dist</strong> folder. So in a terminal, while you are located in the repository folder, execute the following:</p>
-<ul>
-<li><p><code class="docutils literal notranslate"><span class="pre">python</span> <span class="pre">-m</span> <span class="pre">venv</span> <span class="pre">venv</span></code> to create the virtual environment</p></li>
-<li><p>Activate the environment with <code class="docutils literal notranslate"><span class="pre">venv\Scripts\Activate.ps1</span></code> (on Windows) or <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">venv/bin/activate</span></code> (on MacOS)</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">dist</span></code> to enter the dist folder</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">gpbp-1.0.0-py3-none-any.whl</span></code> to install the package</p></li>
+<li><p>Windows: <code class="docutils literal notranslate"><span class="pre">venv\Scripts\activate</span></code></p></li>
+<li><p>macOS/Linux: <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">venv/bin/activate</span></code></p></li>
 </ul>
 </li>
+<li><p>Install the package: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">dist/pisa-1.0.0-py3-none-any.whl</span></code></p></li>
+</ol>
+</section>
+<section id="external-dependencies">
+<h4>External Dependencies<a class="headerlink" href="#external-dependencies" title="Link to this heading"></a></h4>
+<p>PISA requires additional tools for certain functionality:</p>
+<ol class="arabic simple">
+<li><p><strong>Optimization Solver</strong>: Used to optimize the location of new facilites.</p>
+<ul class="simple">
+<li><p>For beginners, we recommend the <a class="reference external" href="https://github.com/coin-or/Cbc#download">COIN-OR Branch-and-Cut solver (CBC)</a></p></li>
+<li><p>Note the path to the executable of <code class="docutils literal notranslate"><span class="pre">cbc</span></code> for configuration</p></li>
+<li><p>Advanced users can substitute CBC with other solvers compatible with the package</p></li>
 </ul>
+</li>
+<li><p><strong>Mapbox API</strong> (Optional): Used to generate facility isopolygons.</p>
+<ul class="simple">
+<li><p><a class="reference external" href="https://www.mapbox.com/signup/">Sign up for a free Mapbox account</a></p></li>
+<li><p>Get your API key from the Mapbox account dashboard</p></li>
+</ul>
+</li>
+</ol>
+<p>After installing <code class="docutils literal notranslate"><span class="pre">cbc</span></code> and/or creating a Mapbox API key, create a <code class="docutils literal notranslate"><span class="pre">.env</span></code> file in the repository root with the following settings:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># Path to your cbc solver executable (for optimization)</span>
+<span class="nv">CBC_PATH</span><span class="o">=</span>&lt;path_to_solver&gt;
+
+<span class="c1"># Mapbox API key (optional, for isopolygon generation)</span>
+<span class="nv">MAPBOX_API_KEY</span><span class="o">=</span>&lt;your_api_key_here&gt;
+</pre></div>
+</div>
+<p>This file is ignored by git by default for security.</p>
+</section>
 </section>
 <section id="usage">
 <h3>Usage<a class="headerlink" href="#usage" title="Link to this heading"></a></h3>
+<p>We provide two examples to understand and interact with the package:</p>
 <ol class="arabic simple">
-<li><p>Some example usage can be seen in the <code class="docutils literal notranslate"><span class="pre">examples/gpbp_showcase.ipynb</span></code> notebook</p></li>
-<li><p>When in the <code class="docutils literal notranslate"><span class="pre">gpbp_app</span></code> folder you can run a <a class="reference external" href="https://streamlit.io/">Streamlit</a> app to use
-the package using an interface. Specifically, while you are located in the repository folder, execute the following:</p></li>
+<li><p>Some example usage can be seen in the <code class="docutils literal notranslate"><span class="pre">examples/pisa_showcase_*.ipynb</span></code> notebooks. These notebooks show the basic package data flow and allow you to explore the outputs of each function. The notebooks differ in the tool used to generate isopolygons: OSM or Mapbox. Note that Mapbox requires an API key (see <a class="reference internal" href="#external-dependencies"><span class="xref myst">External Dependencies</span></a>).</p></li>
+<li><p>A more visual example can be seen in the <a class="reference external" href="https://streamlit.io/">Streamlit</a> app to interact with the package using a graphical interface. You can start the app by running <code class="docutils literal notranslate"><span class="pre">streamlit</span> <span class="pre">run</span> <span class="pre">pisa_app/main_page.py</span></code> from the main repository directory, which will automatically open a browser window.</p></li>
 </ol>
-<ul class="simple">
-<li><p><code class="docutils literal notranslate"><span class="pre">cd</span> <span class="pre">gpbp_app</span></code> to enter the application folder</p></li>
-<li><p><code class="docutils literal notranslate"><span class="pre">streamlit</span> <span class="pre">run</span> <span class="pre">main_page.py</span></code> to run the app, which will automatically open a browser window</p></li>
-</ul>
 </section>
 </section>
 <section id="deploying-running-the-web-interface-docker">
 <h2>Deploying/running the web interface (Docker)<a class="headerlink" href="#deploying-running-the-web-interface-docker" title="Link to this heading"></a></h2>
 <p>Docker is a tool that allows you to package an application and its dependencies in a virtual container that can run on most operating systems. The web interface for the PISA project can be run using Docker. To do this, you need to have Docker installed on your system. You can download Docker from <a class="reference external" href="https://www.docker.com/products/docker-desktop">here</a>.</p>
-<p>After you have installed Docker, you can run the following command in the repository to build an image of the PISA project. All the necessary dependencies will be installed inside the image, isolated from your system. The image will be tagged as <code class="docutils literal notranslate"><span class="pre">pisa</span></code>.</p>
+<p>After you have installed Docker, you can run the following command in the repository to build an image of the PISA project. The Dockerfile uses Poetry to install the application and its dependencies inside the image, consistent with the recommended installation method, and includes all necessary geospatial libraries.</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>pisa<span class="w"> </span>.
 </pre></div>
 </div>
@@ -120,13 +154,25 @@ the package using an interface. Specifically, while you are located in the repos
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">127</span>.0.0.1:8501:8501<span class="w"> </span>--name<span class="w"> </span>pisa<span class="w"> </span>pisa
 </pre></div>
 </div>
-<p>You can use the following commands after running the container for the first time:</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>stop<span class="w"> </span>pisa
+<p>You can use the following commands to manage the container after the initial run:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># Stop the container</span>
+docker<span class="w"> </span>stop<span class="w"> </span>pisa
+
+<span class="c1"># Start a stopped container</span>
 docker<span class="w"> </span>start<span class="w"> </span>pisa
+
+<span class="c1"># View logs from the container</span>
 docker<span class="w"> </span>logs<span class="w"> </span>pisa
+
+<span class="c1"># Remove the container (if you need to start fresh)</span>
+docker<span class="w"> </span>rm<span class="w"> </span>pisa
 </pre></div>
 </div>
-<p>The image is also ready to be deployed on a server or a cloud platform that supports Docker.</p>
+<p>The image is also ready to be deployed on a server or a cloud platform that supports Docker. If you want to use external dependencies like Mapbox API, you’ll need to provide these credentials when running the container. You can do this by mounting a volume with your <code class="docutils literal notranslate"><span class="pre">.env</span></code> file or using environment variables:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">127</span>.0.0.1:8501:8501<span class="w"> </span>--env-file<span class="w"> </span>./.env<span class="w"> </span>--name<span class="w"> </span>pisa<span class="w"> </span>pisa
+</pre></div>
+</div>
+<p>This ensures your API keys and other configuration settings are available to the application inside the container.</p>
 </section>
 <section id="references">
 <h2>References<a class="headerlink" href="#references" title="Link to this heading"></a></h2>
@@ -146,7 +192,7 @@ docker<span class="w"> </span>logs<span class="w"> </span>pisa
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="autoapi/index.html" class="btn btn-neutral float-right" title="API Reference" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="contributing.html" class="btn btn-neutral float-right" title="Contributing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>
