@@ -5,7 +5,7 @@ name: Deploy documentation
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main" , "philipp/update_docs"]
   pull_request:
     branches: [ "main" ]
   workflow_dispatch:
