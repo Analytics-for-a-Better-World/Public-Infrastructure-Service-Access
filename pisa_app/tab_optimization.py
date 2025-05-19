@@ -61,15 +61,12 @@ def pisa_optimization(ss):
                 isopolygon_calculator, kwargs = get_isopolygon_calculator(ss.strategy, ss)
 
                 ss.total_fac = pd.concat([ss.existing_facilities_df, ss.potential_facilities_gdf])
-                ss.total_fac = (
-                    ss.total_fac.drop(columns=["ID"]).reset_index().rename(columns={"index": "ID"})
-                )
                 cutoff_idx = len(ss.existing_facilities_df)
 
                 ss.isopolygon_facilities = isopolygon_calculator(
                     ss.total_fac,
                     **kwargs
-                ).calculate_isopolygons().reset_index()
+                ).calculate_isopolygons()
 
                 current = get_population_served_by_isopolygons(ss.population_gdf, ss.isopolygon_facilities[0:cutoff_idx])
                 potential = get_population_served_by_isopolygons(ss.population_gdf, ss.isopolygon_facilities[cutoff_idx:])
