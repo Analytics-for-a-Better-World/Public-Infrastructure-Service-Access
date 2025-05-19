@@ -1,0 +1,83 @@
+facilities
+==========
+
+.. py:module:: facilities
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   facilities.logger
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   facilities.Facilities
+
+
+Module Contents
+---------------
+
+.. py:data:: logger
+
+.. py:class:: Facilities
+
+   Get existing and potential facility locations for given administrative area
+
+
+   .. py:attribute:: admin_area_boundaries
+      :type:  shapely.Polygon | shapely.MultiPolygon
+
+
+   .. py:attribute:: data_src
+      :type:  str
+      :value: 'osm'
+
+
+
+   .. py:attribute:: osm_tags
+      :type:  dict
+
+
+   .. py:method:: get_existing_facilities() -> pandas.DataFrame
+
+      Get facilities from specified data source
+
+
+
+   .. py:method:: _get_existing_facilities_osm(osm_tags: dict, admin_area_boundaries: shapely.Polygon | shapely.MultiPolygon) -> pandas.DataFrame
+      :staticmethod:
+
+
+      Fetches existing facilities from OpenStreetMap (OSM) within a specified administrative area.
+      :param osm_tags: Dictionary of OSM tags to filter facilities (e.g., {'amenity': 'school'})
+      :type osm_tags: dict
+      :param administrative_area: Geographic area within which to search for facilities, defined as a shapely Polygon
+                                  or MultiPolygon object
+      :type administrative_area: Polygon | MultiPolygon
+
+      :returns: DataFrame containing facilities information with columns:
+                - osmid (index): OSM ID of the facility
+                - longitude: Longitude of facility
+                - latitude: Latitude of facility
+      :rtype: pandas.DataFrame
+
+
+
+   .. py:method:: estimate_potential_facilities(spacing: float) -> geopandas.GeoDataFrame
+
+      Create grid of potential facility locations
+
+      Create a grid of evenly spaced points within the given GeoDataFrame.
+
+      :param spacing: The distance between the points in coordinate units.
+
+      :returns: GeoDataFrame containing potential facility locations
+
+
+

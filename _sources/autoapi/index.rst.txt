@@ -7,5 +7,14 @@ This page contains auto-generated API reference documentation [#f1]_.
    :titlesonly:
 
    /autoapi/gpbp/index
+   /autoapi/utils/index
+   /autoapi/constants/index
+   /autoapi/population/index
+   /autoapi/facilities/index
+   /autoapi/isopolygons/index
+   /autoapi/visualisation/index
+   /autoapi/osm_road_network/index
+   /autoapi/administrative_area/index
+   /autoapi/population_served_by_isopolygons/index
 
 .. [#f1] Created with `sphinx-autoapi <https://github.com/readthedocs/sphinx-autoapi>`_

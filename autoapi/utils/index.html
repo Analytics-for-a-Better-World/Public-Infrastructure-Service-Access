@@ -1,0 +1,231 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>utils &mdash; Public Infrastructure Service Access 1.0.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../../_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="../../_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
+      <link rel="stylesheet" type="text/css" href="../../_static/graphviz.css?v=4ae1632d" />
+
+  
+      <script src="../../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../../_static/documentation_options.js?v=8d563738"></script>
+      <script src="../../_static/doctools.js?v=9bcbadda"></script>
+      <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../../genindex.html" />
+    <link rel="search" title="Search" href="../../search.html" />
+    <link rel="next" title="constants" href="../constants/index.html" />
+    <link rel="prev" title="gpbp.visualisation" href="../gpbp/visualisation/index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../../index.html" class="icon icon-home">
+            Public Infrastructure Service Access
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../../contributing.html">Contributing</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="../index.html">API Reference</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="../gpbp/index.html">gpbp</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">utils</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#attributes">Attributes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#functions">Functions</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#module-contents">Module Contents</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="#utils.logger"><code class="docutils literal notranslate"><span class="pre">logger</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#utils.disk_cache"><code class="docutils literal notranslate"><span class="pre">disk_cache()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#utils.validate_distance_type"><code class="docutils literal notranslate"><span class="pre">validate_distance_type()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#utils.validate_mode_of_transport"><code class="docutils literal notranslate"><span class="pre">validate_mode_of_transport()</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#utils.validate_fallback_speed"><code class="docutils literal notranslate"><span class="pre">validate_fallback_speed()</span></code></a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="../constants/index.html">constants</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../population/index.html">population</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../facilities/index.html">facilities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../isopolygons/index.html">isopolygons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../visualisation/index.html">visualisation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../osm_road_network/index.html">osm_road_network</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../administrative_area/index.html">administrative_area</a></li>
+<li class="toctree-l2"><a class="reference internal" href="../population_served_by_isopolygons/index.html">population_served_by_isopolygons</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../../index.html">Public Infrastructure Service Access</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="../index.html">API Reference</a></li>
+      <li class="breadcrumb-item active">utils</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../../_sources/autoapi/utils/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="module-utils">
+<span id="utils"></span><h1>utils<a class="headerlink" href="#module-utils" title="Link to this heading"></a></h1>
+<section id="attributes">
+<h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#utils.logger" title="utils.logger"><code class="xref py py-obj docutils literal notranslate"><span class="pre">logger</span></code></a></p></td>
+<td><p></p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="functions">
+<h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
+<table class="autosummary longtable docutils align-default">
+<tbody>
+<tr class="row-odd"><td><p><a class="reference internal" href="#utils.disk_cache" title="utils.disk_cache"><code class="xref py py-obj docutils literal notranslate"><span class="pre">disk_cache</span></code></a>([cache_dir])</p></td>
+<td><p>A decorator that implements disk-based caching for function results.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#utils.validate_distance_type" title="utils.validate_distance_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_distance_type</span></code></a>(→ str)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-odd"><td><p><a class="reference internal" href="#utils.validate_mode_of_transport" title="utils.validate_mode_of_transport"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_mode_of_transport</span></code></a>(→ str)</p></td>
+<td><p></p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#utils.validate_fallback_speed" title="utils.validate_fallback_speed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_fallback_speed</span></code></a>(→ int | float | None)</p></td>
+<td><p>If no custom fallback speed is provided, return None. Else, validate that the</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="module-contents">
+<h2>Module Contents<a class="headerlink" href="#module-contents" title="Link to this heading"></a></h2>
+<dl class="py data">
+<dt class="sig sig-object py" id="utils.logger">
+<span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">logger</span></span><a class="headerlink" href="#utils.logger" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.disk_cache">
+<span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">disk_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cache'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#utils.disk_cache" title="Link to this definition"></a></dt>
+<dd><p>A decorator that implements disk-based caching for function results.
+This decorator saves the result of a function call to a file on disk and loads it
+on subsequent calls with the same arguments, avoiding redundant computations.
+:param cache_dir: Directory where cache files will be stored. Defaults to “cache”.
+:type cache_dir: str, optional</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A decorated function that implements caching behavior.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>callable</p>
+</dd>
+</dl>
+<p class="rubric">Example</p>
+<p>&#64;disk_cache()
+def expensive_computation(x):</p>
+<blockquote>
+<div><p># Some time-consuming calculation
+return x ** 2</p>
+</div></blockquote>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Cache files are stored as pickle files</p></li>
+<li><p>Cache keys are generated using SHA-256 hash of function name and arguments</p></li>
+<li><p>Logs cache hits/misses using the logging module</p></li>
+<li><p>Creates cache directory if it doesn’t exist</p></li>
+<li><p>Cache files are named using the hash of the function name and arguments</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pickle.PickleError</strong> – If there are issues serializing/deserializing the cached data</p></li>
+<li><p><strong>OSError</strong> – If there are issues with file operations</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.validate_distance_type">
+<span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">validate_distance_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">distance_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#utils.validate_distance_type" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.validate_mode_of_transport">
+<span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">validate_mode_of_transport</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode_of_transport</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#utils.validate_mode_of_transport" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py function">
+<dt class="sig sig-object py" id="utils.validate_fallback_speed">
+<span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">validate_fallback_speed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fallback_speed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#utils.validate_fallback_speed" title="Link to this definition"></a></dt>
+<dd><p>If no custom fallback speed is provided, return None. Else, validate that the
+user-provided fallback speed is within reasonable bounds for the given mode of transport.</p>
+</dd></dl>
+
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../gpbp/visualisation/index.html" class="btn btn-neutral float-left" title="gpbp.visualisation" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../constants/index.html" class="btn btn-neutral float-right" title="constants" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright .</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

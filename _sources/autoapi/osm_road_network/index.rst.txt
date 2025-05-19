@@ -1,0 +1,79 @@
+osm_road_network
+================
+
+.. py:module:: osm_road_network
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   osm_road_network.logger
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   osm_road_network.OsmRoadNetwork
+
+
+Module Contents
+---------------
+
+.. py:data:: logger
+
+.. py:class:: OsmRoadNetwork(admin_area_boundaries: shapely.Polygon | shapely.MultiPolygon, mode_of_transport: str, distance_type: str, fallback_speed: int | float | None = None)
+
+   Class to retrieve and process OpenStreetMap road network data.
+
+   :param admin_area_boundaries: The geography of the administrative area object.
+   :type admin_area_boundaries: Polygon | MultiPolygon
+   :param mode_of_transport: The mode of transport for which the road network is required.
+   :type mode_of_transport: str
+   :param distance_type: The type of distance to be calculated.
+   :type distance_type: str
+   :param fallback_speed: The speed to be used for road types where OSM does not provide a speed attribute.
+                          If not provided, osmnx will do the imputation (recommended).
+   :type fallback_speed: int | float | None
+
+
+   .. py:attribute:: admin_area_boundaries
+
+
+   .. py:attribute:: distance_type
+
+
+   .. py:attribute:: network_type
+
+
+   .. py:method:: get_osm_road_network() -> networkx.MultiDiGraph
+
+      Returns the processed OSM road network.
+
+
+
+   .. py:method:: _download_osm_road_network() -> networkx.MultiDiGraph
+
+      Download the OSM road network from OpenStreetMap for the specified administrative area.
+
+
+
+   .. py:method:: _set_network_type(mode_of_transport: str) -> str
+      :staticmethod:
+
+
+      Set valid network_type based on valid values for mode_of_transport
+
+
+
+   .. py:method:: _add_time_to_edges(road_network: networkx.MultiDiGraph, fallback_speed: int | float | None) -> networkx.MultiDiGraph
+      :staticmethod:
+
+
+      Add travel time edge attribute and change unit to minutes
+
+
+

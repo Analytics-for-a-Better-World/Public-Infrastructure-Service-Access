@@ -1,0 +1,46 @@
+visualisation
+=============
+
+.. py:module:: visualisation
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   visualisation.plot_facilities
+   visualisation.plot_population_heatmap
+   visualisation.plot_population
+   visualisation.plot_isochrones
+   visualisation.plot_results
+   visualisation._start_coordinates_from_admin_area
+   visualisation._bounding_box_from_admin_area
+
+
+Module Contents
+---------------
+
+.. py:function:: plot_facilities(df_facilities: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, df_potential_facilities: Optional[pandas.DataFrame] = None, tiles='OpenStreetMap') -> folium.Map
+
+   Plot facilities on a map with administrative area boundaries.
+
+
+.. py:function:: plot_population_heatmap(df_population: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, tiles='OpenStreetMap') -> folium.Map
+
+.. py:function:: plot_population(df_population: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, random_sample_n: Optional[int] = None, tiles='OpenStreetMap') -> folium.Map
+
+.. py:function:: plot_isochrones(df_isopolygons: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, tiles='OpenStreetMap')
+
+.. py:function:: plot_results(open_locations: list, current: pandas.DataFrame, total_fac: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon) -> folium.Map
+
+.. py:function:: _start_coordinates_from_admin_area(admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon) -> list
+
+   Identify the start coordinates for the map.
+
+
+.. py:function:: _bounding_box_from_admin_area(admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon) -> list
+
+   Identify the bounding box for the map.
+
+

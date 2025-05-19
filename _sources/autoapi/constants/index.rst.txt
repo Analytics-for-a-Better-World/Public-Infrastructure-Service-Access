@@ -1,0 +1,30 @@
+constants
+=========
+
+.. py:module:: constants
+
+.. autoapi-nested-parse::
+
+   Constants used throughout the PISA package.
+
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   constants.VALID_MODES_OF_TRANSPORT
+   constants.VALID_DISTANCE_TYPES
+   constants.OSM_TAGS
+
+
+Module Contents
+---------------
+
+.. py:data:: VALID_MODES_OF_TRANSPORT
+
+.. py:data:: VALID_DISTANCE_TYPES
+
+.. py:data:: OSM_TAGS
+

@@ -1,0 +1,70 @@
+utils
+=====
+
+.. py:module:: utils
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   utils.logger
+
+
+Functions
+---------
+
+.. autoapisummary::
+
+   utils.disk_cache
+   utils.validate_distance_type
+   utils.validate_mode_of_transport
+   utils.validate_fallback_speed
+
+
+Module Contents
+---------------
+
+.. py:data:: logger
+
+.. py:function:: disk_cache(cache_dir='cache')
+
+   A decorator that implements disk-based caching for function results.
+   This decorator saves the result of a function call to a file on disk and loads it
+   on subsequent calls with the same arguments, avoiding redundant computations.
+   :param cache_dir: Directory where cache files will be stored. Defaults to "cache".
+   :type cache_dir: str, optional
+
+   :returns: A decorated function that implements caching behavior.
+   :rtype: callable
+
+   .. rubric:: Example
+
+   @disk_cache()
+   def expensive_computation(x):
+       # Some time-consuming calculation
+       return x ** 2
+
+   .. rubric:: Notes
+
+   - Cache files are stored as pickle files
+   - Cache keys are generated using SHA-256 hash of function name and arguments
+   - Logs cache hits/misses using the logging module
+   - Creates cache directory if it doesn't exist
+   - Cache files are named using the hash of the function name and arguments
+
+   :raises pickle.PickleError: If there are issues serializing/deserializing the cached data
+   :raises OSError: If there are issues with file operations
+
+
+.. py:function:: validate_distance_type(distance_type: str) -> str
+
+.. py:function:: validate_mode_of_transport(mode_of_transport: str) -> str
+
+.. py:function:: validate_fallback_speed(fallback_speed: int | float | None, network_type: str) -> int | float | None
+
+   If no custom fallback speed is provided, return None. Else, validate that the
+   user-provided fallback speed is within reasonable bounds for the given mode of transport.
+
+

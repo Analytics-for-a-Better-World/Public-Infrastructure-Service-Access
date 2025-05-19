@@ -1,0 +1,114 @@
+administrative_area
+===================
+
+.. py:module:: administrative_area
+
+
+Attributes
+----------
+
+.. autoapisummary::
+
+   administrative_area.logger
+
+
+Classes
+-------
+
+.. autoapisummary::
+
+   administrative_area.AdministrativeArea
+
+
+Module Contents
+---------------
+
+.. py:data:: logger
+
+.. py:class:: AdministrativeArea(country_name: str, admin_level: int)
+
+   Get the boundaries of administrative areas for a specified country.
+
+   The administrative area level is specified by an integer, where 0 is the country level,
+   1 is the next broadest level (e.g. states or provinces), and so on.
+
+   It is possible to get the geometry of a specific administrative area by name.
+
+   Example usage:
+
+   ```python
+   timor_leste = AdministrativeArea("Timor-Leste", admin_level=1)
+   print(timor_leste.get_admin_area_names())
+   baucau_boundaries = timor_leste.get_admin_area_boundaries("Baucau")
+   timor_leste_country_code = timor_leste.get_iso3_country_code()
+   ```
+
+
+   .. py:attribute:: country
+
+
+   .. py:attribute:: admin_level
+
+
+   .. py:attribute:: all_admin_areas_gdf
+      :value: None
+
+
+
+   .. py:method:: _get_pycountry_from_country_name(country_name: str)
+      :staticmethod:
+
+
+      Validates country name using fuzzy matching and returns pycountry object.
+
+      :param country_name: Name of the country to validate
+
+      :returns: pycountry.db.Country object
+
+      :raises Exception: If country name is invalid or not found
+
+
+
+   .. py:method:: _download_admin_areas(country, admin_level: int) -> geopandas.GeoDataFrame
+      :staticmethod:
+
+
+      Downloads and returns all administrative areas of specified level for a country.
+
+      :param country_name: Name of the country
+      :param admin_level: Administrative area level (0 for country, 1 for first level divisions, etc.)
+
+      :returns: GeoDataFrame containing all administrative areas of the specified level
+
+
+
+   .. py:method:: get_admin_area_names() -> list[str]
+
+      Retrieves the names of all administrative areas for the specified level.
+
+      :returns: List of administrative area names at the specified level.
+                For admin_level=0, returns just the country name.
+
+
+
+   .. py:method:: get_admin_area_boundaries(admin_area_name: str) -> shapely.Polygon | shapely.MultiPolygon
+
+      Returns the boundary geometry for the specified administrative area.
+
+      :param admin_area_name: Name of the administrative area to retrieve boundaries for
+
+      :returns: Polygon or MultiPolygon representing the administrative area boundaries
+
+      :raises Exception: If admin_area_name is not set or not found in the data
+
+
+
+   .. py:method:: get_iso3_country_code() -> str
+
+      Retrieve the ISO 3166-1 alpha-3 country code for the country associated with this instance.
+
+      :returns: The ISO 3166-1 alpha-3 country code in lowercase.
+      :rtype: str
+
+
+
