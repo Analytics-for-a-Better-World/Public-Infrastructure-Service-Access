@@ -31,6 +31,12 @@ RUN poetry config virtualenvs.create false
 COPY . ./
 RUN poetry install --no-interaction --no-ansi
 
+# Fix for streamlit-folium missing marker images
+RUN mkdir -p /usr/local/lib/python3.10/site-packages/streamlit_folium/frontend/build && \
+    curl -o /usr/local/lib/python3.10/site-packages/streamlit_folium/frontend/build/marker-icon-2x.png https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png && \
+    curl -o /usr/local/lib/python3.10/site-packages/streamlit_folium/frontend/build/marker-shadow.png https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png && \
+    curl -o /usr/local/lib/python3.10/site-packages/streamlit_folium/frontend/build/marker-icon.png https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png
+
 EXPOSE 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
