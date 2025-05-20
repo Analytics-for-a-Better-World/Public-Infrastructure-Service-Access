@@ -91,13 +91,7 @@ docker logs pisa
 docker rm pisa
 ```
 
-The image is also ready to be deployed on a server or a cloud platform that supports Docker. If you want to use external dependencies like Mapbox API, you'll need to provide these credentials when running the container. You can do this by mounting a volume with your `.env` file or using environment variables:
-
-```sh
-docker run -p 127.0.0.1:8501:8501 --env-file ./.env --name pisa pisa
-```
-
-This ensures your API keys and other configuration settings are available to the application inside the container.
+The image is also ready to be deployed on a server or a cloud platform that supports Docker.
 
 ## References
 - [Travel Distance Calculations in Python](https://pythoncharmers.com/blog/travel-distance-python-with-geopandas-folium-alphashape-osmnx-buffer.html)
