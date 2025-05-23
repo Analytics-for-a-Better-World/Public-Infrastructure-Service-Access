@@ -46,6 +46,8 @@ def pisa_optimization(ss):
             if ss.potential_facilities_gdf is not None:
                 max_value_pot = ss.potential_facilities_gdf.shape[0]
         options = np.array([5, 10, 20, 50, 100, 150, 200, 250])
+        if 'max_value_pot' in locals() and max_value_pot < 5 and max_value_pot > 0:
+            options = np.append(options, max_value_pot)
         st.selectbox(
             "Budget (max number of potential locations to be built)",
             options=options[options <= max_value_pot],
