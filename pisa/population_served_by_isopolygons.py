@@ -1,3 +1,15 @@
+"""Module for analyzing population coverage by facility service areas.
+
+This module contains functions for determining which population points are covered
+by service areas (isopolygons) around facilities at different distance thresholds.
+It helps answer questions such as "How many people can reach a facility within X minutes?"
+or "Which populations are served by which facilities at different distance thresholds?"
+
+The main function in this module performs spatial analysis to identify population points
+that fall within the service areas of facilities, supporting accessibility analysis
+and optimization of facility locations.
+"""
+
 import geopandas as gpd
 import pandas as pd
 
@@ -18,6 +30,7 @@ def get_population_served_by_isopolygons(
     grouped_population : gpd.GeoDataFrame
         GeoDataFrame containing population points with geometry column.
         The index values are used as identifiers in the result.
+        Must include a valid geometry column with point geometries.
     isopolygons : pd.DataFrame
         DataFrame where each column starting with 'ID_' contains Shapely Polygon objects
         representing service areas at different distances. Each row represents a facility
@@ -30,6 +43,19 @@ def get_population_served_by_isopolygons(
         - Cluster_ID: The index from the isopolygons input
         - One column for each 'ID_' column in isopolygons, containing lists of
           population indices that fall within the corresponding polygon
+    
+    Raises
+    ------
+    ValueError
+        If either input DataFrame is empty
+
+    Notes
+    -----
+    This function:
+    1. Ensures both inputs have proper CRS (Coordinate Reference System)
+    2. Performs a spatial join to find population points within each isopolygon
+    3. Groups results by facility and distance threshold
+    4. Returns population indices served by each facility at each distance threshold
 
     Example usage
     --------------
@@ -99,7 +125,24 @@ def get_population_served_by_isopolygons(
 
     # Clean up lists: replace [nan] and nan with [] and convert float lists to int lists
     def sanitize_lists(x):
-        """Convert list of floats to list of ints, or return empty list if NaN."""
+        """Convert list of floats to list of integers, or handle NaN values.
+        
+        Parameters
+        ----------
+        x : list or scalar
+            Input data that may be a list of population indices (as floats) or a scalar value
+            
+        Returns
+        -------
+        list
+            If input is a list without NaN values: list of integers
+            If input is a list with NaN values or is a scalar: empty list
+            
+        Notes
+        -----
+        This helper function ensures consistent types and handles edge cases in the 
+        population indices from the spatial join operation.
+        """
         if isinstance(x, list):
             return [] if pd.isna(x).any() else [int(i) for i in x]
         else:
