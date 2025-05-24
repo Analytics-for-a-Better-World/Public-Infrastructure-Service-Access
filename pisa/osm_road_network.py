@@ -48,7 +48,6 @@ class OsmRoadNetwork:
         The speed to be used for road types where OSM does not provide a speed attribute.
         If not provided, osmnx will do the imputation (recommended).
     """
-
     def __init__(
         self,
         admin_area_boundaries: Polygon | MultiPolygon,
@@ -82,7 +81,6 @@ class OsmRoadNetwork:
             - If distance_type is 'length', the graph has 'length' attributes on edges (in meters)
             - If distance_type is 'travel_time', the graph has 'travel_time' attributes on edges (in minutes)
         """
-
         road_network = self._download_osm_road_network()
 
         if self.distance_type == "travel_time":
@@ -98,7 +96,6 @@ class OsmRoadNetwork:
         nx.MultiDiGraph
             NetworkX MultiDiGraph representing the road network within the administrative area
         """
-
         return ox.graph_from_polygon(polygon=self.admin_area_boundaries, network_type=self.network_type)
 
     @staticmethod
@@ -120,7 +117,6 @@ class OsmRoadNetwork:
         str
             The corresponding OSMnx network type ('drive', 'walk', or 'bike')
         """
-
         # validate mode of transport
         mode_of_transport = validate_mode_of_transport(mode_of_transport)
 
