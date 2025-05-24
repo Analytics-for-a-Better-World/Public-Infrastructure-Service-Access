@@ -1,5 +1,3 @@
-from typing import Optional
-
 import folium
 import numpy as np
 import pandas as pd
@@ -12,7 +10,7 @@ from shapely.geometry import MultiPolygon, Polygon
 def plot_facilities(
     df_facilities: pd.DataFrame,
     admin_area_boundaries: MultiPolygon | Polygon,
-    df_potential_facilities: Optional[pd.DataFrame] = None,
+    df_potential_facilities: pd.DataFrame | None = None,
     tiles="OpenStreetMap",
 ) -> folium.Map:
     """Plot facilities on an interactive map with administrative area boundaries.
@@ -140,7 +138,7 @@ def plot_population_heatmap(
 def plot_population(
     df_population: pd.DataFrame,
     admin_area_boundaries: MultiPolygon | Polygon,
-    random_sample_n: Optional[int] = None,
+    random_sample_n: int | None = None,
     tiles="OpenStreetMap",
 ) -> folium.Map:
     """Plot population points on an interactive map.
