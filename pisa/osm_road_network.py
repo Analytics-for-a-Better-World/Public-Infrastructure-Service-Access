@@ -11,6 +11,31 @@ OsmRoadNetwork : Class for retrieving and processing OSM road network data
 The module supports multiple transport modes, different distance types (length or travel time),
 and includes methods for validating inputs and handling missing speed data in OSM.
 
+Examples
+--------
+Retrieve and process a road network for walking travel time analysis:
+
+>>> from pisa.administrative_area import AdministrativeArea
+>>> from pisa.osm_road_network import OsmRoadNetwork
+>>>
+>>> # Get administrative area boundaries
+>>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+>>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
+>>>
+>>> # Create a road network for walking travel time analysis
+>>> road_network = OsmRoadNetwork(
+>>>     admin_area_boundaries=boundaries,
+>>>     mode_of_transport="walking",
+>>>     distance_type="travel_time"
+>>> )
+>>>
+>>> # Get the processed network with travel time attributes
+>>> graph = road_network.get_osm_road_network()
+>>>
+>>> # Check some network statistics
+>>> print(f"Number of nodes: {len(graph.nodes)}")
+>>> print(f"Number of edges: {len(graph.edges)}")
+
 See Also
 --------
 isopolygons : Module for calculating service areas using road networks

@@ -13,6 +13,28 @@ The module enables users to work with both existing facilities (retrieved from O
 and potential facility locations (generated through methodical sampling within administrative boundaries).
 It forms a core component in public infrastructure accessibility and location optimization workflows.
 
+Examples
+--------
+Retrieve existing facilities and generate potential facility locations:
+
+>>> from pisa.administrative_area import AdministrativeArea
+>>> from pisa.facilities import Facilities
+>>>
+>>> # Get administrative area boundaries
+>>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+>>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
+>>>
+>>> # Create a facilities object
+>>> facilities = Facilities(admin_area_boundaries=boundaries)
+>>>
+>>> # Get existing facilities from OpenStreetMap
+>>> existing = facilities.get_existing_facilities()
+>>> print(f"Found {len(existing)} existing facilities")
+>>>
+>>> # Generate potential facility locations (grid points)
+>>> potential = facilities.estimate_potential_facilities(spacing=0.05)
+>>> print(f"Generated {len(potential)} potential facility locations")
+
 See Also
 --------
 administrative_area : Module for retrieving administrative area boundaries

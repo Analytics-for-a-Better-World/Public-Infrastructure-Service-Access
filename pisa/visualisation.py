@@ -15,6 +15,35 @@ plot_population_heatmap : Create a heatmap showing population density
 The visualizations use Folium (based on Leaflet.js) to create interactive web maps that can be
 displayed in notebooks, web applications, or exported as HTML files.
 
+Examples
+--------
+Create interactive maps for facilities and population:
+
+>>> from pisa.administrative_area import AdministrativeArea
+>>> from pisa.facilities import Facilities
+>>> from pisa.population import WorldpopPopulation
+>>> from pisa.visualisation import plot_facilities, plot_population
+>>>
+>>> # Get administrative area and data
+>>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+>>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
+>>> country_code = admin_area.get_iso3_country_code()
+>>>
+>>> # Get facilities data
+>>> facilities = Facilities(admin_area_boundaries=boundaries)
+>>> existing_facilities = facilities.get_existing_facilities()
+>>>
+>>> # Get population data
+>>> population = WorldpopPopulation(
+>>>     admin_area_boundaries=boundaries,
+>>>     iso3_country_code=country_code
+>>> )
+>>> population_gdf = population.get_population_gdf()
+>>>
+>>> # Create interactive maps
+>>> facility_map = plot_facilities(existing_facilities, boundaries)
+>>> population_map = plot_population(population_gdf, boundaries)
+
 See Also
 --------
 facilities : Module for facility data processing

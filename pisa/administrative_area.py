@@ -12,6 +12,24 @@ AdministrativeArea : Class for retrieving and managing administrative area bound
 The module supports fuzzy matching of country names, downloading boundary data at different administrative levels,
 and accessing specific regions within countries.
 
+Examples
+--------
+Retrieve administrative boundaries for a country and its subdivisions:
+
+>>> from pisa.administrative_area import AdministrativeArea
+>>>
+>>> # Get country-level boundaries
+>>> country = AdministrativeArea("Timor-Leste", admin_level=0)
+>>> country_boundary = country.get_admin_area_boundaries("Timor-Leste")
+>>> 
+>>> # Get province-level boundaries
+>>> provinces = AdministrativeArea("Timor-Leste", admin_level=1)
+>>> province_names = provinces.get_admin_area_names()
+>>> print(f"Provinces in Timor-Leste: {', '.join(province_names)}")
+>>> 
+>>> # Get boundary for a specific province
+>>> baucau_boundary = provinces.get_admin_area_boundaries("Baucau")
+
 See Also
 --------
 facilities : Module for working with facility locations

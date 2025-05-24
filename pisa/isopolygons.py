@@ -1,15 +1,60 @@
-"""
+"""Isopolygon calculation module for service area analysis.
+
 This module provides functionality for calculating isopolygons around facilities using different methods and services.
-
 An isopolygon represents the area that can be reached within a specific distance (isodistance) or time (isochrone) from a
- facility.
+facility.
 
-The module contains an abstract base class IsopolygonCalculator and its implementations.
+The module contains an abstract base class IsopolygonCalculator and its implementations for different calculation 
+methods.
+
+Classes
+-------
+IsopolygonCalculator : Abstract base class for isopolygon calculations
+OsmIsopolygonCalculator : Implementation using OpenStreetMap road networks
+OsmIsopolygonCalculatorAlternative : Simplified implementation using OpenStreetMap
+MapboxIsopolygonCalculator : Implementation using the Mapbox API
+
+Examples
+--------
+Calculate isochrones around facilities using OpenStreetMap:
+
+>>> from pisa.administrative_area import AdministrativeArea
+>>> from pisa.facilities import Facilities
+>>> from pisa.osm_road_network import OsmRoadNetwork
+>>> from pisa.isopolygons import OsmIsopolygonCalculator
+>>> 
+>>> # Get administrative area and facilities
+>>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+>>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
+>>> facilities = Facilities(admin_area_boundaries=boundaries)
+>>> existing_facilities = facilities.get_existing_facilities()
+>>> 
+>>> # Create a road network for travel time calculations
+>>> road_network = OsmRoadNetwork(
+>>>     admin_area_boundaries=boundaries,
+>>>     mode_of_transport="walking",
+>>>     distance_type="travel_time"
+>>> )
+>>> graph = road_network.get_osm_road_network()
+>>> 
+>>> # Calculate isochrones (5, 10, 15 minutes walking)
+>>> isopolygon_calculator = OsmIsopolygonCalculator(
+>>>     facilities_df=existing_facilities,
+>>>     distance_type="travel_time",
+>>>     distance_values=[5, 10, 15],
+>>>     road_network=graph
+>>> )
+>>> isopolygons = isopolygon_calculator.calculate_isopolygons()
 
 Note:
     To implement a new way of calculating isopolygons (e.g., using Google Maps), create a class that inherits from 
     IsopolygonCalculator and implements calculate_isopolygons.
 
+See Also
+--------
+facilities : Module for retrieving facility locations
+osm_road_network : Module for retrieving and processing road networks
+population_served_by_isopolygons : Module for analyzing population coverage
 """
 
 import json

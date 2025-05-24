@@ -13,6 +13,28 @@ WorldpopPopulation : Implementation for WorldPop population data
 The module supports retrieving population data within specified administrative boundaries, aggregating the data at
 different resolutions, and preparing it for accessibility analysis with facilities.
 
+Examples
+--------
+Retrieve and process population data from WorldPop:
+
+>>> from pisa.administrative_area import AdministrativeArea
+>>> from pisa.population import WorldpopPopulation
+>>>
+>>> # Get administrative area boundaries
+>>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+>>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
+>>> country_code = admin_area.get_iso3_country_code()
+>>>
+>>> # Create a population object and retrieve data
+>>> population = WorldpopPopulation(
+>>>     admin_area_boundaries=boundaries,
+>>>     iso3_country_code=country_code
+>>> )
+>>>
+>>> # Get processed population data as a GeoDataFrame
+>>> population_gdf = population.get_population_gdf()
+>>> print(f"Total population: {population_gdf['population'].sum()}")
+
 See Also
 --------
 administrative_area : Module for retrieving administrative area boundaries
