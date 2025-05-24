@@ -24,13 +24,14 @@ import logging
 import os
 import pickle
 from functools import wraps
+from typing import Callable
 
 from pisa.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
 
 logger = logging.getLogger(__name__)
 
 
-def disk_cache(cache_dir="cache"):
+def disk_cache(cache_dir: str = "cache") -> Callable:
     """Implement disk-based caching for function results.
     
     This decorator saves the result of a function call to a file on disk and loads it
@@ -69,7 +70,7 @@ def disk_cache(cache_dir="cache"):
         If there are issues with file operations
     """
 
-    def decorator(func):
+    def decorator(func: Callable) -> Callable:
         @wraps(func)
         def wrapper(*args, **kwargs):
             # Ensure the cache directory exists

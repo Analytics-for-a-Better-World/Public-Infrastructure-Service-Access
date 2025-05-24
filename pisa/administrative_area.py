@@ -93,7 +93,7 @@ class AdministrativeArea:
         self.all_admin_areas_gdf = self._download_admin_areas(country=self.country, admin_level=self.admin_level)
 
     @staticmethod
-    def _get_pycountry_from_country_name(country_name: str):
+    def _get_pycountry_from_country_name(country_name: str) -> object:
         """Validate country name using fuzzy matching and return pycountry object.
         
         Parameters

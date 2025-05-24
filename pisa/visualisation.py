@@ -100,7 +100,7 @@ def plot_facilities(
     folium_map = folium.Map(location=start_coords, tiles=tiles)
 
     # Add a polygon layer for the administrative area boundaries
-    def style_function(x):
+    def style_function(x) -> dict:
         return {
             "fillColor": "green",
             "color": "green",
@@ -247,7 +247,11 @@ def plot_population(
     return folium_map
 
 
-def plot_isochrones(df_isopolygons: pd.DataFrame, admin_area_boundaries: MultiPolygon | Polygon, tiles="OpenStreetMap"):
+def plot_isochrones(
+    df_isopolygons: pd.DataFrame,
+    admin_area_boundaries: MultiPolygon | Polygon,
+    tiles: str = "OpenStreetMap",
+) -> folium.Map:
     """Plot isochrones/isopolygons for multiple facilities on an interactive map.
     
     This function creates a Folium map displaying isopolygons (areas reachable within specific travel times or distances)

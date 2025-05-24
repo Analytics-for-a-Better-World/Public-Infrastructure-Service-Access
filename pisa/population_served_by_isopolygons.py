@@ -124,12 +124,12 @@ def get_population_served_by_isopolygons(
     )
 
     # Clean up lists: replace [nan] and nan with [] and convert float lists to int lists
-    def sanitize_lists(x):
+    def sanitize_lists(x: list | float | int) -> list:
         """Convert list of floats to list of integers, or handle NaN values.
         
         Parameters
         ----------
-        x : list or scalar
+        x : list, float or int
             Input data that may be a list of population indices (as floats) or a scalar value
             
         Returns
