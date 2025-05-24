@@ -124,10 +124,6 @@ class AdministrativeArea:
     def get_admin_area_names(self) -> list[str]:
         """Retrieve the names of all administrative areas for the specified level.
         
-        Parameters
-        ----------
-        None
-        
         Returns
         -------
         list of str
@@ -175,10 +171,6 @@ class AdministrativeArea:
 
     def get_iso3_country_code(self) -> str:
         """Retrieve the ISO 3166-1 alpha-3 country code for the country.
-        
-        Parameters
-        ----------
-        None
         
         Returns
         -------
