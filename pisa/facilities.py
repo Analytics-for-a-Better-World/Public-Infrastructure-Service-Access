@@ -1,3 +1,25 @@
+"""Facility data retrieval and management module for accessibility analysis.
+
+This module provides functionality for retrieving, managing, and analyzing facility location data
+within specified administrative areas. It supports extracting facility data from OpenStreetMap (OSM),
+generating potential facility locations through grid sampling, and preparing data for accessibility
+and optimization analyses.
+
+Classes
+-------
+Facilities : Main class for facility data retrieval and management
+
+The module enables users to work with both existing facilities (retrieved from OSM based on tags)
+and potential facility locations (generated through methodical sampling within administrative boundaries).
+It forms a core component in public infrastructure accessibility and location optimization workflows.
+
+See Also
+--------
+administrative_area : Module for retrieving administrative area boundaries
+population : Module for population data processing
+isopolygons : Module for calculating service areas around facilities
+"""
+
 import logging
 from dataclasses import dataclass, field
 

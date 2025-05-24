@@ -1,3 +1,23 @@
+"""Administrative boundaries retrieval and management module.
+
+This module provides functionality to access and work with administrative area boundaries at various levels 
+(countries, provinces, districts, etc.) using the GADM (Global Administrative Areas) database. 
+It enables the retrieval of geographic boundaries for specific administrative areas within countries, 
+which is a fundamental component for spatial analysis in public infrastructure planning.
+
+Classes
+-------
+AdministrativeArea : Class for retrieving and managing administrative area boundaries
+
+The module supports fuzzy matching of country names, downloading boundary data at different administrative levels,
+and accessing specific regions within countries.
+
+See Also
+--------
+facilities : Module for working with facility locations
+population : Module for population data within administrative areas
+"""
+
 import logging
 
 import pycountry

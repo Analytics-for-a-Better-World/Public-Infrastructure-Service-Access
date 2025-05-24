@@ -1,3 +1,24 @@
+"""Population data retrieval and processing module for geographic analysis.
+
+This module provides classes and functions for retrieving, processing, and analyzing population data from various 
+sources such as Facebook's Data for Good and WorldPop. It includes an abstract base class that defines the common 
+interface, and concrete implementations for specific data sources.
+
+Classes
+-------
+Population : Abstract base class for population data retrieval
+FacebookPopulation : Implementation for Facebook's High Resolution Population Density Maps
+WorldpopPopulation : Implementation for WorldPop population data
+
+The module supports retrieving population data within specified administrative boundaries, aggregating the data at
+different resolutions, and preparing it for accessibility analysis with facilities.
+
+See Also
+--------
+administrative_area : Module for retrieving administrative area boundaries
+facilities : Module for working with facility location data
+"""
+
 import urllib
 from abc import ABC, abstractmethod
 from dataclasses import dataclass

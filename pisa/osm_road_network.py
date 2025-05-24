@@ -1,10 +1,30 @@
+"""OpenStreetMap road network data retrieval and processing module.
+
+This module provides functionality for accessing and processing road network data from OpenStreetMap (OSM)
+for various transportation modes (driving, walking, cycling). It serves as the foundation for service area
+calculations and travel time/distance analyses in the PISA package.
+
+Classes
+-------
+OsmRoadNetwork : Class for retrieving and processing OSM road network data
+
+The module supports multiple transport modes, different distance types (length or travel time),
+and includes methods for validating inputs and handling missing speed data in OSM.
+
+See Also
+--------
+isopolygons : Module for calculating service areas using road networks
+administrative_area : Module for defining the geographic scope of the road network
+"""
+
 import logging
 
 import networkx as nx
 import osmnx as ox
 from shapely import MultiPolygon, Polygon
 
-from pisa.utils import validate_distance_type, validate_fallback_speed, validate_mode_of_transport
+from pisa.utils import (validate_distance_type, validate_fallback_speed,
+                        validate_mode_of_transport)
 
 logger = logging.getLogger(__name__)
 
