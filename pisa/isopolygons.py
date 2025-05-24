@@ -28,7 +28,8 @@ from pandas import DataFrame
 from shapely import Polygon
 from shapely.geometry import shape
 
-from pisa.utils import disk_cache, validate_distance_type, validate_mode_of_transport
+from pisa.utils import (disk_cache, validate_distance_type,
+                        validate_mode_of_transport)
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +208,12 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         Buffer distance to apply around network nodes, default is 0.001
     edge_buffer : float, optional
         Buffer distance to apply around network edges, default is 0.0005
+        
+    See Also
+    --------
+    IsopolygonCalculator : Abstract base class
+    OsmIsopolygonCalculatorAlternative : Simplified OSM-based implementation
+    MapboxIsopolygonCalculator : Mapbox API-based implementation
     """
 
     def __init__(
@@ -448,6 +455,12 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
     buffer : float, optional
         Buffer distance in meters to apply around network skeletons (default: 50)
         
+    See Also
+    --------
+    IsopolygonCalculator : Abstract base class
+    OsmIsopolygonCalculator : OSM-based implementation with precise node/edge buffering
+    MapboxIsopolygonCalculator : Mapbox API-based implementation
+        
     Notes
     -----
     This implementation generally produces less accurate but smoother isopolygons
@@ -614,6 +627,12 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         A valid Mapbox API access token with Isochrone API permissions
     base_url : str, optional
         The base URL for the Mapbox Isochrone API, default is 'https://api.mapbox.com/isochrone/v1/'
+        
+    See Also
+    --------
+    IsopolygonCalculator : Abstract base class
+    OsmIsopolygonCalculator : OSM-based implementation with precise node/edge buffering
+    OsmIsopolygonCalculatorAlternative : Simplified OSM-based implementation
         
     Notes
     -----

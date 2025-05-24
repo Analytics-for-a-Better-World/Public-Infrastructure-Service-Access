@@ -24,6 +24,11 @@ class AdministrativeArea:
         The name of the country for which to retrieve administrative areas
     admin_level : int
         The administrative area level to retrieve (0 for country, 1 for first-level divisions, etc.)
+        
+    See Also
+    --------
+    Facilities : Class for retrieving facilities within administrative areas
+    Population : Class for retrieving population data within administrative areas
     
     Examples
     --------

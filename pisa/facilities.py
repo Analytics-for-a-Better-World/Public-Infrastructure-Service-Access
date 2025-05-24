@@ -37,6 +37,11 @@ class Facilities:
     The default OSM_TAGS are defined in the constants module and typically target health facilities. To use 
     different facility types, provide custom osm_tags when creating the Facilities object.
     
+    See Also
+    --------
+    AdministrativeArea : Class for retrieving administrative area boundaries
+    IsopolygonCalculator : Class for calculating service areas around facilities
+    
     Examples
     --------
     >>> from pisa.administrative_area import AdministrativeArea
