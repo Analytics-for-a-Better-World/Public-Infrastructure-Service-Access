@@ -70,11 +70,11 @@ class Facilities:
     ----------
     admin_area_boundaries : Polygon or MultiPolygon
         The geographical boundaries of the administrative area for which to retrieve facilities
-    data_src : str, default="osm"
+    data_src : str, optional
         The data source from which to retrieve facility data. Currently supported:
-        - "osm": OpenStreetMap
-    osm_tags : dict, default=OSM_TAGS
-        Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., {'amenity': 'hospital'})
+        - "osm": OpenStreetMap (default: "osm")
+    osm_tags : dict, optional
+        Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., {'amenity': 'hospital'}). (default: OSM_TAGS)
         
     Notes
     -----

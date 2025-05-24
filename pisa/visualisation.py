@@ -86,9 +86,9 @@ def plot_facilities(
         - latitude: Latitude coordinate of the potential facility
         - longitude: Longitude coordinate of the potential facility
         
-    tiles : str, default="OpenStreetMap"
+    tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
-        See folium.Map documentation for available options.
+        See folium.Map documentation for available options. (default: "OpenStreetMap")
         
     Returns
     -------
@@ -160,9 +160,9 @@ def plot_population_heatmap(
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
         
-    tiles : str, default="OpenStreetMap"
+    tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
-        See folium.Map documentation for available options.
+        See folium.Map documentation for available options. (default: "OpenStreetMap")
         
     Returns
     -------
@@ -212,11 +212,11 @@ def plot_population(
         
     random_sample_n : int, optional
         Number of population points to randomly sample and display.
-        If None, all points will be displayed (may be performance-intensive for large datasets)
+        If None, all points will be displayed (may be performance-intensive for large datasets) (default: None)
         
-    tiles : str, default="OpenStreetMap"
+    tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
-        See folium.Map documentation for available options.
+        See folium.Map documentation for available options. (default: "OpenStreetMap")
         
     Returns
     -------
@@ -265,9 +265,9 @@ def plot_isochrones(df_isopolygons: pd.DataFrame, admin_area_boundaries: MultiPo
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
         
-    tiles : str, default="OpenStreetMap"
+    tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
-        See folium.Map documentation for available options.
+        See folium.Map documentation for available options. (default: "OpenStreetMap")
         
     Returns
     -------

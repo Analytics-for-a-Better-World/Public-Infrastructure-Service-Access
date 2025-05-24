@@ -38,8 +38,8 @@ def disk_cache(cache_dir="cache"):
     
     Parameters
     ----------
-    cache_dir : str, default="cache"
-        Directory where cache files will be stored
+    cache_dir : str, optional
+        Directory where cache files will be stored. (default: "cache")
     
     Returns
     -------

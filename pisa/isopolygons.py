@@ -250,9 +250,9 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
     road_network : networkx.MultiDiGraph
         Road network graph to use for calculations
     node_buffer : float, optional
-        Buffer distance to apply around network nodes, default is 0.001
+        Buffer distance to apply around network nodes. (default: 0.001)
     edge_buffer : float, optional
-        Buffer distance to apply around network edges, default is 0.0005
+        Buffer distance to apply around network edges. (default: 0.0005)
         
     See Also
     --------
@@ -498,7 +498,7 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
     road_network : networkx.MultiDiGraph
         Road network graph to use for calculations
     buffer : float, optional
-        Buffer distance in meters to apply around network skeletons (default: 50)
+        Buffer distance in meters to apply around network skeletons. (default: 50)
         
     See Also
     --------
