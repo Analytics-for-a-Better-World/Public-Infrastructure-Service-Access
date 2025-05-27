@@ -6,7 +6,6 @@ This page contains auto-generated API reference documentation [#f1]_.
 .. toctree::
    :titlesonly:
 
-   /autoapi/gpbp/index
    /autoapi/utils/index
    /autoapi/constants/index
    /autoapi/population/index
