@@ -19,7 +19,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
 ]
-autoapi_dirs = ["../gpbp", "../pisa"]
+autoapi_dirs = ["../pisa"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
