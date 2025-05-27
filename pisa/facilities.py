@@ -95,7 +95,7 @@ class Facilities:
             ["longitude", "latitude"]
         ]
 
-    def estimate_potential_facilities(self, spacing: float) -> gpd.GeoDataFrame:
+    def estimate_potential_facilities(self, spacing: float = 0.05) -> gpd.GeoDataFrame:
         """Create grid of potential facility locations
 
         Create a grid of evenly spaced points within the given GeoDataFrame.
