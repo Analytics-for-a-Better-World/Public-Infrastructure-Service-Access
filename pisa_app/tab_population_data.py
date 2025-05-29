@@ -12,7 +12,7 @@ def population_data(ss):
         "Pick the population resolution (larger values increase accuracy)",
         min_value=1,
         max_value=5,
-        value=5,
+        value=1,
         step=1,
     )
 
