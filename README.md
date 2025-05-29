@@ -44,10 +44,10 @@ After installing `cbc` and/or creating a Mapbox API key, create a `.env` file in
 
 ```sh
 # Path to your cbc solver executable (for optimization)
-CBC_PATH=<path_to_solver>
+CBC_SOLVER_PATH=<path_to_solver>
 
 # Mapbox API key (optional, for isopolygon generation)
-MAPBOX_API_KEY=<your_api_key_here>
+MAPBOX_API_TOKEN=<your_api_key_here>
 ```
 
 This file is ignored by git by default for security.
