@@ -5,14 +5,6 @@ within specified administrative areas. It supports extracting facility data from
 generating potential facility locations through grid sampling, and preparing data for accessibility
 and optimization analyses.
 
-Classes
--------
-Facilities : Main class for facility data retrieval and management
-
-The module enables users to work with both existing facilities (retrieved from OSM based on tags)
-and potential facility locations (generated through methodical sampling within administrative boundaries).
-It forms a core component in public infrastructure accessibility and location optimization workflows.
-
 Examples
 --------
 Retrieve existing facilities and generate potential facility locations:

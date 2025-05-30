@@ -4,14 +4,6 @@ This module provides functions for creating interactive maps and visualizations 
 and isopolygons (service areas). It helps in visualizing spatial relationships between facilities and population,
 service coverage areas, and optimization scenarios.
 
-Functions
----------
-plot_facilities : Create an interactive map showing existing and potential facilities
-plot_population : Create an interactive map showing population distribution
-plot_isochrones : Visualize isochrones/isopolygons around facilities
-plot_population_isopolygon_overlap : Visualize population points served by facility isopolygons
-plot_population_heatmap : Create a heatmap showing population density
-
 The visualizations use Folium (based on Leaflet.js) to create interactive web maps that can be
 displayed in notebooks, web applications, or exported as HTML files.
 

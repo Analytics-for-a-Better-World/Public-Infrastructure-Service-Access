@@ -1,15 +1,59 @@
-"""Module for analyzing population coverage by facility service areas.
+"""Compute population coverage by facility service areas (isopolygons).
 
-This module contains functions for determining which population points are covered
-by service areas (isopolygons) around facilities at different distance thresholds.
-It helps answer questions such as "How many people can reach a facility within X minutes?"
-or "Which populations are served by which facilities at different distance thresholds?"
+This module provides functions to determine which population points are covered by service areas
+(isopolygons) around facilities at different distance thresholds. It helps answer questions such as
+"How many people can reach a facility within X minutes?" or "Which populations are served by which
+facilities at different distance thresholds?"
 
-The main function in this module performs spatial analysis to identify population points
-that fall within the service areas of facilities, supporting accessibility analysis
-and optimization of facility locations.
+Examples
+--------
+Retrieve population coverage for example points and polygons::
+
+>>> from shapely.geometry import Point, Polygon
+>>> import geopandas as gpd
+>>> import pandas as pd
+>>> from pisa.population_served_by_isopolygons import get_population_served_by_isopolygons
+>>>
+>>> # Get administrative area and facilities
+>>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+>>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
+>>>
+>>> # Get grouped population
+>>> population = WorldpopPopulation(
+>>>     admin_area_boundaries=boundaries,
+>>>     iso3_country_code=country_code
+>>> )
+>>> grouped_population = population.get_population_gdf()
+>>>
+>>> facilities = Facilities(admin_area_boundaries=boundaries)
+>>> existing_facilities = facilities.get_existing_facilities()
+>>> 
+>>> # Create a road network for travel time calculations
+>>> road_network = OsmRoadNetwork(
+>>>     admin_area_boundaries=boundaries,
+>>>     mode_of_transport="walking",
+>>>     distance_type="travel_time"
+>>> )
+>>> graph = road_network.get_osm_road_network()
+>>> 
+>>> # Calculate isochrones (5, 10, 15 minutes walking)
+>>> isopolygon_calculator = OsmIsopolygonCalculator(
+>>>     facilities_df=existing_facilities,
+>>>     distance_type="travel_time",
+>>>     distance_values=[5, 10, 15],
+>>>     road_network=graph
+>>> )
+>>> isopolygons = isopolygon_calculator.calculate_isopolygons()
+>>>
+>>> # Find which population points are served by each isopolygon
+>>> result = get_population_served_by_isopolygons(grouped_population, isopolygons)
+
+See Also
+--------
+isopolygons : Module for generating service area polygons
+facilities : Module for facility location and clustering
+get_population_served_by_isopolygons : Main function for population coverage analysis
 """
-
 import geopandas as gpd
 import pandas as pd
 

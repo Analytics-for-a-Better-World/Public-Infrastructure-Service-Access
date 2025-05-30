@@ -4,12 +4,6 @@ This module provides classes and functions for retrieving, processing, and analy
 sources such as Facebook's Data for Good and WorldPop. It includes an abstract base class that defines the common 
 interface, and concrete implementations for specific data sources.
 
-Classes
--------
-Population : Abstract base class for population data retrieval
-FacebookPopulation : Implementation for Facebook's High Resolution Population Density Maps
-WorldpopPopulation : Implementation for WorldPop population data
-
 The module supports retrieving population data within specified administrative boundaries, aggregating the data at
 different resolutions, and preparing it for accessibility analysis with facilities.
 

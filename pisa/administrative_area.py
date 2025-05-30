@@ -5,13 +5,6 @@ This module provides functionality to access and work with administrative area b
 It enables the retrieval of geographic boundaries for specific administrative areas within countries, 
 which is a fundamental component for spatial analysis in public infrastructure planning.
 
-Classes
--------
-AdministrativeArea : Class for retrieving and managing administrative area boundaries
-
-The module supports fuzzy matching of country names, downloading boundary data at different administrative levels,
-and accessing specific regions within countries.
-
 Examples
 --------
 Retrieve administrative boundaries for a country and its subdivisions:

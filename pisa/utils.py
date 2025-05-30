@@ -4,16 +4,6 @@ This module contains utility functions that are used throughout the PISA package
 validation functions, caching mechanisms, and other helper functions that support the core
 functionality of the package.
 
-Functions
----------
-disk_cache : Decorator for disk-based caching of function results
-validate_mode_of_transport : Validate that a mode of transport is supported
-validate_distance_type : Validate that a distance type is supported
-validate_fallback_speed : Validate and process fallback speed values
-
-The utilities in this module help ensure consistent validation of inputs, efficient computation
-through caching, and other common operations needed throughout the package.
-
 See Also
 --------
 constants : Module containing constants used by these utility functions

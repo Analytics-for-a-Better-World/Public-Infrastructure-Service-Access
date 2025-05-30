@@ -7,13 +7,6 @@ facility.
 The module contains an abstract base class IsopolygonCalculator and its implementations for different calculation 
 methods.
 
-Classes
--------
-IsopolygonCalculator : Abstract base class for isopolygon calculations
-OsmIsopolygonCalculator : Implementation using OpenStreetMap road networks
-OsmIsopolygonCalculatorAlternative : Simplified implementation using OpenStreetMap
-MapboxIsopolygonCalculator : Implementation using the Mapbox API
-
 Examples
 --------
 Calculate isochrones around facilities using OpenStreetMap:

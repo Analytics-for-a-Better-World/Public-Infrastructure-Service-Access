@@ -4,13 +4,6 @@ This module provides functionality for accessing and processing road network dat
 for various transportation modes (driving, walking, cycling). It serves as the foundation for service area
 calculations and travel time/distance analyses in the PISA package.
 
-Classes
--------
-OsmRoadNetwork : Class for retrieving and processing OSM road network data
-
-The module supports multiple transport modes, different distance types (length or travel time),
-and includes methods for validating inputs and handling missing speed data in OSM.
-
 Examples
 --------
 Retrieve and process a road network for walking travel time analysis:
