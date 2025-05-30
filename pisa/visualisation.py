@@ -145,13 +145,12 @@ def plot_population_heatmap(
     ----------
     df_population : pd.DataFrame
         DataFrame containing population data. Must have columns:
+        
         - latitude: Latitude coordinate
-        - longitude: Longitude coordinate
+        - longitude: Longitude coordinate  
         - population: Population value (intensity for the heatmap)
-    
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
-        
     tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
         See folium.Map documentation for available options. (default: "OpenStreetMap")

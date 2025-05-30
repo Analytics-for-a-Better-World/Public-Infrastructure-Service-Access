@@ -113,7 +113,6 @@ class IsopolygonCalculator(ABC):
         ValueError
             If facilities_df has no rows (empty DataFrame)
         """
-
         if (
             "longitude" not in facilities_df.columns
             or "latitude" not in facilities_df.columns
@@ -152,7 +151,6 @@ class IsopolygonCalculator(ABC):
         The requirement that all distance values be integers comes from the Mapbox Isochrone API,
         but is applied to all implementations for consistency.
         """
-
         if isinstance(distance_values, int):
             return [distance_values]
 
@@ -184,7 +182,6 @@ class IsopolygonCalculator(ABC):
         These limits are imposed by the Mapbox Isochrone API specifications. Even when using other providers (e.g., OSM),
          the same limits are applied for consistency across implementations.
         """
-
         if self.distance_type == "length" and max(self.distance_values) > 100000:
             raise ValueError(
                 "One or more distance values are larger than the permitted 100.000 meters limit."
@@ -201,16 +198,16 @@ class IsopolygonCalculator(ABC):
         
         This abstract method must be implemented by subclasses to provide the actual implementation of isopolygon 
         calculation using specific data sources and algorithms.
-                    
+        
         Specific implementations should provide detailed error handling and logging appropriate to their data sources and
-         algorithms.
+        algorithms.
         
         Returns
         -------
         pandas.DataFrame
             DataFrame containing isopolygons with the following structure:
             - Each row represents a facility from facilities_df
-            - One column named 'ID_{distance}' for each distance value in distance_values, where {distance} is the 
+            - One column named ``ID_{distance}`` for each distance value in distance_values, where {distance} is the 
             distance value in meters or minutes
             - Each cell contains a Shapely Polygon or MultiPolygon representing the area that can be reached within the 
             corresponding distance
@@ -318,7 +315,6 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         - This implementation provides more accurate isopolygons compared to the
           alternative implementation but may be more computationally intensive
         """
-
         # Initialize an empty DataFrame to store isopolygons
         index = self.nearest_nodes_dict.keys()
         columns = [f"ID_{d}" for d in self.distance_values]
@@ -452,7 +448,6 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
           edges_gdf will be an empty GeoSeries
         - The method uses NetworkX's ego_graph to extract the subgraph within the specified distance
         """
-
         subgraph = nx.ego_graph(
             road_network, center_node, radius=distance_value, distance=distance_type
         )
@@ -566,7 +561,6 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
           for each distance value, then buffers them to create isopolygons
         - Computation time increases with the number of facilities and distance values
         """
-
         index = self.nearest_nodes_dict.keys()
         columns = [f"ID_{d}" for d in self.distance_values]
         isopolygons = pd.DataFrame(index=index, columns=columns)
@@ -728,7 +722,6 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         - Makes one API request per facility (not per distance value)
         - The API returns GeoJSON features that are converted to Shapely geometries
         """
-
         columns = [f"ID_{d}" for d in self.distance_values]
 
         # DataFrame with each row per facility and one column per distance
@@ -788,7 +781,6 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         -------
         None
         """
-
         if (request_count + 1) % 300 == 0:
             logger.info("Reached Mapbox API request limit. Waiting for 1 minute...")
             time.sleep(60)
@@ -829,7 +821,6 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         This method uses the disk_cache decorator to avoid making repeated requests for the same URL, which helps reduce
          API usage and improves performance for repeated calculations.
         """
-
         try:
             # Make the request
             response = requests.get(request_url, timeout=60)
@@ -895,7 +886,6 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         ValueError
             If more than 4 distance values are provided (Mapbox API limitation)
         """
-
         if len(distance_values) > 4:
             raise ValueError("Mapbox API accepts a maximum of 4 distance_values")
 

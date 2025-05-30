@@ -101,25 +101,27 @@ def get_population_served_by_isopolygons(
     3. Groups results by facility and distance threshold
     4. Returns population indices served by each facility at each distance threshold
 
-    Example usage
-    --------------
-    grouped_population:
-        index   geometry
-        p0      POINT (...)
-        p1      POINT (...)
-        p2      POINT (...)
+    Example
+    --------
+    Basic usage with sample data::
 
-    isopolygons:
-        index   ID_10           ID_20
-        i0      POLYGON (...)   POLYGON (...)
-        i1      POLYGON (...)   POLYGON (...)
-        i2      POLYGON (...)   POLYGON (...)
+        grouped_population:
+            index   geometry
+            p0      POINT (...)
+            p1      POINT (...)
+            p2      POINT (...)
 
-    get_population_served_by_isopolygons(grouped_population, isopolygons):
-        index   Cluster_ID   ID_10           ID_20
-        0      i0          [p0, p1]       [p0, p1]
-        1      i1          [p2]           []
-        2      i2          []             [p1, p2]
+        isopolygons:
+            index   ID_10           ID_20
+            i0      POLYGON (...)   POLYGON (...)
+            i1      POLYGON (...)   POLYGON (...)
+            i2      POLYGON (...)   POLYGON (...)
+
+        result = get_population_served_by_isopolygons(grouped_population, isopolygons):
+            index   Cluster_ID   ID_10           ID_20
+            0      i0          [p0, p1]       [p0, p1]
+            1      i1          [p2]           []
+            2      i2          []             [p1, p2]
     """
     crs = "EPSG:4326"
 
