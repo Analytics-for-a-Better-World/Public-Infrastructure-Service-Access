@@ -104,18 +104,54 @@
              
   <section id="module-population">
 <span id="population"></span><h1>population<a class="headerlink" href="#module-population" title="Link to this heading"></a></h1>
+<p>Population data retrieval and processing module for geographic analysis.</p>
+<p>This module provides classes and functions for retrieving, processing, and analyzing population data from various
+sources such as Facebook’s Data for Good and WorldPop. It includes an abstract base class that defines the common
+interface, and concrete implementations for specific data sources.</p>
+<p>The module supports retrieving population data within specified administrative boundaries, aggregating the data at
+different resolutions, and preparing it for accessibility analysis with facilities.</p>
+<p class="rubric">Examples</p>
+<p>Retrieve and process population data from WorldPop:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.administrative_area</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdministrativeArea</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.population</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorldpopPopulation</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get administrative area boundaries</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">admin_area</span> <span class="o">=</span> <span class="n">AdministrativeArea</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">,</span> <span class="n">admin_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">boundaries</span> <span class="o">=</span> <span class="n">admin_area</span><span class="o">.</span><span class="n">get_admin_area_boundaries</span><span class="p">(</span><span class="s2">&quot;Baucau&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">country_code</span> <span class="o">=</span> <span class="n">admin_area</span><span class="o">.</span><span class="n">get_iso3_country_code</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a population object and retrieve data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">population</span> <span class="o">=</span> <span class="n">WorldpopPopulation</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">admin_area_boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">iso3_country_code</span><span class="o">=</span><span class="n">country_code</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get processed population data as a GeoDataFrame</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">population_gdf</span> <span class="o">=</span> <span class="n">population</span><span class="o">.</span><span class="n">get_population_gdf</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Total population: </span><span class="si">{</span><span class="n">population_gdf</span><span class="p">[</span><span class="s1">&#39;population&#39;</span><span class="p">]</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="../administrative_area/index.html#module-administrative_area" title="administrative_area"><code class="xref py py-obj docutils literal notranslate"><span class="pre">administrative_area</span></code></a></dt><dd><p>Module for retrieving administrative area boundaries</p>
+</dd>
+<dt><a class="reference internal" href="../facilities/index.html#module-facilities" title="facilities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">facilities</span></code></a></dt><dd><p>Module for working with facility location data</p>
+</dd>
+</dl>
+</div>
 <section id="classes">
 <h2>Classes<a class="headerlink" href="#classes" title="Link to this heading"></a></h2>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#population.Population" title="population.Population"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Population</span></code></a></p></td>
-<td><p>Abstract base class for Population. Subclasses must implement the method get_population_data()</p></td>
+<td><p>Abstract base class for Population data retrieval and processing.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#population.FacebookPopulation" title="population.FacebookPopulation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FacebookPopulation</span></code></a></p></td>
-<td><p>Abstract base class for Population. Subclasses must implement the method get_population_data()</p></td>
+<td><p>Population data from Facebook's High Resolution Population Density Maps.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#population.WorldpopPopulation" title="population.WorldpopPopulation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">WorldpopPopulation</span></code></a></p></td>
-<td><p>Abstract base class for Population. Subclasses must implement the method get_population_data()</p></td>
+<td><p>Population data from WorldPop global population data.</p></td>
 </tr>
 </tbody>
 </table>
@@ -126,8 +162,19 @@
 <dt class="sig sig-object py" id="population.Population">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">population.</span></span><span class="sig-name descname"><span class="pre">Population</span></span><a class="headerlink" href="#population.Population" title="Link to this definition"></a></dt>
 <dd><p>Bases: <code class="xref py py-obj docutils literal notranslate"><span class="pre">abc.ABC</span></code></p>
-<p>Abstract base class for Population. Subclasses must implement the method get_population_data()
-If you want to add new data source (e.g. geojson): create new subclass with method get_population_data().</p>
+<p>Abstract base class for Population data retrieval and processing.</p>
+<p>This class provides the core functionality for retrieving and processing population data for a specified
+administrative area. Subclasses must implement the method get_population_data() to support different data sources.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>admin_area_boundaries</strong> (<em>Polygon</em><em> or </em><em>MultiPolygon</em>) – The geographical boundaries of the administrative area for which to retrieve population data</p></li>
+<li><p><strong>iso3_country_code</strong> (<em>str</em>) – The ISO3 country code for the administrative area (e.g., ‘TLS’ for Timor-Leste)</p></li>
+<li><p><strong>population_resolution</strong> (<em>int</em><em>, </em><em>optional</em>) – The decimal precision to which latitude and longitude coordinates are rounded for aggregation purposes
+(default: 5)</p></li>
+</ul>
+</dd>
+</dl>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="population.Population.admin_area_boundaries">
 <span class="sig-name descname"><span class="pre">admin_area_boundaries</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">shapely.Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.MultiPolygon</span></em><a class="headerlink" href="#population.Population.admin_area_boundaries" title="Link to this definition"></a></dt>
@@ -146,23 +193,23 @@ If you want to add new data source (e.g. geojson): create new subclass with meth
 <dl class="py method">
 <dt class="sig sig-object py" id="population.Population.get_population_gdf">
 <span class="sig-name descname"><span class="pre">get_population_gdf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">geopandas.GeoDataFrame</span></span></span><a class="headerlink" href="#population.Population.get_population_gdf" title="Link to this definition"></a></dt>
-<dd><p>Integrates the methods to get the population numbers for the selected area into one flow and
-returns grouped population data for the admin area as a GeoDataFrame.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="population.Population._group_population">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_group_population</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">population_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">population_resolution</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">geopandas.GeoDataFrame</span></span></span><a class="headerlink" href="#population.Population._group_population" title="Link to this definition"></a></dt>
-<dd><p>Group population data by longitude and latitude based on the population resolution. The population resolution
-is an integer that indicates the number of digits after the decimal point to which latitude and longitude get rounded
-and then grouped. The population of all rows with the same unique combination of latitude and longitude after
-rounding by population resolution is summed. The resulting dataframe is returned as a GeoDataFrame.</p>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="population.Population._get_population_df">
-<em class="property"><span class="pre">abstract</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_get_population_df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.DataFrame</span></span></span><a class="headerlink" href="#population.Population._get_population_df" title="Link to this definition"></a></dt>
-<dd><p>Must be implemented in subclasses</p>
+<dd><p>Get aggregated population data for the administrative area as a GeoDataFrame.</p>
+<p>This method integrates the population data retrieval workflow by:
+1. Retrieving raw population data using the specific implementation of the get_population_data() method
+2. Aggregating the population data based on the specified resolution</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Aggregated population data with columns:
+- longitude: Rounded longitude coordinate
+- latitude: Rounded latitude coordinate
+- population: Total population at the coordinate
+- geometry: Point geometry representing the coordinate
+- ID: Unique identifier for each point</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>GeoDataFrame</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -171,25 +218,67 @@ rounding by population resolution is summed. The resulting dataframe is returned
 <dt class="sig sig-object py" id="population.FacebookPopulation">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">population.</span></span><span class="sig-name descname"><span class="pre">FacebookPopulation</span></span><a class="headerlink" href="#population.FacebookPopulation" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#population.Population" title="population.Population"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Population</span></code></a></p>
-<p>Abstract base class for Population. Subclasses must implement the method get_population_data()
-If you want to add new data source (e.g. geojson): create new subclass with method get_population_data().</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="population.FacebookPopulation._get_population_df">
-<span class="sig-name descname"><span class="pre">_get_population_df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.DataFrame</span></span></span><a class="headerlink" href="#population.FacebookPopulation._get_population_df" title="Link to this definition"></a></dt>
-<dd><p>Download &amp; process data from the chosen datasource ‘facebook’. Returns a DataFrame with population data.</p>
-</dd></dl>
-
+<p>Population data from Facebook’s High Resolution Population Density Maps.</p>
+<p>This class retrieves and processes population data from Facebook’s Data for Good program, which provides
+high-resolution population density maps. The data is accessed via the Humanitarian Data Exchange (HDX) platform.</p>
+<p>The class follows the same initialization pattern as its parent class Population.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="#population.Population" title="population.Population"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Population</span></code></a></dt><dd><p>Parent abstract class</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">WorldPopulation</span></code></dt><dd><p>Alternative population data source implementation</p>
+</dd>
+</dl>
+</div>
 <dl class="py method">
 <dt class="sig sig-object py" id="population.FacebookPopulation.download_population_facebook">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">download_population_facebook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iso3_country_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.DataFrame</span></span></span><a class="headerlink" href="#population.FacebookPopulation.download_population_facebook" title="Link to this definition"></a></dt>
-<dd><p>Download population data from 2020 from facebook for a country defined by the iso3_country_code.</p>
+<dd><p>Download Facebook population data for a specific country.</p>
+<p>This method retrieves population data from Facebook’s High Resolution Population Density Maps via the
+Humanitarian Data Exchange (HDX) platform for a country specified by its ISO3 code.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>iso3_country_code</strong> (<em>str</em>) – The ISO3 country code for which to download population data (e.g., ‘TLS’ for Timor-Leste)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Raw population data from Facebook for the specified country</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>Exception</strong> – If there are issues with the HDX configuration or data download</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The method accesses the Facebook population dataset from the year 2020.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="population.FacebookPopulation.process_population_facebook">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">process_population_facebook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">downloaded_data</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">iso3_country_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.MultiPolygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.DataFrame</span></span></span><a class="headerlink" href="#population.FacebookPopulation.process_population_facebook" title="Link to this definition"></a></dt>
-<dd><p>Create geodataframe, clip with admin area boundaries to keep only those areas inside the admin area boundaries
-and convert back to pandas dataframe</p>
+<dd><p>Process Facebook population data for a specific administrative area.</p>
+<p>This method transforms raw Facebook population data into a filtered dataset that only includes points within the
+specified administrative area boundaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>downloaded_data</strong> (<em>pd.DataFrame</em>) – Raw population data downloaded from Facebook/HDX</p></li>
+<li><p><strong>iso3_country_code</strong> (<em>str</em>) – ISO3 country code used to identify the population column in the data</p></li>
+<li><p><strong>admin_area_boundaries</strong> (<em>Polygon</em><em> or </em><em>MultiPolygon</em>) – The geographical boundaries used to clip the population data</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Processed population data containing only points within the administrative area, with columns:
+- longitude: Longitude coordinate
+- latitude: Latitude coordinate
+- population: Population count (renamed from country-specific column)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
 </dd></dl>
 
 </dd></dl>
@@ -198,38 +287,93 @@ and convert back to pandas dataframe</p>
 <dt class="sig sig-object py" id="population.WorldpopPopulation">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">population.</span></span><span class="sig-name descname"><span class="pre">WorldpopPopulation</span></span><a class="headerlink" href="#population.WorldpopPopulation" title="Link to this definition"></a></dt>
 <dd><p>Bases: <a class="reference internal" href="#population.Population" title="population.Population"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Population</span></code></a></p>
-<p>Abstract base class for Population. Subclasses must implement the method get_population_data()
-If you want to add new data source (e.g. geojson): create new subclass with method get_population_data().</p>
-<dl class="py method">
-<dt class="sig sig-object py" id="population.WorldpopPopulation._get_population_df">
-<span class="sig-name descname"><span class="pre">_get_population_df</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.DataFrame</span></span></span><a class="headerlink" href="#population.WorldpopPopulation._get_population_df" title="Link to this definition"></a></dt>
-<dd><p>Download &amp; process data from the chosen datasource ‘worldpop’. Returns a DataFrame with population data.</p>
-</dd></dl>
-
+<p>Population data from WorldPop global population data.</p>
+<p>This class retrieves and processes population data from the WorldPop project, which provides high-resolution
+population density estimates globally. The data is accessed via the WorldPop REST API.</p>
+<p>The class follows the same initialization pattern as its parent class Population.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="#population.Population" title="population.Population"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Population</span></code></a></dt><dd><p>Parent abstract class</p>
+</dd>
+<dt><a class="reference internal" href="#population.FacebookPopulation" title="population.FacebookPopulation"><code class="xref py py-obj docutils literal notranslate"><span class="pre">FacebookPopulation</span></code></a></dt><dd><p>Alternative population data source implementation</p>
+</dd>
+</dl>
+</div>
 <dl class="py method">
 <dt class="sig sig-object py" id="population.WorldpopPopulation.download_population_worldpop">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">download_population_worldpop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">iso3_country_code</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#population.WorldpopPopulation.download_population_worldpop" title="Link to this definition"></a></dt>
-<dd><p>Download population numbers from worldpop from last year for a country defined by the iso3_country_code.</p>
+<dd><p>Download population data from WorldPop for a specific country.</p>
+<p>This method retrieves population data from the WorldPop REST API for a country specified by its ISO3 code, using
+the most recently available dataset.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>iso3_country_code</strong> (<em>str</em>) – The ISO3 country code for which to download population data (e.g., ‘TLS’ for Timor-Leste)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>File path to the downloaded raster data file</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>requests.exceptions.RequestException</strong> – If there are issues with the WorldPop API request</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="population.WorldpopPopulation.process_population_worldpop">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">process_population_worldpop</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">file_path</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.MultiPolygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.DataFrame</span></span></span><a class="headerlink" href="#population.WorldpopPopulation.process_population_worldpop" title="Link to this definition"></a></dt>
-<dd><p>Processes the downloaded worldpop data raster file into the required format of a dataframe of longitude, latitude
-and statistical population count</p>
-<p>Function takes the bounds of the raster file in the raster_fpath, draws an evenly spaced sequence of points between
-the xmin &amp; xmax, and between ymin &amp; ymax, and then generates a grid to cover the complete square area inside the
-boundaries. The population count for each point in the grid that falls within the given MultiPolygon area
-(identified by the mask) is extracted from the raster file, and a dataframe with latitude, longitude &amp; population
-count for each point in the raster is returned.</p>
+<dd><p>Process WorldPop raster data for a specific administrative area.</p>
+<p>This method converts the downloaded WorldPop raster data into a DataFrame of point-based population values,
+filtered to include only points within the specified administrative area boundaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>file_path</strong> (<em>str</em>) – Path to the downloaded WorldPop raster file</p></li>
+<li><p><strong>admin_area_boundaries</strong> (<em>Polygon</em><em> or </em><em>MultiPolygon</em>) – The geographical boundaries used to filter the population data</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Processed population data containing only points within the administrative area, with columns:
+- longitude: Longitude coordinate
+- latitude: Latitude coordinate
+- population: Population count</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="population.WorldpopPopulation.get_admarea_mask">
 <em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_admarea_mask</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">vector_polygon</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.MultiPolygon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raster_layer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">rasterio.DatasetReader</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">numpy.ndarray</span></span></span><a class="headerlink" href="#population.WorldpopPopulation.get_admarea_mask" title="Link to this definition"></a></dt>
-<dd><p>Extract mask from raster for a given MultiPolygon</p>
-<p>Return a boolean mask for the raster layer which is True where the (multi)polygon is located and false for all
-points outside the given (Multi)Polygon</p>
+<dd><p>Create a boolean mask identifying raster pixels within a vector polygon.</p>
+<p>This method creates a mask that can be used to filter raster data to include only points that fall within a
+specified vector polygon.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>vector_polygon</strong> (<em>Polygon</em><em> or </em><em>MultiPolygon</em>) – The vector geometry used to create the mask</p></li>
+<li><p><strong>raster_layer</strong> (<em>rasterio.DatasetReader</em>) – The open raster dataset to be masked</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A boolean mask with the same dimensions as the raster, where:
+- True: pixel is within the polygon
+- False: pixel is outside the polygon</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>np.ndarray</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>The method uses rasterio’s mask function with the all_touched=True parameter,
+which includes all pixels that are touched by the polygon, not just those
+whose centers are within it. It then creates a boolean mask by checking
+which pixels have values greater than zero.</p>
 </dd></dl>
 
 </dd></dl>
