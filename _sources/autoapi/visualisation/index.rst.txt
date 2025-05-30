@@ -104,6 +104,7 @@ Module Contents
    administrative area boundaries.
 
    :param df_population: DataFrame containing population data. Must have columns:
+
                          - latitude: Latitude coordinate
                          - longitude: Longitude coordinate
                          - population: Population value (intensity for the heatmap)

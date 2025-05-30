@@ -213,10 +213,13 @@ administrative area boundaries.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df_population</strong> (<em>pd.DataFrame</em>) – DataFrame containing population data. Must have columns:
-- latitude: Latitude coordinate
-- longitude: Longitude coordinate
-- population: Population value (intensity for the heatmap)</p></li>
+<li><p><strong>df_population</strong> (<em>pd.DataFrame</em>) – <p>DataFrame containing population data. Must have columns:</p>
+<ul>
+<li><p>latitude: Latitude coordinate</p></li>
+<li><p>longitude: Longitude coordinate</p></li>
+<li><p>population: Population value (intensity for the heatmap)</p></li>
+</ul>
+</p></li>
 <li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
 <li><p><strong>tiles</strong> (<em>str</em><em>, </em><em>optional</em>) – The tile provider for the base map. Any valid Folium tile provider name can be used.
 See folium.Map documentation for available options. (default: “OpenStreetMap”)</p></li>

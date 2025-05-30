@@ -222,15 +222,13 @@ IsopolygonCalculator and implements calculate_isopolygons.</p>
 <dd><p>Calculate isopolygons for the specified facilities.</p>
 <p>This abstract method must be implemented by subclasses to provide the actual implementation of isopolygon
 calculation using specific data sources and algorithms.</p>
-<dl class="simple">
-<dt>Specific implementations should provide detailed error handling and logging appropriate to their data sources and</dt><dd><p>algorithms.</p>
-</dd>
-</dl>
+<p>Specific implementations should provide detailed error handling and logging appropriate to their data sources and
+algorithms.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>DataFrame containing isopolygons with the following structure:
 - Each row represents a facility from facilities_df
-- One column named ‘ID_{distance}’ for each distance value in distance_values, where {distance} is the
+- One column named <code class="docutils literal notranslate"><span class="pre">ID_{distance}</span></code> for each distance value in distance_values, where {distance} is the
 distance value in meters or minutes
 - Each cell contains a Shapely Polygon or MultiPolygon representing the area that can be reached within the
 corresponding distance</p>

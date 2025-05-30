@@ -212,26 +212,27 @@ isopolygon. The index values are used as Cluster_ID in the result.</p></li>
 2. Performs a spatial join to find population points within each isopolygon
 3. Groups results by facility and distance threshold
 4. Returns population indices served by each facility at each distance threshold</p>
-<section id="example-usage">
-<h3>Example usage<a class="headerlink" href="#example-usage" title="Link to this heading"></a></h3>
-<dl class="simple">
-<dt>grouped_population:</dt><dd><p>index   geometry
-p0      POINT (…)
-p1      POINT (…)
-p2      POINT (…)</p>
-</dd>
-<dt>isopolygons:</dt><dd><p>index   ID_10           ID_20
-i0      POLYGON (…)   POLYGON (…)
-i1      POLYGON (…)   POLYGON (…)
-i2      POLYGON (…)   POLYGON (…)</p>
-</dd>
-<dt>get_population_served_by_isopolygons(grouped_population, isopolygons):</dt><dd><p>index   Cluster_ID   ID_10           ID_20
-0      i0          [p0, p1]       [p0, p1]
-1      i1          [p2]           []
-2      i2          []             [p1, p2]</p>
-</dd>
-</dl>
-</section>
+<p class="rubric">Example</p>
+<p>Basic usage with sample data:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">grouped_population</span><span class="p">:</span>
+    <span class="n">index</span>   <span class="n">geometry</span>
+    <span class="n">p0</span>      <span class="n">POINT</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">p1</span>      <span class="n">POINT</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">p2</span>      <span class="n">POINT</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+
+<span class="n">isopolygons</span><span class="p">:</span>
+    <span class="n">index</span>   <span class="n">ID_10</span>           <span class="n">ID_20</span>
+    <span class="n">i0</span>      <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>   <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">i1</span>      <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>   <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">i2</span>      <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>   <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">get_population_served_by_isopolygons</span><span class="p">(</span><span class="n">grouped_population</span><span class="p">,</span> <span class="n">isopolygons</span><span class="p">):</span>
+    <span class="n">index</span>   <span class="n">Cluster_ID</span>   <span class="n">ID_10</span>           <span class="n">ID_20</span>
+    <span class="mi">0</span>      <span class="n">i0</span>          <span class="p">[</span><span class="n">p0</span><span class="p">,</span> <span class="n">p1</span><span class="p">]</span>       <span class="p">[</span><span class="n">p0</span><span class="p">,</span> <span class="n">p1</span><span class="p">]</span>
+    <span class="mi">1</span>      <span class="n">i1</span>          <span class="p">[</span><span class="n">p2</span><span class="p">]</span>           <span class="p">[]</span>
+    <span class="mi">2</span>      <span class="n">i2</span>          <span class="p">[]</span>             <span class="p">[</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>
