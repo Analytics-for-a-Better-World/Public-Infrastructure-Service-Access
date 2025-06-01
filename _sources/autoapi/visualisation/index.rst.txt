@@ -3,58 +3,6 @@ visualisation
 
 .. py:module:: visualisation
 
-.. autoapi-nested-parse::
-
-   Data visualization module for spatial accessibility analysis.
-
-   This module provides functions for creating interactive maps and visualizations of facilities, population data,
-   and isopolygons (service areas). It helps in visualizing spatial relationships between facilities and population,
-   service coverage areas, and optimization scenarios.
-
-   The visualizations use Folium (based on Leaflet.js) to create interactive web maps that can be
-   displayed in notebooks, web applications, or exported as HTML files.
-
-   .. rubric:: Examples
-
-   Create interactive maps for facilities and population:
-
-   >>> from pisa.administrative_area import AdministrativeArea
-   >>> from pisa.facilities import Facilities
-   >>> from pisa.population import WorldpopPopulation
-   >>> from pisa.visualisation import plot_facilities, plot_population
-   >>>
-   >>> # Get administrative area and data
-   >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
-   >>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
-   >>> country_code = admin_area.get_iso3_country_code()
-   >>>
-   >>> # Get facilities data
-   >>> facilities = Facilities(admin_area_boundaries=boundaries)
-   >>> existing_facilities = facilities.get_existing_facilities()
-   >>>
-   >>> # Get population data
-   >>> population = WorldpopPopulation(
-   >>>     admin_area_boundaries=boundaries,
-   >>>     iso3_country_code=country_code
-   >>> )
-   >>> population_gdf = population.get_population_gdf()
-   >>>
-   >>> # Create interactive maps
-   >>> facility_map = plot_facilities(existing_facilities, boundaries)
-   >>> population_map = plot_population(population_gdf, boundaries)
-
-   .. seealso::
-
-      :obj:`facilities`
-          Module for facility data processing
-
-      :obj:`population`
-          Module for population data processing
-
-      :obj:`isopolygons`
-          Module for generating service area polygons
-
-
 
 Functions
 ---------
@@ -66,133 +14,33 @@ Functions
    visualisation.plot_population
    visualisation.plot_isochrones
    visualisation.plot_results
+   visualisation._start_coordinates_from_admin_area
+   visualisation._bounding_box_from_admin_area
 
 
 Module Contents
 ---------------
 
-.. py:function:: plot_facilities(df_facilities: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, df_potential_facilities: pandas.DataFrame | None = None, tiles='OpenStreetMap') -> folium.Map
+.. py:function:: plot_facilities(df_facilities: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, df_potential_facilities: Optional[pandas.DataFrame] = None, tiles='OpenStreetMap') -> folium.Map
 
-   Plot facilities on an interactive map with administrative area boundaries.
-
-   This function creates a Folium map showing existing facilities as blue circle markers, and optionally potential
-   facilities as orange circle markers, within the context of administrative area boundaries.
-
-   :param df_facilities: DataFrame containing information about existing facilities. Must have columns:
-                         - latitude: Latitude coordinate of the facility
-                         - longitude: Longitude coordinate of the facility
-   :type df_facilities: pd.DataFrame
-   :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
-   :type admin_area_boundaries: MultiPolygon or Polygon
-   :param df_potential_facilities: DataFrame containing information about potential facility locations. Must have columns:
-                                   - latitude: Latitude coordinate of the potential facility
-                                   - longitude: Longitude coordinate of the potential facility
-   :type df_potential_facilities: pd.DataFrame, optional
-   :param tiles: The tile provider for the base map. Any valid Folium tile provider name can be used.
-                 See folium.Map documentation for available options. (default: "OpenStreetMap")
-   :type tiles: str, optional
-
-   :returns: Interactive Folium map with administrative boundaries and facility markers
-   :rtype: folium.Map
+   Plot facilities on a map with administrative area boundaries.
 
 
 .. py:function:: plot_population_heatmap(df_population: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, tiles='OpenStreetMap') -> folium.Map
 
-   Create a heatmap visualization of population density.
+.. py:function:: plot_population(df_population: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, random_sample_n: Optional[int] = None, tiles='OpenStreetMap') -> folium.Map
 
-   This function generates an interactive Folium map displaying population density as a heatmap within the specified
-   administrative area boundaries.
-
-   :param df_population: DataFrame containing population data. Must have columns:
-
-                         - latitude: Latitude coordinate
-                         - longitude: Longitude coordinate
-                         - population: Population value (intensity for the heatmap)
-   :type df_population: pd.DataFrame
-   :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
-   :type admin_area_boundaries: MultiPolygon or Polygon
-   :param tiles: The tile provider for the base map. Any valid Folium tile provider name can be used.
-                 See folium.Map documentation for available options. (default: "OpenStreetMap")
-   :type tiles: str, optional
-
-   :returns: Interactive Folium map with population heatmap visualization
-   :rtype: folium.Map
-
-
-.. py:function:: plot_population(df_population: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, random_sample_n: int | None = None, tiles='OpenStreetMap') -> folium.Map
-
-   Plot population points on an interactive map.
-
-   This function creates a Folium map showing population points as circle markers, with size and opacity reflecting the
-   relative population values.
-
-   :param df_population: DataFrame containing population data. Must have columns:
-                         - latitude: Latitude coordinate
-                         - longitude: Longitude coordinate
-                         - population: Population value at that point
-   :type df_population: pd.DataFrame
-   :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
-   :type admin_area_boundaries: MultiPolygon or Polygon
-   :param random_sample_n: Number of population points to randomly sample and display.
-                           If None, all points will be displayed (may be performance-intensive for large datasets) (default: None)
-   :type random_sample_n: int, optional
-   :param tiles: The tile provider for the base map. Any valid Folium tile provider name can be used.
-                 See folium.Map documentation for available options. (default: "OpenStreetMap")
-   :type tiles: str, optional
-
-   :returns: Interactive Folium map with population points displayed
-   :rtype: folium.Map
-
-
-.. py:function:: plot_isochrones(df_isopolygons: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, tiles: str = 'OpenStreetMap') -> folium.Map
-
-   Plot isochrones/isopolygons for multiple facilities on an interactive map.
-
-   This function creates a Folium map displaying isopolygons (areas reachable within specific travel times or distances)
-    around facilities, with different colors for each facility and varying opacity for different time/distance
-   thresholds.
-
-   :param df_isopolygons: DataFrame containing isopolygon geometries. Should have:
-                          - Index representing unique facility identifiers
-                          - Columns named 'ID_X' where X is the distance/time threshold (e.g., 'ID_10' for 10-minute isochrone)
-                          - Each cell contains a Shapely Polygon or MultiPolygon
-   :type df_isopolygons: pd.DataFrame
-   :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
-   :type admin_area_boundaries: MultiPolygon or Polygon
-   :param tiles: The tile provider for the base map. Any valid Folium tile provider name can be used.
-                 See folium.Map documentation for available options. (default: "OpenStreetMap")
-   :type tiles: str, optional
-
-   :returns: Interactive Folium map with isopolygons visualized
-   :rtype: folium.Map
-
+.. py:function:: plot_isochrones(df_isopolygons: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon, tiles='OpenStreetMap')
 
 .. py:function:: plot_results(open_locations: list, current: pandas.DataFrame, total_fac: pandas.DataFrame, admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon) -> folium.Map
 
-   Plot optimization results showing existing and proposed facility locations.
+.. py:function:: _start_coordinates_from_admin_area(admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon) -> list
 
-   This function creates a Folium map displaying the results of a facility location optimization model, showing both
-   existing facilities and proposed new facilities.
+   Identify the start coordinates for the map.
 
-   :param open_locations: List of facility identifiers (matching indices in total_fac) that are selected as part of the optimization
-                          solution (both existing and new)
-   :type open_locations: list
-   :param current: DataFrame containing information about existing facilities, with a column 'Cluster_ID' that identifies each
-                   facility
-   :type current: pd.DataFrame
-   :param total_fac: DataFrame containing information about all potential facility locations (both existing and new). Must have:
-                     - Index matching the identifiers in open_locations
-                     - Columns 'latitude' and 'longitude' for facility coordinates
-   :type total_fac: pd.DataFrame
-   :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
-   :type admin_area_boundaries: MultiPolygon or Polygon
 
-   :returns: Interactive Folium map showing optimization results with markers
-   :rtype: folium.Map
+.. py:function:: _bounding_box_from_admin_area(admin_area_boundaries: shapely.geometry.MultiPolygon | shapely.geometry.Polygon) -> list
 
-   .. rubric:: Notes
-
-   - Existing facilities are shown with blue hospital icons
-   - Proposed new facilities are shown with purple question mark icons
+   Identify the bounding box for the map.
 
 

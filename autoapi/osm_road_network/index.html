@@ -104,43 +104,6 @@
              
   <section id="module-osm_road_network">
 <span id="osm-road-network"></span><h1>osm_road_network<a class="headerlink" href="#module-osm_road_network" title="Link to this heading"></a></h1>
-<p>OpenStreetMap road network data retrieval and processing module.</p>
-<p>This module provides functionality for accessing and processing road network data from OpenStreetMap (OSM)
-for various transportation modes (driving, walking, cycling). It serves as the foundation for service area
-calculations and travel time/distance analyses in the PISA package.</p>
-<p class="rubric">Examples</p>
-<p>Retrieve and process a road network for walking travel time analysis:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.administrative_area</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdministrativeArea</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.osm_road_network</span><span class="w"> </span><span class="kn">import</span> <span class="n">OsmRoadNetwork</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get administrative area boundaries</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">admin_area</span> <span class="o">=</span> <span class="n">AdministrativeArea</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">,</span> <span class="n">admin_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">boundaries</span> <span class="o">=</span> <span class="n">admin_area</span><span class="o">.</span><span class="n">get_admin_area_boundaries</span><span class="p">(</span><span class="s2">&quot;Baucau&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a road network for walking travel time analysis</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">road_network</span> <span class="o">=</span> <span class="n">OsmRoadNetwork</span><span class="p">(</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">admin_area_boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">,</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">mode_of_transport</span><span class="o">=</span><span class="s2">&quot;walking&quot;</span><span class="p">,</span>
-<span class="gp">&gt;&gt;&gt; </span>    <span class="n">distance_type</span><span class="o">=</span><span class="s2">&quot;travel_time&quot;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get the processed network with travel time attributes</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span> <span class="o">=</span> <span class="n">road_network</span><span class="o">.</span><span class="n">get_osm_road_network</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Check some network statistics</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of nodes: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">nodes</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Number of edges: </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">graph</span><span class="o">.</span><span class="n">edges</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<dl class="simple">
-<dt><a class="reference internal" href="../isopolygons/index.html#module-isopolygons" title="isopolygons"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isopolygons</span></code></a></dt><dd><p>Module for calculating service areas using road networks</p>
-</dd>
-<dt><a class="reference internal" href="../administrative_area/index.html#module-administrative_area" title="administrative_area"><code class="xref py py-obj docutils literal notranslate"><span class="pre">administrative_area</span></code></a></dt><dd><p>Module for defining the geographic scope of the road network</p>
-</dd>
-</dl>
-</div>
 <section id="attributes">
 <h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
 <table class="autosummary longtable docutils align-default">
@@ -201,19 +164,25 @@ If not provided, osmnx will do the imputation (recommended).</p></li>
 <dl class="py method">
 <dt class="sig sig-object py" id="osm_road_network.OsmRoadNetwork.get_osm_road_network">
 <span class="sig-name descname"><span class="pre">get_osm_road_network</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">networkx.MultiDiGraph</span></span></span><a class="headerlink" href="#osm_road_network.OsmRoadNetwork.get_osm_road_network" title="Link to this definition"></a></dt>
-<dd><p>Get the processed OpenStreetMap road network for the administrative area.</p>
-<p>This method retrieves the OSM road network for the specified administrative area and processes it according to
-the configured distance type. If the distance type is ‘travel_time’, travel times are added to the network edges.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>NetworkX MultiDiGraph representing the road network with appropriate attributes:
-- If distance_type is ‘length’, the graph has ‘length’ attributes on edges (in meters)
-- If distance_type is ‘travel_time’, the graph has ‘travel_time’ attributes on edges (in minutes)</p>
-</dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>nx.MultiDiGraph</p>
-</dd>
-</dl>
+<dd><p>Returns the processed OSM road network.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="osm_road_network.OsmRoadNetwork._download_osm_road_network">
+<span class="sig-name descname"><span class="pre">_download_osm_road_network</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">networkx.MultiDiGraph</span></span></span><a class="headerlink" href="#osm_road_network.OsmRoadNetwork._download_osm_road_network" title="Link to this definition"></a></dt>
+<dd><p>Download the OSM road network from OpenStreetMap for the specified administrative area.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="osm_road_network.OsmRoadNetwork._set_network_type">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_set_network_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode_of_transport</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#osm_road_network.OsmRoadNetwork._set_network_type" title="Link to this definition"></a></dt>
+<dd><p>Set valid network_type based on valid values for mode_of_transport</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="osm_road_network.OsmRoadNetwork._add_time_to_edges">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_add_time_to_edges</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">road_network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">networkx.MultiDiGraph</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fallback_speed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">networkx.MultiDiGraph</span></span></span><a class="headerlink" href="#osm_road_network.OsmRoadNetwork._add_time_to_edges" title="Link to this definition"></a></dt>
+<dd><p>Add travel time edge attribute and change unit to minutes</p>
 </dd></dl>
 
 </dd></dl>

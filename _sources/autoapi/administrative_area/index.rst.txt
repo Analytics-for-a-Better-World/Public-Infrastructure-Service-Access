@@ -3,42 +3,6 @@ administrative_area
 
 .. py:module:: administrative_area
 
-.. autoapi-nested-parse::
-
-   Administrative boundaries retrieval and management module.
-
-   This module provides functionality to access and work with administrative area boundaries at various levels
-   (countries, provinces, districts, etc.) using the GADM (Global Administrative Areas) database.
-   It enables the retrieval of geographic boundaries for specific administrative areas within countries,
-   which is a fundamental component for spatial analysis in public infrastructure planning.
-
-   .. rubric:: Examples
-
-   Retrieve administrative boundaries for a country and its subdivisions:
-
-   >>> from pisa.administrative_area import AdministrativeArea
-   >>>
-   >>> # Get country-level boundaries
-   >>> country = AdministrativeArea("Timor-Leste", admin_level=0)
-   >>> country_boundary = country.get_admin_area_boundaries("Timor-Leste")
-   >>>
-   >>> # Get province-level boundaries
-   >>> provinces = AdministrativeArea("Timor-Leste", admin_level=1)
-   >>> province_names = provinces.get_admin_area_names()
-   >>> print(f"Provinces in Timor-Leste: {', '.join(province_names)}")
-   >>>
-   >>> # Get boundary for a specific province
-   >>> baucau_boundary = provinces.get_admin_area_boundaries("Baucau")
-
-   .. seealso::
-
-      :obj:`facilities`
-          Module for working with facility locations
-
-      :obj:`population`
-          Module for population data within administrative areas
-
-
 
 Attributes
 ----------
@@ -65,38 +29,19 @@ Module Contents
 
    Get the boundaries of administrative areas for a specified country.
 
-   This class provides functionality to retrieve administrative area boundaries
-   from the GADM (Global Administrative Areas) database for a specified country.
-
    The administrative area level is specified by an integer, where 0 is the country level,
-   1 is the next broadest level (e.g., states or provinces), and so on.
+   1 is the next broadest level (e.g. states or provinces), and so on.
 
-   :param country_name: The name of the country for which to retrieve administrative areas
-   :type country_name: str
-   :param admin_level: The administrative area level to retrieve (0 for country, 1 for first-level divisions, etc.)
-   :type admin_level: int
+   It is possible to get the geometry of a specific administrative area by name.
 
-   .. seealso::
+   Example usage:
 
-      :obj:`Facilities`
-          Class for retrieving facilities within administrative areas
-
-      :obj:`Population`
-          Class for retrieving population data within administrative areas
-
-   .. rubric:: Examples
-
-   >>> # Create an administrative area object for Timor-Leste at province level
-   >>> timor_leste = AdministrativeArea("Timor-Leste", admin_level=1)
-   >>>
-   >>> # Get a list of all administrative areas at this level
-   >>> print(timor_leste.get_admin_area_names())
-   >>>
-   >>> # Get the boundaries for a specific administrative area
-   >>> baucau_boundaries = timor_leste.get_admin_area_boundaries("Baucau")
-   >>>
-   >>> # Get the ISO3 country code for the country
-   >>> timor_leste_country_code = timor_leste.get_iso3_country_code()
+   ```python
+   timor_leste = AdministrativeArea("Timor-Leste", admin_level=1)
+   print(timor_leste.get_admin_area_names())
+   baucau_boundaries = timor_leste.get_admin_area_boundaries("Baucau")
+   timor_leste_country_code = timor_leste.get_iso3_country_code()
+   ```
 
 
    .. py:attribute:: country
@@ -110,36 +55,59 @@ Module Contents
 
 
 
+   .. py:method:: _get_pycountry_from_country_name(country_name: str)
+      :staticmethod:
+
+
+      Validates country name using fuzzy matching and returns pycountry object.
+
+      :param country_name: Name of the country to validate
+
+      :returns: pycountry.db.Country object
+
+      :raises Exception: If country name is invalid or not found
+
+
+
+   .. py:method:: _download_admin_areas(country, admin_level: int) -> geopandas.GeoDataFrame
+      :staticmethod:
+
+
+      Downloads and returns all administrative areas of specified level for a country.
+
+      :param country_name: Name of the country
+      :param admin_level: Administrative area level (0 for country, 1 for first level divisions, etc.)
+
+      :returns: GeoDataFrame containing all administrative areas of the specified level
+
+
+
    .. py:method:: get_admin_area_names() -> list[str]
 
-      Retrieve the names of all administrative areas for the specified level.
+      Retrieves the names of all administrative areas for the specified level.
 
       :returns: List of administrative area names at the specified level.
                 For admin_level=0, returns just the country name.
-      :rtype: list of str
 
 
 
    .. py:method:: get_admin_area_boundaries(admin_area_name: str) -> shapely.Polygon | shapely.MultiPolygon
 
-      Return the boundary geometry for the specified administrative area.
+      Returns the boundary geometry for the specified administrative area.
 
-      :param admin_area_name: Name of the administrative area to retrieve boundaries for.
-                              For admin_level=0, this parameter is ignored and the country boundary is returned.
-      :type admin_area_name: str
+      :param admin_area_name: Name of the administrative area to retrieve boundaries for
 
-      :returns: Geometry representing the administrative area boundaries
-      :rtype: shapely.geometry.Polygon or shapely.geometry.MultiPolygon
+      :returns: Polygon or MultiPolygon representing the administrative area boundaries
 
-      :raises ValueError: If admin_area_name is not found in the available administrative areas
+      :raises Exception: If admin_area_name is not set or not found in the data
 
 
 
    .. py:method:: get_iso3_country_code() -> str
 
-      Retrieve the ISO 3166-1 alpha-3 country code for the country.
+      Retrieve the ISO 3166-1 alpha-3 country code for the country associated with this instance.
 
-      :returns: The ISO 3166-1 alpha-3 country code in lowercase (e.g., 'tls' for Timor-Leste)
+      :returns: The ISO 3166-1 alpha-3 country code in lowercase.
       :rtype: str
 
 

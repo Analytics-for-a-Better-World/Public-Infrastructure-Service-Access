@@ -104,43 +104,6 @@
              
   <section id="module-facilities">
 <span id="facilities"></span><h1>facilities<a class="headerlink" href="#module-facilities" title="Link to this heading"></a></h1>
-<p>Facility data retrieval and management module for accessibility analysis.</p>
-<p>This module provides functionality for retrieving, managing, and analyzing facility location data
-within specified administrative areas. It supports extracting facility data from OpenStreetMap (OSM),
-generating potential facility locations through grid sampling, and preparing data for accessibility
-and optimization analyses.</p>
-<p class="rubric">Examples</p>
-<p>Retrieve existing facilities and generate potential facility locations:</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.administrative_area</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdministrativeArea</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.facilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">Facilities</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get administrative area boundaries</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">admin_area</span> <span class="o">=</span> <span class="n">AdministrativeArea</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">,</span> <span class="n">admin_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">boundaries</span> <span class="o">=</span> <span class="n">admin_area</span><span class="o">.</span><span class="n">get_admin_area_boundaries</span><span class="p">(</span><span class="s2">&quot;Baucau&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a facilities object</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">facilities</span> <span class="o">=</span> <span class="n">Facilities</span><span class="p">(</span><span class="n">admin_area_boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get existing facilities from OpenStreetMap</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">existing</span> <span class="o">=</span> <span class="n">facilities</span><span class="o">.</span><span class="n">get_existing_facilities</span><span class="p">()</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Found </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">existing</span><span class="p">)</span><span class="si">}</span><span class="s2"> existing facilities&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Generate potential facility locations (grid points)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">potential</span> <span class="o">=</span> <span class="n">facilities</span><span class="o">.</span><span class="n">estimate_potential_facilities</span><span class="p">(</span><span class="n">spacing</span><span class="o">=</span><span class="mf">0.05</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Generated </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">potential</span><span class="p">)</span><span class="si">}</span><span class="s2"> potential facility locations&quot;</span><span class="p">)</span>
-</pre></div>
-</div>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<dl class="simple">
-<dt><a class="reference internal" href="../administrative_area/index.html#module-administrative_area" title="administrative_area"><code class="xref py py-obj docutils literal notranslate"><span class="pre">administrative_area</span></code></a></dt><dd><p>Module for retrieving administrative area boundaries</p>
-</dd>
-<dt><a class="reference internal" href="../population/index.html#module-population" title="population"><code class="xref py py-obj docutils literal notranslate"><span class="pre">population</span></code></a></dt><dd><p>Module for population data processing</p>
-</dd>
-<dt><a class="reference internal" href="../isopolygons/index.html#module-isopolygons" title="isopolygons"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isopolygons</span></code></a></dt><dd><p>Module for calculating service areas around facilities</p>
-</dd>
-</dl>
-</div>
 <section id="attributes">
 <h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
 <table class="autosummary longtable docutils align-default">
@@ -156,7 +119,7 @@ and optimization analyses.</p>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#facilities.Facilities" title="facilities.Facilities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">Facilities</span></code></a></p></td>
-<td><p>Retrieve and manage facility location data for a given administrative area.</p></td>
+<td><p>Get existing and potential facility locations for given administrative area</p></td>
 </tr>
 </tbody>
 </table>
@@ -171,44 +134,7 @@ and optimization analyses.</p>
 <dl class="py class">
 <dt class="sig sig-object py" id="facilities.Facilities">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">facilities.</span></span><span class="sig-name descname"><span class="pre">Facilities</span></span><a class="headerlink" href="#facilities.Facilities" title="Link to this definition"></a></dt>
-<dd><p>Retrieve and manage facility location data for a given administrative area.</p>
-<p>This class provides functionality to retrieve existing facilities within a specified administrative area from
-various data sources (currently supporting OpenStreetMap).</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>admin_area_boundaries</strong> (<em>Polygon</em><em> or </em><em>MultiPolygon</em>) – The geographical boundaries of the administrative area for which to retrieve facilities</p></li>
-<li><p><strong>data_src</strong> (<em>str</em><em>, </em><em>optional</em>) – The data source from which to retrieve facility data. Currently supported:
-- “osm”: OpenStreetMap (default: “osm”)</p></li>
-<li><p><strong>osm_tags</strong> (<em>dict</em><em>, </em><em>optional</em>) – Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., {‘amenity’: ‘hospital’}). (default: OSM_TAGS)</p></li>
-</ul>
-</dd>
-</dl>
-<p class="rubric">Notes</p>
-<p>The default OSM_TAGS are defined in the constants module and typically target health facilities. To use
-different facility types, provide custom osm_tags when creating the Facilities object.</p>
-<div class="admonition seealso">
-<p class="admonition-title">See also</p>
-<dl class="simple">
-<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">AdministrativeArea</span></code></dt><dd><p>Class for retrieving administrative area boundaries</p>
-</dd>
-<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">IsopolygonCalculator</span></code></dt><dd><p>Class for calculating service areas around facilities</p>
-</dd>
-</dl>
-</div>
-<p class="rubric">Examples</p>
-<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.administrative_area</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdministrativeArea</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.facilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">Facilities</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get an administrative area for a specific country and region</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">admin_area</span> <span class="o">=</span> <span class="n">AdministrativeArea</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">,</span> <span class="n">admin_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">boundaries</span> <span class="o">=</span> <span class="n">admin_area</span><span class="o">.</span><span class="n">get_admin_area_boundaries</span><span class="p">(</span><span class="s2">&quot;Baucau&quot;</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt;</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get hospital facilities within the administrative area</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">facilities</span> <span class="o">=</span> <span class="n">Facilities</span><span class="p">(</span><span class="n">admin_area_boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">)</span>
-<span class="gp">&gt;&gt;&gt; </span><span class="n">existing_facilities</span> <span class="o">=</span> <span class="n">facilities</span><span class="o">.</span><span class="n">get_existing_facilities</span><span class="p">()</span>
-</pre></div>
-</div>
+<dd><p>Get existing and potential facility locations for given administrative area</p>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="facilities.Facilities.admin_area_boundaries">
 <span class="sig-name descname"><span class="pre">admin_area_boundaries</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">shapely.Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.MultiPolygon</span></em><a class="headerlink" href="#facilities.Facilities.admin_area_boundaries" title="Link to this definition"></a></dt>
@@ -227,55 +153,45 @@ different facility types, provide custom osm_tags when creating the Facilities o
 <dl class="py method">
 <dt class="sig sig-object py" id="facilities.Facilities.get_existing_facilities">
 <span class="sig-name descname"><span class="pre">get_existing_facilities</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.DataFrame</span></span></span><a class="headerlink" href="#facilities.Facilities.get_existing_facilities" title="Link to this definition"></a></dt>
-<dd><p>Retrieve existing facilities from the specified data source.</p>
-<p>This method acts as a dispatcher that calls the appropriate data source-specific method based on the <cite>data_src</cite>
-attribute of the Facilities instance.</p>
+<dd><p>Get facilities from specified data source</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="facilities.Facilities._get_existing_facilities_osm">
+<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_get_existing_facilities_osm</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">osm_tags</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">dict</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.MultiPolygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.DataFrame</span></span></span><a class="headerlink" href="#facilities.Facilities._get_existing_facilities_osm" title="Link to this definition"></a></dt>
+<dd><p>Fetches existing facilities from OpenStreetMap (OSM) within a specified administrative area.
+:param osm_tags: Dictionary of OSM tags to filter facilities (e.g., {‘amenity’: ‘school’})
+:type osm_tags: dict
+:param administrative_area: Geographic area within which to search for facilities, defined as a shapely Polygon</p>
+<blockquote>
+<div><p>or MultiPolygon object</p>
+</div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>DataFrame containing facilities information with columns:
-- osmid (index): Facility identifier (e.g., OSM ID for OpenStreetMap data)
-- longitude: Longitude coordinate of the facility
-- latitude: Latitude coordinate of the facility</p>
+- osmid (index): OSM ID of the facility
+- longitude: Longitude of facility
+- latitude: Latitude of facility</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>pandas.DataFrame</p>
 </dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>NotImplementedError</strong> – If the specified data source is not implemented</p>
-</dd>
 </dl>
-<p class="rubric">Notes</p>
-<p>Currently, only the “osm” (OpenStreetMap) data source is implemented. To support additional data sources,
-implement new methods and update this dispatcher method accordingly, or refactor to use an abstract base class.</p>
 </dd></dl>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="facilities.Facilities.estimate_potential_facilities">
-<span class="sig-name descname"><span class="pre">estimate_potential_facilities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spacing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">geopandas.GeoDataFrame</span></span></span><a class="headerlink" href="#facilities.Facilities.estimate_potential_facilities" title="Link to this definition"></a></dt>
-<dd><p>Create a grid of potential facility locations within the administrative area.</p>
-<p>This method generates a regular grid of points within the administrative area boundaries that can be used as
-potential locations for new facilities in optimization scenarios.</p>
+<span class="sig-name descname"><span class="pre">estimate_potential_facilities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">spacing</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">0.05</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">geopandas.GeoDataFrame</span></span></span><a class="headerlink" href="#facilities.Facilities.estimate_potential_facilities" title="Link to this definition"></a></dt>
+<dd><p>Create grid of potential facility locations</p>
+<p>Create a grid of evenly spaced points within the given GeoDataFrame.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>spacing</strong> (<em>float</em>) – The distance between adjacent points in the grid, in coordinate units (degrees). Smaller values create a
-denser grid with more potential facility locations.</p>
+<dd class="field-odd"><p><strong>spacing</strong> – The distance between the points in coordinate units.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>DataFrame containing potential facility locations with columns:
-- ID (index): Unique identifier for each potential facility location
-- longitude: Longitude coordinate of the potential facility
-- latitude: Latitude coordinate of the potential facility</p>
-</dd>
-<dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>geopandas.GeoDataFrame</p>
+<dd class="field-even"><p>GeoDataFrame containing potential facility locations</p>
 </dd>
 </dl>
-<p class="rubric">Notes</p>
-<p>The grid is created by:
-1. Finding the bounding box of the administrative area
-2. Creating a regular grid covering the entire bounding box
-3. Clipping the grid to include only points within the actual administrative area boundaries</p>
-<p>The resulting grid points are spaced at regular intervals determined by the spacing parameter.</p>
 </dd></dl>
 
 </dd></dl>
