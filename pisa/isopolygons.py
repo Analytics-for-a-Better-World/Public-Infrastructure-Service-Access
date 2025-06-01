@@ -58,7 +58,9 @@ class IsopolygonCalculator(ABC):
             "longitude" not in facilities_df.columns
             or "latitude" not in facilities_df.columns
         ):
-            raise ValueError("facilities_df must have columns 'longitude' and 'latitude'")
+            raise ValueError(
+                "facilities_df must have columns 'longitude' and 'latitude'"
+            )
 
         if len(facilities_df) == 0:
             raise ValueError("facilities_df must have at least one row")
@@ -192,7 +194,9 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
                         new_isopolygon
                     )
 
-                except AttributeError:  # Probably trying to catch 'MultiPolygon' object has no attribute 'exterior' from _inflate_skeleton, but it wasn't specified in the code before
+                except (
+                    AttributeError
+                ):  # Probably trying to catch 'MultiPolygon' object has no attribute 'exterior' from _inflate_skeleton, but it wasn't specified in the code before
                     logger.info(
                         f"problem with node {road_node} belonging to facility {facility_id}"
                     )  # stops execution
@@ -305,7 +309,7 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         distance_type: str,
         distance_values: list[int],
         road_network: MultiDiGraph,
-        buffer: float = 50,  # in meters
+        buffer: float = 100,  # in meters
     ):
         super().__init__(facilities_df, distance_type, distance_values)
         self.road_network = road_network
@@ -432,7 +436,9 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
         super().__init__(facilities_df, distance_type, distance_values)
 
-        self.distance_values = self._validate_mapbox_distance_values(self.distance_values)
+        self.distance_values = self._validate_mapbox_distance_values(
+            self.distance_values
+        )
 
         self.base_url = base_url
 
