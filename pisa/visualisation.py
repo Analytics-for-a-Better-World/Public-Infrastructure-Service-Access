@@ -246,7 +246,7 @@ def plot_isochrones(
     """Plot isochrones/isopolygons for multiple facilities on an interactive map.
     
     This function creates a Folium map displaying isopolygons (areas reachable within specific travel times or distances)
-     around facilities, with different colors for each facility and varying opacity for different time/distance 
+    around facilities, with different colors for each facility and varying opacity for different time/distance 
     thresholds.
     
     Parameters
