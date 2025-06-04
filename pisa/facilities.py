@@ -35,6 +35,7 @@ isopolygons : Module for calculating service areas around facilities
 """
 
 import logging
+import warnings
 from dataclasses import dataclass, field
 
 import geopandas as gpd
@@ -46,6 +47,15 @@ from pandas import DataFrame
 from shapely import MultiPolygon, Polygon
 
 from pisa.constants import OSM_TAGS
+
+# Suppress user warning about geometry in geographic CRS. Centroid is calculated
+# over a single facility (e.g. a hospital), so distances are very small and
+# projection isn't necessary
+warnings.filterwarnings(
+    "ignore",
+    message="Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect",
+    category=UserWarning,
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -93,9 +103,7 @@ class Facilities:
     """
     admin_area_boundaries: Polygon | MultiPolygon
     data_src: str = "osm"
-    osm_tags: dict = field(
-        default_factory=lambda: OSM_TAGS
-    )
+    osm_tags: dict = field(default_factory=lambda: OSM_TAGS)
 
     def get_existing_facilities(self) -> DataFrame:
         """Retrieve existing facilities from the specified data source.
@@ -166,7 +174,7 @@ class Facilities:
             facilities_gdf = gpd.GeoDataFrame(
                 pd.DataFrame(columns=["id", "element", "amenity", "geometry"]),
                 geometry=[],
-                crs="EPSG:4326"
+                crs="EPSG:4326",
             )
 
         # from the geometry column create longitude and latitude columns,
@@ -187,7 +195,7 @@ class Facilities:
             ["longitude", "latitude"]
         ]
 
-    def estimate_potential_facilities(self, spacing: float) -> gpd.GeoDataFrame:
+    def estimate_potential_facilities(self, spacing: float = 0.05) -> gpd.GeoDataFrame:
         """Create a grid of potential facility locations within the administrative area.
         
         This method generates a regular grid of points within the administrative area boundaries that can be used as 
