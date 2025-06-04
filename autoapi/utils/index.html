@@ -107,6 +107,17 @@
              
   <section id="module-utils">
 <span id="utils"></span><h1>utils<a class="headerlink" href="#module-utils" title="Link to this heading"></a></h1>
+<p>Utility functions and helpers for the PISA package.</p>
+<p>This module contains utility functions that are used throughout the PISA package, including
+validation functions, caching mechanisms, and other helper functions that support the core
+functionality of the package.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="../constants/index.html#module-constants" title="constants"><code class="xref py py-obj docutils literal notranslate"><span class="pre">constants</span></code></a></dt><dd><p>Module containing constants used by these utility functions</p>
+</dd>
+</dl>
+</div>
 <section id="attributes">
 <h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
 <table class="autosummary longtable docutils align-default">
@@ -121,17 +132,17 @@
 <h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
 <table class="autosummary longtable docutils align-default">
 <tbody>
-<tr class="row-odd"><td><p><a class="reference internal" href="#utils.disk_cache" title="utils.disk_cache"><code class="xref py py-obj docutils literal notranslate"><span class="pre">disk_cache</span></code></a>([cache_dir])</p></td>
-<td><p>A decorator that implements disk-based caching for function results.</p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#utils.disk_cache" title="utils.disk_cache"><code class="xref py py-obj docutils literal notranslate"><span class="pre">disk_cache</span></code></a>(→ Callable)</p></td>
+<td><p>Implement disk-based caching for function results.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#utils.validate_distance_type" title="utils.validate_distance_type"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_distance_type</span></code></a>(→ str)</p></td>
-<td><p></p></td>
+<td><p>Validate and normalize distance type input.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#utils.validate_mode_of_transport" title="utils.validate_mode_of_transport"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_mode_of_transport</span></code></a>(→ str)</p></td>
-<td><p></p></td>
+<td><p>Validate and normalize mode of transport input.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#utils.validate_fallback_speed" title="utils.validate_fallback_speed"><code class="xref py py-obj docutils literal notranslate"><span class="pre">validate_fallback_speed</span></code></a>(→ int | float | None)</p></td>
-<td><p>If no custom fallback speed is provided, return None. Else, validate that the</p></td>
+<td><p>Validate that a fallback speed is within reasonable bounds for the given transport mode.</p></td>
 </tr>
 </tbody>
 </table>
@@ -145,27 +156,28 @@
 
 <dl class="py function">
 <dt class="sig sig-object py" id="utils.disk_cache">
-<span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">disk_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'cache'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#utils.disk_cache" title="Link to this definition"></a></dt>
-<dd><p>A decorator that implements disk-based caching for function results.
-This decorator saves the result of a function call to a file on disk and loads it
-on subsequent calls with the same arguments, avoiding redundant computations.
-:param cache_dir: Directory where cache files will be stored. Defaults to “cache”.
-:type cache_dir: str, optional</p>
+<span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">disk_cache</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">cache_dir</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'cache'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Callable</span></span></span><a class="headerlink" href="#utils.disk_cache" title="Link to this definition"></a></dt>
+<dd><p>Implement disk-based caching for function results.</p>
+<p>This decorator saves the result of a function call to a file on disk and loads it
+on subsequent calls with the same arguments, avoiding redundant computations.</p>
 <dl class="field-list simple">
-<dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>A decorated function that implements caching behavior.</p>
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>cache_dir</strong> (<em>str</em><em>, </em><em>optional</em>) – Directory where cache files will be stored. (default: “cache”)</p>
 </dd>
-<dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>callable</p>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A decorated function that implements caching behavior</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>callable</p>
 </dd>
 </dl>
 <p class="rubric">Example</p>
-<p>&#64;disk_cache()
-def expensive_computation(x):</p>
-<blockquote>
-<div><p># Some time-consuming calculation
-return x ** 2</p>
-</div></blockquote>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="nd">@disk_cache</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="k">def</span><span class="w"> </span><span class="nf">expensive_computation</span><span class="p">(</span><span class="n">x</span><span class="p">):</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="c1"># Some time-consuming calculation</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="k">return</span> <span class="n">x</span> <span class="o">**</span> <span class="mi">2</span>
+</pre></div>
+</div>
 <p class="rubric">Notes</p>
 <ul class="simple">
 <li><p>Cache files are stored as pickle files</p></li>
@@ -187,18 +199,92 @@ return x ** 2</p>
 <dl class="py function">
 <dt class="sig sig-object py" id="utils.validate_distance_type">
 <span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">validate_distance_type</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">distance_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#utils.validate_distance_type" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Validate and normalize distance type input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>distance_type</strong> (<em>str</em>) – The distance type to validate (“length” or “travel_time”)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Normalized distance type (lowercase, stripped of whitespace)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If distance_type is not one of the valid types defined in VALID_DISTANCE_TYPES</p>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">VALID_DISTANCE_TYPES</span></code></dt><dd><p>Set of valid distance types</p>
+</dd>
+</dl>
+</div>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="utils.validate_mode_of_transport">
 <span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">validate_mode_of_transport</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">mode_of_transport</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#utils.validate_mode_of_transport" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Validate and normalize mode of transport input.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>mode_of_transport</strong> (<em>str</em>) – The mode of transport to validate (e.g., “driving”, “walking”, “cycling”)</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Normalized mode of transport (lowercase, stripped of whitespace)</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If mode_of_transport is not one of the valid modes defined in VALID_MODES_OF_TRANSPORT</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This function normalizes the input by converting to lowercase and removing
+leading/trailing whitespace before validation.</p>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">VALID_MODES_OF_TRANSPORT</span></code></dt><dd><p>Set of valid transport modes</p>
+</dd>
+</dl>
+</div>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="utils.validate_fallback_speed">
 <span class="sig-prename descclassname"><span class="pre">utils.</span></span><span class="sig-name descname"><span class="pre">validate_fallback_speed</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fallback_speed</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">network_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span></span><a class="headerlink" href="#utils.validate_fallback_speed" title="Link to this definition"></a></dt>
-<dd><p>If no custom fallback speed is provided, return None. Else, validate that the
-user-provided fallback speed is within reasonable bounds for the given mode of transport.</p>
+<dd><p>Validate that a fallback speed is within reasonable bounds for the given transport mode.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>fallback_speed</strong> (<em>int</em><em>, </em><em>float</em><em>, or </em><em>None</em>) – The fallback speed to validate, in kilometers per hour.
+If None, no validation is performed.</p></li>
+<li><p><strong>network_type</strong> (<em>str</em>) – The network type/mode of transport (“drive”, “walk”, “bike”)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The validated fallback speed or None if no fallback speed was provided</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int, float, or None</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – If fallback_speed is not a number</p></li>
+<li><p><strong>ValueError</strong> – If fallback_speed is not positive</p></li>
+<li><p><strong>ValueError</strong> – If fallback_speed exceeds reasonable bounds for the given mode of transport:
+- For walking: speed must be &lt;= 7 km/h
+- For cycling: speed must be &lt;= 25 km/h
+- For driving: speed must be &lt;= 130 km/h</p></li>
+</ul>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<p>This function is used to ensure that fallback speeds (used when OSM data doesn’t
+provide speed information) are within reasonable bounds for the mode of transport.</p>
 </dd></dl>
 
 </section>

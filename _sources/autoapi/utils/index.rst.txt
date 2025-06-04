@@ -3,6 +3,20 @@ utils
 
 .. py:module:: utils
 
+.. autoapi-nested-parse::
+
+   Utility functions and helpers for the PISA package.
+
+   This module contains utility functions that are used throughout the PISA package, including
+   validation functions, caching mechanisms, and other helper functions that support the core
+   functionality of the package.
+
+   .. seealso::
+
+      :obj:`constants`
+          Module containing constants used by these utility functions
+
+
 
 Attributes
 ----------
@@ -28,23 +42,25 @@ Module Contents
 
 .. py:data:: logger
 
-.. py:function:: disk_cache(cache_dir='cache')
+.. py:function:: disk_cache(cache_dir: str = 'cache') -> Callable
 
-   A decorator that implements disk-based caching for function results.
+   Implement disk-based caching for function results.
+
    This decorator saves the result of a function call to a file on disk and loads it
    on subsequent calls with the same arguments, avoiding redundant computations.
-   :param cache_dir: Directory where cache files will be stored. Defaults to "cache".
+
+   :param cache_dir: Directory where cache files will be stored. (default: "cache")
    :type cache_dir: str, optional
 
-   :returns: A decorated function that implements caching behavior.
+   :returns: A decorated function that implements caching behavior
    :rtype: callable
 
    .. rubric:: Example
 
-   @disk_cache()
-   def expensive_computation(x):
-       # Some time-consuming calculation
-       return x ** 2
+   >>> @disk_cache()
+   >>> def expensive_computation(x):
+   >>>     # Some time-consuming calculation
+   >>>     return x ** 2
 
    .. rubric:: Notes
 
@@ -60,11 +76,68 @@ Module Contents
 
 .. py:function:: validate_distance_type(distance_type: str) -> str
 
+   Validate and normalize distance type input.
+
+   :param distance_type: The distance type to validate ("length" or "travel_time")
+   :type distance_type: str
+
+   :returns: Normalized distance type (lowercase, stripped of whitespace)
+   :rtype: str
+
+   :raises ValueError: If distance_type is not one of the valid types defined in VALID_DISTANCE_TYPES
+
+   .. seealso::
+
+      :obj:`VALID_DISTANCE_TYPES`
+          Set of valid distance types
+
+
 .. py:function:: validate_mode_of_transport(mode_of_transport: str) -> str
+
+   Validate and normalize mode of transport input.
+
+   :param mode_of_transport: The mode of transport to validate (e.g., "driving", "walking", "cycling")
+   :type mode_of_transport: str
+
+   :returns: Normalized mode of transport (lowercase, stripped of whitespace)
+   :rtype: str
+
+   :raises ValueError: If mode_of_transport is not one of the valid modes defined in VALID_MODES_OF_TRANSPORT
+
+   .. rubric:: Notes
+
+   This function normalizes the input by converting to lowercase and removing
+   leading/trailing whitespace before validation.
+
+   .. seealso::
+
+      :obj:`VALID_MODES_OF_TRANSPORT`
+          Set of valid transport modes
+
 
 .. py:function:: validate_fallback_speed(fallback_speed: int | float | None, network_type: str) -> int | float | None
 
-   If no custom fallback speed is provided, return None. Else, validate that the
-   user-provided fallback speed is within reasonable bounds for the given mode of transport.
+   Validate that a fallback speed is within reasonable bounds for the given transport mode.
+
+   :param fallback_speed: The fallback speed to validate, in kilometers per hour.
+                          If None, no validation is performed.
+   :type fallback_speed: int, float, or None
+   :param network_type: The network type/mode of transport ("drive", "walk", "bike")
+   :type network_type: str
+
+   :returns: The validated fallback speed or None if no fallback speed was provided
+   :rtype: int, float, or None
+
+   :raises ValueError: If fallback_speed is not a number
+   :raises ValueError: If fallback_speed is not positive
+   :raises ValueError: If fallback_speed exceeds reasonable bounds for the given mode of transport:
+       - For walking: speed must be <= 7 km/h
+       - For cycling: speed must be <= 25 km/h
+       - For driving: speed must be <= 130 km/h
+
+   .. rubric:: Notes
+
+   This function is used to ensure that fallback speeds (used when OSM data doesn't
+   provide speed information) are within reasonable bounds for the mode of transport.
 
 

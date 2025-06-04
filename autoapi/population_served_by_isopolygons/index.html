@@ -101,6 +101,64 @@
              
   <section id="module-population_served_by_isopolygons">
 <span id="population-served-by-isopolygons"></span><h1>population_served_by_isopolygons<a class="headerlink" href="#module-population_served_by_isopolygons" title="Link to this heading"></a></h1>
+<p>Compute population coverage by facility service areas (isopolygons).</p>
+<p>This module provides functions to determine which population points are covered by service areas
+(isopolygons) around facilities at different distance thresholds. It helps answer questions such as
+“How many people can reach a facility within X minutes?” or “Which populations are served by which
+facilities at different distance thresholds?”</p>
+<p class="rubric">Examples</p>
+<p>Retrieve population coverage for example points and polygons:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">shapely.geometry</span><span class="w"> </span><span class="kn">import</span> <span class="n">Point</span><span class="p">,</span> <span class="n">Polygon</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">geopandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">gpd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">import</span><span class="w"> </span><span class="nn">pandas</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">pd</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.population_served_by_isopolygons</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_population_served_by_isopolygons</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get administrative area and facilities</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">admin_area</span> <span class="o">=</span> <span class="n">AdministrativeArea</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">,</span> <span class="n">admin_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">boundaries</span> <span class="o">=</span> <span class="n">admin_area</span><span class="o">.</span><span class="n">get_admin_area_boundaries</span><span class="p">(</span><span class="s2">&quot;Baucau&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get grouped population</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">population</span> <span class="o">=</span> <span class="n">WorldpopPopulation</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">admin_area_boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">iso3_country_code</span><span class="o">=</span><span class="n">country_code</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">grouped_population</span> <span class="o">=</span> <span class="n">population</span><span class="o">.</span><span class="n">get_population_gdf</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">facilities</span> <span class="o">=</span> <span class="n">Facilities</span><span class="p">(</span><span class="n">admin_area_boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">existing_facilities</span> <span class="o">=</span> <span class="n">facilities</span><span class="o">.</span><span class="n">get_existing_facilities</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create a road network for travel time calculations</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">road_network</span> <span class="o">=</span> <span class="n">OsmRoadNetwork</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">admin_area_boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">mode_of_transport</span><span class="o">=</span><span class="s2">&quot;walking&quot;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">distance_type</span><span class="o">=</span><span class="s2">&quot;travel_time&quot;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">graph</span> <span class="o">=</span> <span class="n">road_network</span><span class="o">.</span><span class="n">get_osm_road_network</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Calculate isochrones (5, 10, 15 minutes walking)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">isopolygon_calculator</span> <span class="o">=</span> <span class="n">OsmIsopolygonCalculator</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">facilities_df</span><span class="o">=</span><span class="n">existing_facilities</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">distance_type</span><span class="o">=</span><span class="s2">&quot;travel_time&quot;</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">distance_values</span><span class="o">=</span><span class="p">[</span><span class="mi">5</span><span class="p">,</span> <span class="mi">10</span><span class="p">,</span> <span class="mi">15</span><span class="p">],</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">road_network</span><span class="o">=</span><span class="n">graph</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">isopolygons</span> <span class="o">=</span> <span class="n">isopolygon_calculator</span><span class="o">.</span><span class="n">calculate_isopolygons</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Find which population points are served by each isopolygon</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">result</span> <span class="o">=</span> <span class="n">get_population_served_by_isopolygons</span><span class="p">(</span><span class="n">grouped_population</span><span class="p">,</span> <span class="n">isopolygons</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="../isopolygons/index.html#module-isopolygons" title="isopolygons"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isopolygons</span></code></a></dt><dd><p>Module for generating service area polygons</p>
+</dd>
+<dt><a class="reference internal" href="../facilities/index.html#module-facilities" title="facilities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">facilities</span></code></a></dt><dd><p>Module for facility location and clustering</p>
+</dd>
+<dt><a class="reference internal" href="#population_served_by_isopolygons.get_population_served_by_isopolygons" title="population_served_by_isopolygons.get_population_served_by_isopolygons"><code class="xref py py-obj docutils literal notranslate"><span class="pre">get_population_served_by_isopolygons</span></code></a></dt><dd><p>Main function for population coverage analysis</p>
+</dd>
+</dl>
+</div>
 <section id="functions">
 <h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
 <table class="autosummary longtable docutils align-default">
@@ -125,39 +183,56 @@ are contained within the corresponding service area.</p>
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>grouped_population</strong> (<em>gpd.GeoDataFrame</em>) – GeoDataFrame containing population points with geometry column.
-The index values are used as identifiers in the result.</p></li>
+The index values are used as identifiers in the result.
+Must include a valid geometry column with point geometries.</p></li>
 <li><p><strong>isopolygons</strong> (<em>pd.DataFrame</em>) – DataFrame where each column starting with ‘<a href="#id1"><span class="problematic" id="id2">ID_</span></a>’ contains Shapely Polygon objects
 representing service areas at different distances. Each row represents a facility
 isopolygon. The index values are used as Cluster_ID in the result.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><ul>
-<li><p><em>pd.DataFrame</em> – DataFrame with columns:
+<dd class="field-even"><p><p>DataFrame with columns:
 - Cluster_ID: The index from the isopolygons input
 - One column for each ‘<a href="#id3"><span class="problematic" id="id4">ID_</span></a>’ column in isopolygons, containing lists of</p>
 <blockquote>
 <div><p>population indices that fall within the corresponding polygon</p>
 </div></blockquote>
-</li>
-<li><p><em>Example usage</em></p></li>
-<li><p><em>————–</em></p></li>
-<li><p><em>grouped_population</em> – index   geometry
-p0      POINT (…)
-p1      POINT (…)
-p2      POINT (…)</p></li>
-<li><p><em>isopolygons</em> – index   ID_10           ID_20
-i0      POLYGON (…)   POLYGON (…)
-i1      POLYGON (…)   POLYGON (…)
-i2      POLYGON (…)   POLYGON (…)</p></li>
-<li><p><em>get_population_served_by_isopolygons(grouped_population, isopolygons)</em> – index   Cluster_ID   ID_10           ID_20
-0      i0          [p0, p1]       [p0, p1]
-1      i1          [p2]           []
-2      i2          []             [p1, p2]</p></li>
-</ul>
 </p>
 </dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>pd.DataFrame</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If either input DataFrame is empty</p>
+</dd>
 </dl>
+<p class="rubric">Notes</p>
+<p>This function:
+1. Ensures both inputs have proper CRS (Coordinate Reference System)
+2. Performs a spatial join to find population points within each isopolygon
+3. Groups results by facility and distance threshold
+4. Returns population indices served by each facility at each distance threshold</p>
+<p class="rubric">Example</p>
+<p>Basic usage with sample data:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">grouped_population</span><span class="p">:</span>
+    <span class="n">index</span>   <span class="n">geometry</span>
+    <span class="n">p0</span>      <span class="n">POINT</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">p1</span>      <span class="n">POINT</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">p2</span>      <span class="n">POINT</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+
+<span class="n">isopolygons</span><span class="p">:</span>
+    <span class="n">index</span>   <span class="n">ID_10</span>           <span class="n">ID_20</span>
+    <span class="n">i0</span>      <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>   <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">i1</span>      <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>   <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+    <span class="n">i2</span>      <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>   <span class="n">POLYGON</span> <span class="p">(</span><span class="o">...</span><span class="p">)</span>
+
+<span class="n">result</span> <span class="o">=</span> <span class="n">get_population_served_by_isopolygons</span><span class="p">(</span><span class="n">grouped_population</span><span class="p">,</span> <span class="n">isopolygons</span><span class="p">):</span>
+    <span class="n">index</span>   <span class="n">Cluster_ID</span>   <span class="n">ID_10</span>           <span class="n">ID_20</span>
+    <span class="mi">0</span>      <span class="n">i0</span>          <span class="p">[</span><span class="n">p0</span><span class="p">,</span> <span class="n">p1</span><span class="p">]</span>       <span class="p">[</span><span class="n">p0</span><span class="p">,</span> <span class="n">p1</span><span class="p">]</span>
+    <span class="mi">1</span>      <span class="n">i1</span>          <span class="p">[</span><span class="n">p2</span><span class="p">]</span>           <span class="p">[]</span>
+    <span class="mi">2</span>      <span class="n">i2</span>          <span class="p">[]</span>             <span class="p">[</span><span class="n">p1</span><span class="p">,</span> <span class="n">p2</span><span class="p">]</span>
+</pre></div>
+</div>
 </dd></dl>
 
 </section>

@@ -104,6 +104,37 @@
              
   <section id="module-administrative_area">
 <span id="administrative-area"></span><h1>administrative_area<a class="headerlink" href="#module-administrative_area" title="Link to this heading"></a></h1>
+<p>Administrative boundaries retrieval and management module.</p>
+<p>This module provides functionality to access and work with administrative area boundaries at various levels
+(countries, provinces, districts, etc.) using the GADM (Global Administrative Areas) database.
+It enables the retrieval of geographic boundaries for specific administrative areas within countries,
+which is a fundamental component for spatial analysis in public infrastructure planning.</p>
+<p class="rubric">Examples</p>
+<p>Retrieve administrative boundaries for a country and its subdivisions:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.administrative_area</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdministrativeArea</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get country-level boundaries</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">country</span> <span class="o">=</span> <span class="n">AdministrativeArea</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">,</span> <span class="n">admin_level</span><span class="o">=</span><span class="mi">0</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">country_boundary</span> <span class="o">=</span> <span class="n">country</span><span class="o">.</span><span class="n">get_admin_area_boundaries</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get province-level boundaries</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">provinces</span> <span class="o">=</span> <span class="n">AdministrativeArea</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">,</span> <span class="n">admin_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">province_names</span> <span class="o">=</span> <span class="n">provinces</span><span class="o">.</span><span class="n">get_admin_area_names</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">&quot;Provinces in Timor-Leste: </span><span class="si">{</span><span class="s1">&#39;, &#39;</span><span class="o">.</span><span class="n">join</span><span class="p">(</span><span class="n">province_names</span><span class="p">)</span><span class="si">}</span><span class="s2">&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get boundary for a specific province</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">baucau_boundary</span> <span class="o">=</span> <span class="n">provinces</span><span class="o">.</span><span class="n">get_admin_area_boundaries</span><span class="p">(</span><span class="s2">&quot;Baucau&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="../facilities/index.html#module-facilities" title="facilities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">facilities</span></code></a></dt><dd><p>Module for working with facility locations</p>
+</dd>
+<dt><a class="reference internal" href="../population/index.html#module-population" title="population"><code class="xref py py-obj docutils literal notranslate"><span class="pre">population</span></code></a></dt><dd><p>Module for population data within administrative areas</p>
+</dd>
+</dl>
+</div>
 <section id="attributes">
 <h2>Attributes<a class="headerlink" href="#attributes" title="Link to this heading"></a></h2>
 <table class="autosummary longtable docutils align-default">
@@ -135,16 +166,41 @@
 <dt class="sig sig-object py" id="administrative_area.AdministrativeArea">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">administrative_area.</span></span><span class="sig-name descname"><span class="pre">AdministrativeArea</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#administrative_area.AdministrativeArea" title="Link to this definition"></a></dt>
 <dd><p>Get the boundaries of administrative areas for a specified country.</p>
+<p>This class provides functionality to retrieve administrative area boundaries
+from the GADM (Global Administrative Areas) database for a specified country.</p>
 <p>The administrative area level is specified by an integer, where 0 is the country level,
-1 is the next broadest level (e.g. states or provinces), and so on.</p>
-<p>It is possible to get the geometry of a specific administrative area by name.</p>
-<p>Example usage:</p>
-<p><code class="docutils literal notranslate"><span class="pre">`python</span>
-<span class="pre">timor_leste</span> <span class="pre">=</span> <span class="pre">AdministrativeArea(&quot;Timor-Leste&quot;,</span> <span class="pre">admin_level=1)</span>
-<span class="pre">print(timor_leste.get_admin_area_names())</span>
-<span class="pre">baucau_boundaries</span> <span class="pre">=</span> <span class="pre">timor_leste.get_admin_area_boundaries(&quot;Baucau&quot;)</span>
-<span class="pre">timor_leste_country_code</span> <span class="pre">=</span> <span class="pre">timor_leste.get_iso3_country_code()</span>
-<span class="pre">`</span></code></p>
+1 is the next broadest level (e.g., states or provinces), and so on.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>country_name</strong> (<em>str</em>) – The name of the country for which to retrieve administrative areas</p></li>
+<li><p><strong>admin_level</strong> (<em>int</em>) – The administrative area level to retrieve (0 for country, 1 for first-level divisions, etc.)</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">Facilities</span></code></dt><dd><p>Class for retrieving facilities within administrative areas</p>
+</dd>
+<dt><code class="xref py py-obj docutils literal notranslate"><span class="pre">Population</span></code></dt><dd><p>Class for retrieving population data within administrative areas</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">Examples</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create an administrative area object for Timor-Leste at province level</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">timor_leste</span> <span class="o">=</span> <span class="n">AdministrativeArea</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">,</span> <span class="n">admin_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get a list of all administrative areas at this level</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="nb">print</span><span class="p">(</span><span class="n">timor_leste</span><span class="o">.</span><span class="n">get_admin_area_names</span><span class="p">())</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get the boundaries for a specific administrative area</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">baucau_boundaries</span> <span class="o">=</span> <span class="n">timor_leste</span><span class="o">.</span><span class="n">get_admin_area_boundaries</span><span class="p">(</span><span class="s2">&quot;Baucau&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get the ISO3 country code for the country</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">timor_leste_country_code</span> <span class="o">=</span> <span class="n">timor_leste</span><span class="o">.</span><span class="n">get_iso3_country_code</span><span class="p">()</span>
+</pre></div>
+</div>
 <dl class="py attribute">
 <dt class="sig sig-object py" id="administrative_area.AdministrativeArea.country">
 <span class="sig-name descname"><span class="pre">country</span></span><a class="headerlink" href="#administrative_area.AdministrativeArea.country" title="Link to this definition"></a></dt>
@@ -161,47 +217,16 @@
 <dd></dd></dl>
 
 <dl class="py method">
-<dt class="sig sig-object py" id="administrative_area.AdministrativeArea._get_pycountry_from_country_name">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_get_pycountry_from_country_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#administrative_area.AdministrativeArea._get_pycountry_from_country_name" title="Link to this definition"></a></dt>
-<dd><p>Validates country name using fuzzy matching and returns pycountry object.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>country_name</strong> – Name of the country to validate</p>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>pycountry.db.Country object</p>
-</dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Exception</strong> – If country name is invalid or not found</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
-<dt class="sig sig-object py" id="administrative_area.AdministrativeArea._download_admin_areas">
-<em class="property"><span class="pre">static</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">_download_admin_areas</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">country</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_level</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">geopandas.GeoDataFrame</span></span></span><a class="headerlink" href="#administrative_area.AdministrativeArea._download_admin_areas" title="Link to this definition"></a></dt>
-<dd><p>Downloads and returns all administrative areas of specified level for a country.</p>
-<dl class="field-list simple">
-<dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><ul class="simple">
-<li><p><strong>country_name</strong> – Name of the country</p></li>
-<li><p><strong>admin_level</strong> – Administrative area level (0 for country, 1 for first level divisions, etc.)</p></li>
-</ul>
-</dd>
-<dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>GeoDataFrame containing all administrative areas of the specified level</p>
-</dd>
-</dl>
-</dd></dl>
-
-<dl class="py method">
 <dt class="sig sig-object py" id="administrative_area.AdministrativeArea.get_admin_area_names">
 <span class="sig-name descname"><span class="pre">get_admin_area_names</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">]</span></span></span></span><a class="headerlink" href="#administrative_area.AdministrativeArea.get_admin_area_names" title="Link to this definition"></a></dt>
-<dd><p>Retrieves the names of all administrative areas for the specified level.</p>
+<dd><p>Retrieve the names of all administrative areas for the specified level.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>List of administrative area names at the specified level.
 For admin_level=0, returns just the country name.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>list of str</p>
 </dd>
 </dl>
 </dd></dl>
@@ -209,16 +234,20 @@ For admin_level=0, returns just the country name.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="administrative_area.AdministrativeArea.get_admin_area_boundaries">
 <span class="sig-name descname"><span class="pre">get_admin_area_boundaries</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">admin_area_name</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">shapely.Polygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.MultiPolygon</span></span></span><a class="headerlink" href="#administrative_area.AdministrativeArea.get_admin_area_boundaries" title="Link to this definition"></a></dt>
-<dd><p>Returns the boundary geometry for the specified administrative area.</p>
+<dd><p>Return the boundary geometry for the specified administrative area.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>admin_area_name</strong> – Name of the administrative area to retrieve boundaries for</p>
+<dd class="field-odd"><p><strong>admin_area_name</strong> (<em>str</em>) – Name of the administrative area to retrieve boundaries for.
+For admin_level=0, this parameter is ignored and the country boundary is returned.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Polygon or MultiPolygon representing the administrative area boundaries</p>
+<dd class="field-even"><p>Geometry representing the administrative area boundaries</p>
 </dd>
-<dt class="field-odd">Raises<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>Exception</strong> – If admin_area_name is not set or not found in the data</p>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>shapely.geometry.Polygon or shapely.geometry.MultiPolygon</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – If admin_area_name is not found in the available administrative areas</p>
 </dd>
 </dl>
 </dd></dl>
@@ -226,10 +255,10 @@ For admin_level=0, returns just the country name.</p>
 <dl class="py method">
 <dt class="sig sig-object py" id="administrative_area.AdministrativeArea.get_iso3_country_code">
 <span class="sig-name descname"><span class="pre">get_iso3_country_code</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">str</span></span></span><a class="headerlink" href="#administrative_area.AdministrativeArea.get_iso3_country_code" title="Link to this definition"></a></dt>
-<dd><p>Retrieve the ISO 3166-1 alpha-3 country code for the country associated with this instance.</p>
+<dd><p>Retrieve the ISO 3166-1 alpha-3 country code for the country.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>The ISO 3166-1 alpha-3 country code in lowercase.</p>
+<dd class="field-odd"><p>The ISO 3166-1 alpha-3 country code in lowercase (e.g., ‘tls’ for Timor-Leste)</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>str</p>

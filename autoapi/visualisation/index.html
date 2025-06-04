@@ -68,8 +68,6 @@
 <li class="toctree-l4"><a class="reference internal" href="#visualisation.plot_population"><code class="docutils literal notranslate"><span class="pre">plot_population()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#visualisation.plot_isochrones"><code class="docutils literal notranslate"><span class="pre">plot_isochrones()</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#visualisation.plot_results"><code class="docutils literal notranslate"><span class="pre">plot_results()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#visualisation._start_coordinates_from_admin_area"><code class="docutils literal notranslate"><span class="pre">_start_coordinates_from_admin_area()</span></code></a></li>
-<li class="toctree-l4"><a class="reference internal" href="#visualisation._bounding_box_from_admin_area"><code class="docutils literal notranslate"><span class="pre">_bounding_box_from_admin_area()</span></code></a></li>
 </ul>
 </li>
 </ul>
@@ -108,30 +106,69 @@
              
   <section id="module-visualisation">
 <span id="visualisation"></span><h1>visualisation<a class="headerlink" href="#module-visualisation" title="Link to this heading"></a></h1>
+<p>Data visualization module for spatial accessibility analysis.</p>
+<p>This module provides functions for creating interactive maps and visualizations of facilities, population data,
+and isopolygons (service areas). It helps in visualizing spatial relationships between facilities and population,
+service coverage areas, and optimization scenarios.</p>
+<p>The visualizations use Folium (based on Leaflet.js) to create interactive web maps that can be
+displayed in notebooks, web applications, or exported as HTML files.</p>
+<p class="rubric">Examples</p>
+<p>Create interactive maps for facilities and population:</p>
+<div class="doctest highlight-default notranslate"><div class="highlight"><pre><span></span><span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.administrative_area</span><span class="w"> </span><span class="kn">import</span> <span class="n">AdministrativeArea</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.facilities</span><span class="w"> </span><span class="kn">import</span> <span class="n">Facilities</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.population</span><span class="w"> </span><span class="kn">import</span> <span class="n">WorldpopPopulation</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="kn">from</span><span class="w"> </span><span class="nn">pisa.visualisation</span><span class="w"> </span><span class="kn">import</span> <span class="n">plot_facilities</span><span class="p">,</span> <span class="n">plot_population</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get administrative area and data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">admin_area</span> <span class="o">=</span> <span class="n">AdministrativeArea</span><span class="p">(</span><span class="s2">&quot;Timor-Leste&quot;</span><span class="p">,</span> <span class="n">admin_level</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">boundaries</span> <span class="o">=</span> <span class="n">admin_area</span><span class="o">.</span><span class="n">get_admin_area_boundaries</span><span class="p">(</span><span class="s2">&quot;Baucau&quot;</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">country_code</span> <span class="o">=</span> <span class="n">admin_area</span><span class="o">.</span><span class="n">get_iso3_country_code</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get facilities data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">facilities</span> <span class="o">=</span> <span class="n">Facilities</span><span class="p">(</span><span class="n">admin_area_boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">existing_facilities</span> <span class="o">=</span> <span class="n">facilities</span><span class="o">.</span><span class="n">get_existing_facilities</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Get population data</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">population</span> <span class="o">=</span> <span class="n">WorldpopPopulation</span><span class="p">(</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">admin_area_boundaries</span><span class="o">=</span><span class="n">boundaries</span><span class="p">,</span>
+<span class="gp">&gt;&gt;&gt; </span>    <span class="n">iso3_country_code</span><span class="o">=</span><span class="n">country_code</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">population_gdf</span> <span class="o">=</span> <span class="n">population</span><span class="o">.</span><span class="n">get_population_gdf</span><span class="p">()</span>
+<span class="gp">&gt;&gt;&gt;</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="c1"># Create interactive maps</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">facility_map</span> <span class="o">=</span> <span class="n">plot_facilities</span><span class="p">(</span><span class="n">existing_facilities</span><span class="p">,</span> <span class="n">boundaries</span><span class="p">)</span>
+<span class="gp">&gt;&gt;&gt; </span><span class="n">population_map</span> <span class="o">=</span> <span class="n">plot_population</span><span class="p">(</span><span class="n">population_gdf</span><span class="p">,</span> <span class="n">boundaries</span><span class="p">)</span>
+</pre></div>
+</div>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="../facilities/index.html#module-facilities" title="facilities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">facilities</span></code></a></dt><dd><p>Module for facility data processing</p>
+</dd>
+<dt><a class="reference internal" href="../population/index.html#module-population" title="population"><code class="xref py py-obj docutils literal notranslate"><span class="pre">population</span></code></a></dt><dd><p>Module for population data processing</p>
+</dd>
+<dt><a class="reference internal" href="../isopolygons/index.html#module-isopolygons" title="isopolygons"><code class="xref py py-obj docutils literal notranslate"><span class="pre">isopolygons</span></code></a></dt><dd><p>Module for generating service area polygons</p>
+</dd>
+</dl>
+</div>
 <section id="functions">
 <h2>Functions<a class="headerlink" href="#functions" title="Link to this heading"></a></h2>
 <table class="autosummary longtable docutils align-default">
 <tbody>
 <tr class="row-odd"><td><p><a class="reference internal" href="#visualisation.plot_facilities" title="visualisation.plot_facilities"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_facilities</span></code></a>(→ folium.Map)</p></td>
-<td><p>Plot facilities on a map with administrative area boundaries.</p></td>
+<td><p>Plot facilities on an interactive map with administrative area boundaries.</p></td>
 </tr>
 <tr class="row-even"><td><p><a class="reference internal" href="#visualisation.plot_population_heatmap" title="visualisation.plot_population_heatmap"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_population_heatmap</span></code></a>(→ folium.Map)</p></td>
-<td><p></p></td>
+<td><p>Create a heatmap visualization of population density.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#visualisation.plot_population" title="visualisation.plot_population"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_population</span></code></a>(→ folium.Map)</p></td>
-<td><p></p></td>
+<td><p>Plot population points on an interactive map.</p></td>
 </tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#visualisation.plot_isochrones" title="visualisation.plot_isochrones"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_isochrones</span></code></a>(df_isopolygons, admin_area_boundaries)</p></td>
-<td><p></p></td>
+<tr class="row-even"><td><p><a class="reference internal" href="#visualisation.plot_isochrones" title="visualisation.plot_isochrones"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_isochrones</span></code></a>(→ folium.Map)</p></td>
+<td><p>Plot isochrones/isopolygons for multiple facilities on an interactive map.</p></td>
 </tr>
 <tr class="row-odd"><td><p><a class="reference internal" href="#visualisation.plot_results" title="visualisation.plot_results"><code class="xref py py-obj docutils literal notranslate"><span class="pre">plot_results</span></code></a>(→ folium.Map)</p></td>
-<td><p></p></td>
-</tr>
-<tr class="row-even"><td><p><a class="reference internal" href="#visualisation._start_coordinates_from_admin_area" title="visualisation._start_coordinates_from_admin_area"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_start_coordinates_from_admin_area</span></code></a>(→ list)</p></td>
-<td><p>Identify the start coordinates for the map.</p></td>
-</tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#visualisation._bounding_box_from_admin_area" title="visualisation._bounding_box_from_admin_area"><code class="xref py py-obj docutils literal notranslate"><span class="pre">_bounding_box_from_admin_area</span></code></a>(→ list)</p></td>
-<td><p>Identify the bounding box for the map.</p></td>
+<td><p>Plot optimization results showing existing and proposed facility locations.</p></td>
 </tr>
 </tbody>
 </table>
@@ -141,39 +178,150 @@
 <dl class="py function">
 <dt class="sig sig-object py" id="visualisation.plot_facilities">
 <span class="sig-prename descclassname"><span class="pre">visualisation.</span></span><span class="sig-name descname"><span class="pre">plot_facilities</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_facilities</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.geometry.Polygon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">df_potential_facilities</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tiles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'OpenStreetMap'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">folium.Map</span></span></span><a class="headerlink" href="#visualisation.plot_facilities" title="Link to this definition"></a></dt>
-<dd><p>Plot facilities on a map with administrative area boundaries.</p>
+<dd><p>Plot facilities on an interactive map with administrative area boundaries.</p>
+<p>This function creates a Folium map showing existing facilities as blue circle markers, and optionally potential
+facilities as orange circle markers, within the context of administrative area boundaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df_facilities</strong> (<em>pd.DataFrame</em>) – DataFrame containing information about existing facilities. Must have columns:
+- latitude: Latitude coordinate of the facility
+- longitude: Longitude coordinate of the facility</p></li>
+<li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
+<li><p><strong>df_potential_facilities</strong> (<em>pd.DataFrame</em><em>, </em><em>optional</em>) – DataFrame containing information about potential facility locations. Must have columns:
+- latitude: Latitude coordinate of the potential facility
+- longitude: Longitude coordinate of the potential facility</p></li>
+<li><p><strong>tiles</strong> (<em>str</em><em>, </em><em>optional</em>) – The tile provider for the base map. Any valid Folium tile provider name can be used.
+See folium.Map documentation for available options. (default: “OpenStreetMap”)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Interactive Folium map with administrative boundaries and facility markers</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>folium.Map</p>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="visualisation.plot_population_heatmap">
 <span class="sig-prename descclassname"><span class="pre">visualisation.</span></span><span class="sig-name descname"><span class="pre">plot_population_heatmap</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_population</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.geometry.Polygon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tiles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'OpenStreetMap'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">folium.Map</span></span></span><a class="headerlink" href="#visualisation.plot_population_heatmap" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Create a heatmap visualization of population density.</p>
+<p>This function generates an interactive Folium map displaying population density as a heatmap within the specified
+administrative area boundaries.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df_population</strong> (<em>pd.DataFrame</em>) – <p>DataFrame containing population data. Must have columns:</p>
+<ul>
+<li><p>latitude: Latitude coordinate</p></li>
+<li><p>longitude: Longitude coordinate</p></li>
+<li><p>population: Population value (intensity for the heatmap)</p></li>
+</ul>
+</p></li>
+<li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
+<li><p><strong>tiles</strong> (<em>str</em><em>, </em><em>optional</em>) – The tile provider for the base map. Any valid Folium tile provider name can be used.
+See folium.Map documentation for available options. (default: “OpenStreetMap”)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Interactive Folium map with population heatmap visualization</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>folium.Map</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="visualisation.plot_population">
 <span class="sig-prename descclassname"><span class="pre">visualisation.</span></span><span class="sig-name descname"><span class="pre">plot_population</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_population</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.geometry.Polygon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">random_sample_n</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tiles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'OpenStreetMap'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">folium.Map</span></span></span><a class="headerlink" href="#visualisation.plot_population" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<dd><p>Plot population points on an interactive map.</p>
+<p>This function creates a Folium map showing population points as circle markers, with size and opacity reflecting the
+relative population values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df_population</strong> (<em>pd.DataFrame</em>) – DataFrame containing population data. Must have columns:
+- latitude: Latitude coordinate
+- longitude: Longitude coordinate
+- population: Population value at that point</p></li>
+<li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
+<li><p><strong>random_sample_n</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of population points to randomly sample and display.
+If None, all points will be displayed (may be performance-intensive for large datasets) (default: None)</p></li>
+<li><p><strong>tiles</strong> (<em>str</em><em>, </em><em>optional</em>) – The tile provider for the base map. Any valid Folium tile provider name can be used.
+See folium.Map documentation for available options. (default: “OpenStreetMap”)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Interactive Folium map with population points displayed</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>folium.Map</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="visualisation.plot_isochrones">
-<span class="sig-prename descclassname"><span class="pre">visualisation.</span></span><span class="sig-name descname"><span class="pre">plot_isochrones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_isopolygons</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.geometry.Polygon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tiles</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'OpenStreetMap'</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#visualisation.plot_isochrones" title="Link to this definition"></a></dt>
-<dd></dd></dl>
+<span class="sig-prename descclassname"><span class="pre">visualisation.</span></span><span class="sig-name descname"><span class="pre">plot_isochrones</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df_isopolygons</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.geometry.Polygon</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">tiles</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">'OpenStreetMap'</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">folium.Map</span></span></span><a class="headerlink" href="#visualisation.plot_isochrones" title="Link to this definition"></a></dt>
+<dd><p>Plot isochrones/isopolygons for multiple facilities on an interactive map.</p>
+<p>This function creates a Folium map displaying isopolygons (areas reachable within specific travel times or distances)
+around facilities, with different colors for each facility and varying opacity for different time/distance
+thresholds.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>df_isopolygons</strong> (<em>pd.DataFrame</em>) – DataFrame containing isopolygon geometries. Should have:
+- Index representing unique facility identifiers
+- Columns named ‘ID_X’ where X is the distance/time threshold (e.g., ‘ID_10’ for 10-minute isochrone)
+- Each cell contains a Shapely Polygon or MultiPolygon</p></li>
+<li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
+<li><p><strong>tiles</strong> (<em>str</em><em>, </em><em>optional</em>) – The tile provider for the base map. Any valid Folium tile provider name can be used.
+See folium.Map documentation for available options. (default: “OpenStreetMap”)</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Interactive Folium map with isopolygons visualized</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>folium.Map</p>
+</dd>
+</dl>
+</dd></dl>
 
 <dl class="py function">
 <dt class="sig sig-object py" id="visualisation.plot_results">
 <span class="sig-prename descclassname"><span class="pre">visualisation.</span></span><span class="sig-name descname"><span class="pre">plot_results</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">open_locations</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">current</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">total_fac</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.geometry.Polygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">folium.Map</span></span></span><a class="headerlink" href="#visualisation.plot_results" title="Link to this definition"></a></dt>
-<dd></dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="visualisation._start_coordinates_from_admin_area">
-<span class="sig-prename descclassname"><span class="pre">visualisation.</span></span><span class="sig-name descname"><span class="pre">_start_coordinates_from_admin_area</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.geometry.Polygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#visualisation._start_coordinates_from_admin_area" title="Link to this definition"></a></dt>
-<dd><p>Identify the start coordinates for the map.</p>
-</dd></dl>
-
-<dl class="py function">
-<dt class="sig sig-object py" id="visualisation._bounding_box_from_admin_area">
-<span class="sig-prename descclassname"><span class="pre">visualisation.</span></span><span class="sig-name descname"><span class="pre">_bounding_box_from_admin_area</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">admin_area_boundaries</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">shapely.geometry.MultiPolygon</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">shapely.geometry.Polygon</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">list</span></span></span><a class="headerlink" href="#visualisation._bounding_box_from_admin_area" title="Link to this definition"></a></dt>
-<dd><p>Identify the bounding box for the map.</p>
+<dd><p>Plot optimization results showing existing and proposed facility locations.</p>
+<p>This function creates a Folium map displaying the results of a facility location optimization model, showing both
+existing facilities and proposed new facilities.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>open_locations</strong> (<em>list</em>) – List of facility identifiers (matching indices in total_fac) that are selected as part of the optimization
+solution (both existing and new)</p></li>
+<li><p><strong>current</strong> (<em>pd.DataFrame</em>) – DataFrame containing information about existing facilities, with a column ‘Cluster_ID’ that identifies each
+facility</p></li>
+<li><p><strong>total_fac</strong> (<em>pd.DataFrame</em>) – DataFrame containing information about all potential facility locations (both existing and new). Must have:
+- Index matching the identifiers in open_locations
+- Columns ‘latitude’ and ‘longitude’ for facility coordinates</p></li>
+<li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Interactive Folium map showing optimization results with markers</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>folium.Map</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Existing facilities are shown with blue hospital icons</p></li>
+<li><p>Proposed new facilities are shown with purple question mark icons</p></li>
+</ul>
 </dd></dl>
 
 </section>
