@@ -1,3 +1,59 @@
+"""Compute population coverage by facility service areas (isopolygons).
+
+This module provides functions to determine which population points are covered by service areas
+(isopolygons) around facilities at different distance thresholds. It helps answer questions such as
+"How many people can reach a facility within X minutes?" or "Which populations are served by which
+facilities at different distance thresholds?"
+
+Examples
+--------
+Retrieve population coverage for example points and polygons::
+
+>>> from shapely.geometry import Point, Polygon
+>>> import geopandas as gpd
+>>> import pandas as pd
+>>> from pisa.population_served_by_isopolygons import get_population_served_by_isopolygons
+>>>
+>>> # Get administrative area and facilities
+>>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
+>>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
+>>>
+>>> # Get grouped population
+>>> population = WorldpopPopulation(
+>>>     admin_area_boundaries=boundaries,
+>>>     iso3_country_code=country_code
+>>> )
+>>> grouped_population = population.get_population_gdf()
+>>>
+>>> facilities = Facilities(admin_area_boundaries=boundaries)
+>>> existing_facilities = facilities.get_existing_facilities()
+>>> 
+>>> # Create a road network for travel time calculations
+>>> road_network = OsmRoadNetwork(
+>>>     admin_area_boundaries=boundaries,
+>>>     mode_of_transport="walking",
+>>>     distance_type="travel_time"
+>>> )
+>>> graph = road_network.get_osm_road_network()
+>>> 
+>>> # Calculate isochrones (5, 10, 15 minutes walking)
+>>> isopolygon_calculator = OsmIsopolygonCalculator(
+>>>     facilities_df=existing_facilities,
+>>>     distance_type="travel_time",
+>>>     distance_values=[5, 10, 15],
+>>>     road_network=graph
+>>> )
+>>> isopolygons = isopolygon_calculator.calculate_isopolygons()
+>>>
+>>> # Find which population points are served by each isopolygon
+>>> result = get_population_served_by_isopolygons(grouped_population, isopolygons)
+
+See Also
+--------
+isopolygons : Module for generating service area polygons
+facilities : Module for facility location and clustering
+get_population_served_by_isopolygons : Main function for population coverage analysis
+"""
 import geopandas as gpd
 import pandas as pd
 
@@ -18,6 +74,7 @@ def get_population_served_by_isopolygons(
     grouped_population : gpd.GeoDataFrame
         GeoDataFrame containing population points with geometry column.
         The index values are used as identifiers in the result.
+        Must include a valid geometry column with point geometries.
     isopolygons : pd.DataFrame
         DataFrame where each column starting with 'ID_' contains Shapely Polygon objects
         representing service areas at different distances. Each row represents a facility
@@ -30,26 +87,41 @@ def get_population_served_by_isopolygons(
         - Cluster_ID: The index from the isopolygons input
         - One column for each 'ID_' column in isopolygons, containing lists of
           population indices that fall within the corresponding polygon
+    
+    Raises
+    ------
+    ValueError
+        If either input DataFrame is empty
 
-    Example usage
-    --------------
-    grouped_population:
-        index   geometry
-        p0      POINT (...)
-        p1      POINT (...)
-        p2      POINT (...)
+    Notes
+    -----
+    This function:
+    1. Ensures both inputs have proper CRS (Coordinate Reference System)
+    2. Performs a spatial join to find population points within each isopolygon
+    3. Groups results by facility and distance threshold
+    4. Returns population indices served by each facility at each distance threshold
 
-    isopolygons:
-        index   ID_10           ID_20
-        i0      POLYGON (...)   POLYGON (...)
-        i1      POLYGON (...)   POLYGON (...)
-        i2      POLYGON (...)   POLYGON (...)
+    Example
+    --------
+    Basic usage with sample data::
 
-    get_population_served_by_isopolygons(grouped_population, isopolygons):
-        index   Cluster_ID   ID_10           ID_20
-        0      i0          [p0, p1]       [p0, p1]
-        1      i1          [p2]           []
-        2      i2          []             [p1, p2]
+        grouped_population:
+            index   geometry
+            p0      POINT (...)
+            p1      POINT (...)
+            p2      POINT (...)
+
+        isopolygons:
+            index   ID_10           ID_20
+            i0      POLYGON (...)   POLYGON (...)
+            i1      POLYGON (...)   POLYGON (...)
+            i2      POLYGON (...)   POLYGON (...)
+
+        result = get_population_served_by_isopolygons(grouped_population, isopolygons):
+            index   Cluster_ID   ID_10           ID_20
+            0      i0          [p0, p1]       [p0, p1]
+            1      i1          [p2]           []
+            2      i2          []             [p1, p2]
     """
     crs = "EPSG:4326"
 
@@ -98,8 +170,25 @@ def get_population_served_by_isopolygons(
     )
 
     # Clean up lists: replace [nan] and nan with [] and convert float lists to int lists
-    def sanitize_lists(x):
-        """Convert list of floats to list of ints, or return empty list if NaN."""
+    def sanitize_lists(x: list | float | int) -> list:
+        """Convert list of floats to list of integers, or handle NaN values.
+        
+        Parameters
+        ----------
+        x : list, float or int
+            Input data that may be a list of population indices (as floats) or a scalar value
+            
+        Returns
+        -------
+        list
+            If input is a list without NaN values: list of integers
+            If input is a list with NaN values or is a scalar: empty list
+            
+        Notes
+        -----
+        This helper function ensures consistent types and handles edge cases in the 
+        population indices from the spatial join operation.
+        """
         if isinstance(x, list):
             return [] if pd.isna(x).any() else [int(i) for i in x]
         else:
