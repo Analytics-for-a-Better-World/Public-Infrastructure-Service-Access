@@ -65,22 +65,24 @@ def plot_facilities(
     
     Parameters
     ----------
-    df_facilities : pd.DataFrame
+    df_facilities : pandas.DataFrame
         DataFrame containing information about existing facilities. Must have columns:
-        - latitude: Latitude coordinate of the facility
-        - longitude: Longitude coordinate of the facility
+
+            - ``latitude``: Latitude coordinate of the facility
+            - ``longitude``: Longitude coordinate of the facility
     
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
         
-    df_potential_facilities : pd.DataFrame, optional
+    df_potential_facilities : pandas.DataFrame, optional
         DataFrame containing information about potential facility locations. Must have columns:
-        - latitude: Latitude coordinate of the potential facility
-        - longitude: Longitude coordinate of the potential facility
+
+            - ``latitude``: Latitude coordinate of the potential facility
+            - ``longitude``: Longitude coordinate of the potential facility
         
     tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
-        See folium.Map documentation for available options. (default: "OpenStreetMap")
+        See folium.Map documentation for available options. (default: ``OpenStreetMap``)
         
     Returns
     -------
@@ -143,17 +145,17 @@ def plot_population_heatmap(
     
     Parameters
     ----------
-    df_population : pd.DataFrame
+    df_population : pandas.DataFrame
         DataFrame containing population data. Must have columns:
         
-        - latitude: Latitude coordinate
-        - longitude: Longitude coordinate  
-        - population: Population value (intensity for the heatmap)
+            - ``latitude``: Latitude coordinate
+            - ``longitude``: Longitude coordinate
+            - ``population``: Population value (intensity for the heatmap)
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
     tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
-        See folium.Map documentation for available options. (default: "OpenStreetMap")
+        See folium.Map documentation for available options. (default: ``OpenStreetMap``)
         
     Returns
     -------
@@ -192,22 +194,23 @@ def plot_population(
     
     Parameters
     ----------
-    df_population : pd.DataFrame
+    df_population : pandas.DataFrame
         DataFrame containing population data. Must have columns:
-        - latitude: Latitude coordinate
-        - longitude: Longitude coordinate
-        - population: Population value at that point
+
+            - ``latitude``: Latitude coordinate
+            - ``longitude``: Longitude coordinate
+            - ``population``: Population value at that point
     
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
         
     random_sample_n : int, optional
         Number of population points to randomly sample and display.
-        If None, all points will be displayed (may be performance-intensive for large datasets) (default: None)
+        If None, all points will be displayed (can be performance-intensive for large datasets) (default: ``None``)
         
     tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
-        See folium.Map documentation for available options. (default: "OpenStreetMap")
+        See folium.Map documentation for available options. (default: ``OpenStreetMap``)
         
     Returns
     -------
@@ -251,18 +254,19 @@ def plot_isochrones(
     
     Parameters
     ----------
-    df_isopolygons : pd.DataFrame
+    df_isopolygons : pandas.DataFrame
         DataFrame containing isopolygon geometries. Should have:
-        - Index representing unique facility identifiers
-        - Columns named 'ID_X' where X is the distance/time threshold (e.g., 'ID_10' for 10-minute isochrone)
-        - Each cell contains a Shapely Polygon or MultiPolygon
+
+            - Index representing unique facility identifiers
+            - Columns named ``ID_X`` where X is the distance/time threshold (e.g., ``ID_10`` for 10-minute isochrone)
+            - Each cell contains a Shapely Polygon or MultiPolygon
     
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
         
     tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
-        See folium.Map documentation for available options. (default: "OpenStreetMap")
+        See folium.Map documentation for available options. (default: ``OpenStreetMap``)
         
     Returns
     -------
@@ -330,14 +334,15 @@ def plot_results(
         List of facility identifiers (matching indices in total_fac) that are selected as part of the optimization 
         solution (both existing and new)
     
-    current : pd.DataFrame
-        DataFrame containing information about existing facilities, with a column 'Cluster_ID' that identifies each 
+    current : pandas.DataFrame
+        DataFrame containing information about existing facilities, with a column ``Cluster_ID`` that identifies each
         facility
         
-    total_fac : pd.DataFrame
-        DataFrame containing information about all potential facility locations (both existing and new). Must have:
-        - Index matching the identifiers in open_locations
-        - Columns 'latitude' and 'longitude' for facility coordinates
+    total_fac : pandas.DataFrame
+        DataFrame containing information about all facility locations (both existing and potential). Must have:
+
+            - Index matching the identifiers in open_locations
+            - Columns ``latitude`` and ``longitude`` for facility coordinates
         
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area

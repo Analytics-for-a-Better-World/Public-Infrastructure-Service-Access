@@ -54,7 +54,7 @@ class AdministrativeArea:
     country_name : str
         The name of the country for which to retrieve administrative areas
     admin_level : int
-        The administrative area level to retrieve (0 for country, 1 for first-level divisions, etc.)
+        The administrative area level to retrieve (``0`` for country, ``1`` for first-level divisions, etc.)
         
     See Also
     --------
@@ -206,6 +206,6 @@ class AdministrativeArea:
         Returns
         -------
         str
-            The ISO 3166-1 alpha-3 country code in lowercase (e.g., 'tls' for Timor-Leste)
+            The ISO 3166-1 alpha-3 country code in lowercase (e.g., ``tls`` for Timor-Leste)
         """
         return self.country.alpha_3.lower()

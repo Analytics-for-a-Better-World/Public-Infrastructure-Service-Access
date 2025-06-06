@@ -30,7 +30,7 @@ def disk_cache(cache_dir: str = "cache") -> Callable:
     Parameters
     ----------
     cache_dir : str, optional
-        Directory where cache files will be stored. (default: "cache")
+        Directory where cache files will be stored. (default: ``cache``)
     
     Returns
     -------
@@ -103,7 +103,7 @@ def validate_distance_type(distance_type: str) -> str:
     Parameters
     ----------
     distance_type : str
-        The distance type to validate ("length" or "travel_time")
+        The distance type to validate (``length`` or ``travel_time``)
         
     Returns
     -------
@@ -132,7 +132,7 @@ def validate_mode_of_transport(mode_of_transport: str) -> str:
     Parameters
     ----------
     mode_of_transport : str
-        The mode of transport to validate (e.g., "driving", "walking", "cycling")
+        The mode of transport to validate (e.g., ``driving``, ``walking``, ``cycling``)
         
     Returns
     -------
@@ -171,7 +171,7 @@ def validate_fallback_speed(
         The fallback speed to validate, in kilometers per hour.
         If None, no validation is performed.
     network_type : str
-        The network type/mode of transport ("drive", "walk", "bike")
+        The network type/mode of transport (``drive``, ``walk``, ``bike``)
         
     Returns
     -------
@@ -181,14 +181,13 @@ def validate_fallback_speed(
     Raises
     ------
     ValueError
-        If fallback_speed is not a number
-    ValueError
-        If fallback_speed is not positive
-    ValueError
-        If fallback_speed exceeds reasonable bounds for the given mode of transport:
-        - For walking: speed must be <= 7 km/h
-        - For cycling: speed must be <= 25 km/h
-        - For driving: speed must be <= 130 km/h
+        - If fallback_speed is not a number
+        - If fallback_speed is not positive
+        - If fallback_speed exceeds reasonable bounds for the given mode of transport:
+
+            - For walking: speed must be <= 7 km/h
+            - For cycling: speed must be <= 25 km/h
+            - For driving: speed must be <= 130 km/h
         
     Notes
     -----

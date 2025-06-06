@@ -62,10 +62,10 @@ class Population(ABC):
     admin_area_boundaries : Polygon or MultiPolygon
         The geographical boundaries of the administrative area for which to retrieve population data
     iso3_country_code : str
-        The ISO3 country code for the administrative area (e.g., 'TLS' for Timor-Leste)
+        The ISO3 country code for the administrative area (e.g., ``TLS`` for Timor-Leste)
     population_resolution : int, optional
         The decimal precision to which latitude and longitude coordinates are rounded for aggregation purposes 
-        (default: 5)
+        (default: ``5``)
     """
 
     admin_area_boundaries: Polygon | MultiPolygon
@@ -74,20 +74,22 @@ class Population(ABC):
 
     def get_population_gdf(self) -> GeoDataFrame:
         """Get aggregated population data for the administrative area as a GeoDataFrame.
-        
+
         This method integrates the population data retrieval workflow by:
-        1. Retrieving raw population data using the specific implementation of the get_population_data() method
-        2. Aggregating the population data based on the specified resolution
+
+            1. Retrieving raw population data using the specific implementation of the get_population_data() method
+            2. Aggregating the population data based on the specified resolution
         
         Returns
         -------
-        GeoDataFrame
+        geopandas.GeoDataFrame
             Aggregated population data with columns:
-            - longitude: Rounded longitude coordinate
-            - latitude: Rounded latitude coordinate
-            - population: Total population at the coordinate
-            - geometry: Point geometry representing the coordinate
-            - ID: Unique identifier for each point
+
+                - ``longitude``: Rounded longitude coordinate
+                - ``latitude``: Rounded latitude coordinate
+                - ``population``: Total population at the coordinate
+                - ``geometry``: Point geometry representing the coordinate
+                - ``ID``: Unique identifier for each point
         """
         population_df = self._get_population_df()
         return self._group_population(population_df, self.population_resolution)
@@ -104,7 +106,7 @@ class Population(ABC):
         
         Parameters
         ----------
-        population_df : pd.DataFrame
+        population_df : pandas.DataFrame
             DataFrame containing population data with at least the columns:
             - longitude: Longitude coordinate
             - latitude: Latitude coordinate
@@ -115,7 +117,7 @@ class Population(ABC):
             
         Returns
         -------
-        GeoDataFrame
+        geopandas.GeoDataFrame
             Aggregated population data with columns:
             - longitude: Rounded longitude coordinate
             - latitude: Rounded latitude coordinate
@@ -155,7 +157,7 @@ class Population(ABC):
         
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             DataFrame containing population data with columns:
             - longitude: Longitude coordinate
             - latitude: Latitude coordinate
@@ -191,7 +193,7 @@ class FacebookPopulation(Population):
         
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             DataFrame with population data containing columns:
             - longitude: Longitude coordinate
             - latitude: Latitude coordinate
@@ -219,11 +221,11 @@ class FacebookPopulation(Population):
         Parameters
         ----------
         iso3_country_code : str
-            The ISO3 country code for which to download population data (e.g., 'TLS' for Timor-Leste)
+            The ISO3 country code for which to download population data (e.g., ``TLS`` for Timor-Leste)
         
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             Raw population data from Facebook for the specified country
             
         Raises
@@ -267,7 +269,7 @@ class FacebookPopulation(Population):
         
         Parameters
         ----------
-        downloaded_data : pd.DataFrame
+        downloaded_data : pandas.DataFrame
             Raw population data downloaded from Facebook/HDX
         iso3_country_code : str
             ISO3 country code used to identify the population column in the data
@@ -276,11 +278,12 @@ class FacebookPopulation(Population):
             
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             Processed population data containing only points within the administrative area, with columns:
-            - longitude: Longitude coordinate
-            - latitude: Latitude coordinate
-            - population: Population count (renamed from country-specific column)
+
+                - ``longitude``: Longitude coordinate
+                - ``latitude``: Latitude coordinate
+                - ``population``: Population count (renamed from country-specific column)
         """
         gdf = GeoDataFrame(
             downloaded_data,
@@ -317,7 +320,7 @@ class WorldpopPopulation(Population):
         
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             DataFrame with population data containing columns:
             - longitude: Longitude coordinate
             - latitude: Latitude coordinate
@@ -344,7 +347,7 @@ class WorldpopPopulation(Population):
         Parameters
         ----------
         iso3_country_code : str
-            The ISO3 country code for which to download population data (e.g., 'TLS' for Timor-Leste)
+            The ISO3 country code for which to download population data (e.g., ``TLS`` for Timor-Leste)
         
         Returns
         -------
@@ -389,11 +392,12 @@ class WorldpopPopulation(Population):
             
         Returns
         -------
-        pd.DataFrame
+        pandas.DataFrame
             Processed population data containing only points within the administrative area, with columns:
-            - longitude: Longitude coordinate
-            - latitude: Latitude coordinate
-            - population: Population count
+
+                - ``longitude``: Longitude coordinate
+                - ``latitude``: Latitude coordinate
+                - ``population``: Population count
         """
         # Convert raster file to dataframe
         with rasterio.open(file_path) as src:
@@ -436,8 +440,9 @@ class WorldpopPopulation(Population):
         -------
         np.ndarray
             A boolean mask with the same dimensions as the raster, where:
-            - True: pixel is within the polygon
-            - False: pixel is outside the polygon
+
+                - ``True``: pixel is within the polygon
+                - ``False``: pixel is outside the polygon
             
         Notes
         -----

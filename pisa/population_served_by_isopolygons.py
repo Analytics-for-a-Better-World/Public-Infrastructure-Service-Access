@@ -71,22 +71,23 @@ def get_population_served_by_isopolygons(
 
     Parameters
     ----------
-    grouped_population : gpd.GeoDataFrame
+    grouped_population : geopandas.GeoDataFrame
         GeoDataFrame containing population points with geometry column.
         The index values are used as identifiers in the result.
         Must include a valid geometry column with point geometries.
-    isopolygons : pd.DataFrame
-        DataFrame where each column starting with 'ID_' contains Shapely Polygon objects
+    isopolygons : pandas.DataFrame
+        DataFrame where each column starting with ``ID_`` contains Shapely Polygon objects
         representing service areas at different distances. Each row represents a facility
-        isopolygon. The index values are used as Cluster_ID in the result.
+        isopolygon. The index values are used as ``Cluster_ID`` in the result.
 
     Returns
     -------
-    pd.DataFrame
+    pandas.DataFrame
         DataFrame with columns:
-        - Cluster_ID: The index from the isopolygons input
-        - One column for each 'ID_' column in isopolygons, containing lists of
-          population indices that fall within the corresponding polygon
+
+            - ``Cluster_ID``: The index from the isopolygons input
+            - One column for each ``ID_`` column in isopolygons, containing lists of
+              population indices that fall within the corresponding polygon
     
     Raises
     ------
@@ -96,10 +97,11 @@ def get_population_served_by_isopolygons(
     Notes
     -----
     This function:
-    1. Ensures both inputs have proper CRS (Coordinate Reference System)
-    2. Performs a spatial join to find population points within each isopolygon
-    3. Groups results by facility and distance threshold
-    4. Returns population indices served by each facility at each distance threshold
+
+        1. Ensures both inputs have proper CRS (Coordinate Reference System)
+        2. Performs a spatial join to find population points within each isopolygon
+        3. Groups results by facility and distance threshold
+        4. Returns population indices served by each facility at each distance threshold
 
     Example
     --------

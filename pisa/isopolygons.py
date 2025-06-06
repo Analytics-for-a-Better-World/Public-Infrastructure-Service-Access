@@ -208,11 +208,12 @@ class IsopolygonCalculator(ABC):
         -------
         pandas.DataFrame
             DataFrame containing isopolygons with the following structure:
-            - Each row represents a facility from facilities_df
-            - One column named ``ID_{distance}`` for each distance value in distance_values, where {distance} is the 
-            distance value in meters or minutes
-            - Each cell contains a Shapely Polygon or MultiPolygon representing the area that can be reached within the 
-            corresponding distance
+
+                - Each row represents a facility from facilities_df
+                - One column named ``ID_{distance}`` for each distance value in distance_values, where {distance} is the
+                  distance value in meters or minutes
+                - Each cell contains a Shapely Polygon or MultiPolygon representing the area that can be reached within the
+                  corresponding distance
               
         Raises
         ------
@@ -234,17 +235,17 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
     Parameters
     ----------
     facilities_df : pandas.DataFrame
-        DataFrame containing facility locations with 'longitude' and 'latitude' columns
+        DataFrame containing facility locations with ``longitude`` and ``latitude`` columns
     distance_type : str
-        Type of distance to calculate ('length' or 'travel_time')
+        Type of distance to calculate (``length`` or ``travel_time``)
     distance_values : list[int]
-        List of distance values in meters (for 'length') or minutes (for 'travel_time')
+        List of distance values in meters (for ``length``) or minutes (for ``travel_time``)
     road_network : networkx.MultiDiGraph
         Road network graph to use for calculations
     node_buffer : float, optional
-        Buffer distance to apply around network nodes. (default: 0.001)
+        Buffer distance to apply around network nodes. (default: ``0.001``)
     edge_buffer : float, optional
-        Buffer distance to apply around network edges. (default: 0.0005)
+        Buffer distance to apply around network edges. (default: ``0.0005``)
         
     See Also
     --------
@@ -302,11 +303,12 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         -------
         pandas.DataFrame
             DataFrame containing isopolygons with the following structure:
-            - Each row represents a facility from facilities_df
-            - One column named 'ID_{distance}' for each distance value in distance_values,
-              where {distance} is the distance value in meters or minutes
-            - Each cell contains a Shapely Polygon or MultiPolygon representing
-              the area that can be reached within the corresponding distance
+
+                - Each row represents a facility from facilities_df
+                - One column named ``ID_{distance}`` for each distance value in distance_values,
+                  where {distance} is the distance value in meters or minutes
+                - Each cell contains a Shapely Polygon or MultiPolygon representing
+                  the area that can be reached within the corresponding distance
               
         Notes
         -----
@@ -482,15 +484,15 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
     Parameters
     ----------
     facilities_df : pandas.DataFrame
-        DataFrame containing facility locations with 'longitude' and 'latitude' columns
+        DataFrame containing facility locations with ``longitude`` and ``latitude`` columns
     distance_type : str
-        Type of distance to calculate ('length' or 'travel_time')
+        Type of distance to calculate (``length`` or ``travel_time``)
     distance_values : list[int]
-        List of distance values in meters (for 'length') or minutes (for 'travel_time')
+        List of distance values in meters (for ``length``) or minutes (for ``travel_time``)
     road_network : networkx.MultiDiGraph
         Road network graph to use for calculations
     buffer : float, optional
-        Buffer distance in meters to apply around network skeletons. (default: 50)
+        Buffer distance in meters to apply around network skeletons. (default: ``50``)
         
     See Also
     --------
@@ -551,11 +553,12 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         -------
         pandas.DataFrame
             DataFrame containing isopolygons with the following structure:
-            - Each row represents a facility from facilities_df
-            - One column named 'ID_{distance}' for each distance value in distance_values,
-              where {distance} is the distance value in meters or minutes
-            - Each cell contains a Shapely Polygon or MultiPolygon representing
-              the area that can be reached within the corresponding distance
+
+                - Each row represents a facility from facilities_df
+                - One column named ``ID_{distance}`` for each distance value in distance_values,
+                  where {distance} is the distance value in meters or minutes
+                - Each cell contains a Shapely Polygon or MultiPolygon representing
+                  the area that can be reached within the corresponding distance
               
         Notes
         -----
@@ -651,14 +654,14 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     Parameters
     ----------
     facilities_df : pandas.DataFrame
-        DataFrame containing facility locations with 'longitude' and 'latitude' columns
+        DataFrame containing facility locations with ``longitude`` and ``latitude`` columns
     distance_type : str
-        Type of distance to calculate ('length' or 'travel_time')
+        Type of distance to calculate (``length`` or ``travel_time``)
     distance_values : list[int]
-        List of distance values in meters (for 'length') or minutes (for 'travel_time')
+        List of distance values in meters (for ``length``) or minutes (for ``travel_time``)
         Maximum of 4 values allowed by the Mapbox API
     mode_of_transport : str
-        The mode of transport to use (must be one of 'driving', 'walking', 'cycling')
+        The mode of transport to use (must be one of ``driving``, ``walking``, ``cycling``)
     mapbox_api_token : str
         A valid Mapbox API access token with Isochrone API permissions
     base_url : str, optional
@@ -715,11 +718,12 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         -------
         pandas.DataFrame
             DataFrame containing isopolygons with the following structure:
-            - Each row represents a facility from facilities_df
-            - One column named 'ID_{distance}' for each distance value in distance_values,
-              where {distance} is the distance value in meters or minutes
-            - Each cell contains a Shapely Polygon or MultiPolygon representing
-              the area that can be reached within the corresponding distance
+
+                - Each row represents a facility from facilities_df
+                - One column named ``ID_{distance}`` for each distance value in distance_values,
+                  where {distance} is the distance value in meters or minutes
+                - Each cell contains a Shapely Polygon or MultiPolygon representing
+                  the area that can be reached within the corresponding distance
               
         Notes
         -----
