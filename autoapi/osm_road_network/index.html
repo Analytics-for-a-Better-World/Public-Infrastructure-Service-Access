@@ -203,12 +203,17 @@ If not provided, osmnx will do the imputation (recommended).</p></li>
 <span class="sig-name descname"><span class="pre">get_osm_road_network</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">networkx.MultiDiGraph</span></span></span><a class="headerlink" href="#osm_road_network.OsmRoadNetwork.get_osm_road_network" title="Link to this definition"></a></dt>
 <dd><p>Get the processed OpenStreetMap road network for the administrative area.</p>
 <p>This method retrieves the OSM road network for the specified administrative area and processes it according to
-the configured distance type. If the distance type is ‘travel_time’, travel times are added to the network edges.</p>
+the configured distance type. If the distance type is <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>, travel times are added to the network edges.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>NetworkX MultiDiGraph representing the road network with appropriate attributes:
-- If distance_type is ‘length’, the graph has ‘length’ attributes on edges (in meters)
-- If distance_type is ‘travel_time’, the graph has ‘travel_time’ attributes on edges (in minutes)</p>
+<dd class="field-odd"><p><p>NetworkX MultiDiGraph representing the road network with appropriate attributes:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>If distance_type is <code class="docutils literal notranslate"><span class="pre">length</span></code>, the graph has <code class="docutils literal notranslate"><span class="pre">length</span></code> attributes on edges (in meters)</p></li>
+<li><p>If distance_type is <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>, the graph has <code class="docutils literal notranslate"><span class="pre">travel_time</span></code> attributes on edges (in minutes)</p></li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>nx.MultiDiGraph</p>

@@ -179,8 +179,8 @@ various data sources (currently supporting OpenStreetMap).</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>admin_area_boundaries</strong> (<em>Polygon</em><em> or </em><em>MultiPolygon</em>) – The geographical boundaries of the administrative area for which to retrieve facilities</p></li>
 <li><p><strong>data_src</strong> (<em>str</em><em>, </em><em>optional</em>) – The data source from which to retrieve facility data. Currently supported:
-- “osm”: OpenStreetMap (default: “osm”)</p></li>
-<li><p><strong>osm_tags</strong> (<em>dict</em><em>, </em><em>optional</em>) – Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., {‘amenity’: ‘hospital’}). (default: OSM_TAGS)</p></li>
+- “osm”: OpenStreetMap (default: <code class="docutils literal notranslate"><span class="pre">osm</span></code>)</p></li>
+<li><p><strong>osm_tags</strong> (<em>dict</em><em>, </em><em>optional</em>) – Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., <code class="docutils literal notranslate"><span class="pre">{amenity:</span> <span class="pre">hospital}</span></code>). (default: <code class="docutils literal notranslate"><span class="pre">OSM_TAGS</span></code>)</p></li>
 </ul>
 </dd>
 </dl>
@@ -232,10 +232,15 @@ different facility types, provide custom osm_tags when creating the Facilities o
 attribute of the Facilities instance.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>DataFrame containing facilities information with columns:
-- osmid (index): Facility identifier (e.g., OSM ID for OpenStreetMap data)
-- longitude: Longitude coordinate of the facility
-- latitude: Latitude coordinate of the facility</p>
+<dd class="field-odd"><p><p>DataFrame containing facilities information with columns:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">osmid</span></code> (index): Facility identifier (e.g., OSM ID for OpenStreetMap data)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>: Longitude coordinate of the facility</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code>: Latitude coordinate of the facility</p></li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>pandas.DataFrame</p>
@@ -245,7 +250,7 @@ attribute of the Facilities instance.</p>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>Currently, only the “osm” (OpenStreetMap) data source is implemented. To support additional data sources,
+<p>Currently, only the <code class="docutils literal notranslate"><span class="pre">osm</span></code> (OpenStreetMap) data source is implemented. To support additional data sources,
 implement new methods and update this dispatcher method accordingly, or refactor to use an abstract base class.</p>
 </dd></dl>
 
@@ -261,20 +266,29 @@ potential locations for new facilities in optimization scenarios.</p>
 denser grid with more potential facility locations.</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>DataFrame containing potential facility locations with columns:
-- ID (index): Unique identifier for each potential facility location
-- longitude: Longitude coordinate of the potential facility
-- latitude: Latitude coordinate of the potential facility</p>
+<dd class="field-even"><p><p>GeoDataFrame containing potential facility locations with columns:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">ID</span></code> (index): Unique identifier for each potential facility location</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>: Longitude coordinate of the potential facility</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code>: Latitude coordinate of the potential facility</p></li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>geopandas.GeoDataFrame</p>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>The grid is created by:
-1. Finding the bounding box of the administrative area
-2. Creating a regular grid covering the entire bounding box
-3. Clipping the grid to include only points within the actual administrative area boundaries</p>
+<p>The grid is created by:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Finding the bounding box of the administrative area</p></li>
+<li><p>Creating a regular grid covering the entire bounding box</p></li>
+<li><p>Clipping the grid to include only points within the actual administrative area boundaries</p></li>
+</ol>
+</div></blockquote>
 <p>The resulting grid points are spaced at regular intervals determined by the spacing parameter.</p>
 </dd></dl>
 

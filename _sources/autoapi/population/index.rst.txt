@@ -71,10 +71,10 @@ Module Contents
 
    :param admin_area_boundaries: The geographical boundaries of the administrative area for which to retrieve population data
    :type admin_area_boundaries: Polygon or MultiPolygon
-   :param iso3_country_code: The ISO3 country code for the administrative area (e.g., 'TLS' for Timor-Leste)
+   :param iso3_country_code: The ISO3 country code for the administrative area (e.g., ``TLS`` for Timor-Leste)
    :type iso3_country_code: str
    :param population_resolution: The decimal precision to which latitude and longitude coordinates are rounded for aggregation purposes
-                                 (default: 5)
+                                 (default: ``5``)
    :type population_resolution: int, optional
 
 
@@ -97,16 +97,20 @@ Module Contents
       Get aggregated population data for the administrative area as a GeoDataFrame.
 
       This method integrates the population data retrieval workflow by:
-      1. Retrieving raw population data using the specific implementation of the get_population_data() method
-      2. Aggregating the population data based on the specified resolution
 
-      :returns: Aggregated population data with columns:
-                - longitude: Rounded longitude coordinate
-                - latitude: Rounded latitude coordinate
-                - population: Total population at the coordinate
-                - geometry: Point geometry representing the coordinate
-                - ID: Unique identifier for each point
-      :rtype: GeoDataFrame
+          1. Retrieving raw population data using the specific implementation of the get_population_data() method
+          2. Aggregating the population data based on the specified resolution
+
+      :returns:
+
+                Aggregated population data with columns:
+
+                    - ``longitude``: Rounded longitude coordinate
+                    - ``latitude``: Rounded latitude coordinate
+                    - ``population``: Total population at the coordinate
+                    - ``geometry``: Point geometry representing the coordinate
+                    - ``ID``: Unique identifier for each point
+      :rtype: geopandas.GeoDataFrame
 
 
 
@@ -140,11 +144,11 @@ Module Contents
       This method retrieves population data from Facebook's High Resolution Population Density Maps via the
       Humanitarian Data Exchange (HDX) platform for a country specified by its ISO3 code.
 
-      :param iso3_country_code: The ISO3 country code for which to download population data (e.g., 'TLS' for Timor-Leste)
+      :param iso3_country_code: The ISO3 country code for which to download population data (e.g., ``TLS`` for Timor-Leste)
       :type iso3_country_code: str
 
       :returns: Raw population data from Facebook for the specified country
-      :rtype: pd.DataFrame
+      :rtype: pandas.DataFrame
 
       :raises Exception: If there are issues with the HDX configuration or data download
 
@@ -164,17 +168,20 @@ Module Contents
       specified administrative area boundaries.
 
       :param downloaded_data: Raw population data downloaded from Facebook/HDX
-      :type downloaded_data: pd.DataFrame
+      :type downloaded_data: pandas.DataFrame
       :param iso3_country_code: ISO3 country code used to identify the population column in the data
       :type iso3_country_code: str
       :param admin_area_boundaries: The geographical boundaries used to clip the population data
       :type admin_area_boundaries: Polygon or MultiPolygon
 
-      :returns: Processed population data containing only points within the administrative area, with columns:
-                - longitude: Longitude coordinate
-                - latitude: Latitude coordinate
-                - population: Population count (renamed from country-specific column)
-      :rtype: pd.DataFrame
+      :returns:
+
+                Processed population data containing only points within the administrative area, with columns:
+
+                    - ``longitude``: Longitude coordinate
+                    - ``latitude``: Latitude coordinate
+                    - ``population``: Population count (renamed from country-specific column)
+      :rtype: pandas.DataFrame
 
 
 
@@ -208,7 +215,7 @@ Module Contents
       This method retrieves population data from the WorldPop REST API for a country specified by its ISO3 code, using
       the most recently available dataset.
 
-      :param iso3_country_code: The ISO3 country code for which to download population data (e.g., 'TLS' for Timor-Leste)
+      :param iso3_country_code: The ISO3 country code for which to download population data (e.g., ``TLS`` for Timor-Leste)
       :type iso3_country_code: str
 
       :returns: File path to the downloaded raster data file
@@ -232,11 +239,14 @@ Module Contents
       :param admin_area_boundaries: The geographical boundaries used to filter the population data
       :type admin_area_boundaries: Polygon or MultiPolygon
 
-      :returns: Processed population data containing only points within the administrative area, with columns:
-                - longitude: Longitude coordinate
-                - latitude: Latitude coordinate
-                - population: Population count
-      :rtype: pd.DataFrame
+      :returns:
+
+                Processed population data containing only points within the administrative area, with columns:
+
+                    - ``longitude``: Longitude coordinate
+                    - ``latitude``: Latitude coordinate
+                    - ``population``: Population count
+      :rtype: pandas.DataFrame
 
 
 
@@ -254,9 +264,12 @@ Module Contents
       :param raster_layer: The open raster dataset to be masked
       :type raster_layer: rasterio.DatasetReader
 
-      :returns: A boolean mask with the same dimensions as the raster, where:
-                - True: pixel is within the polygon
-                - False: pixel is outside the polygon
+      :returns:
+
+                A boolean mask with the same dimensions as the raster, where:
+
+                    - ``True``: pixel is within the polygon
+                    - ``False``: pixel is outside the polygon
       :rtype: np.ndarray
 
       .. rubric:: Notes

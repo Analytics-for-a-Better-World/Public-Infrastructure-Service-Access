@@ -78,18 +78,22 @@ Module Contents
    This function creates a Folium map showing existing facilities as blue circle markers, and optionally potential
    facilities as orange circle markers, within the context of administrative area boundaries.
 
-   :param df_facilities: DataFrame containing information about existing facilities. Must have columns:
-                         - latitude: Latitude coordinate of the facility
-                         - longitude: Longitude coordinate of the facility
-   :type df_facilities: pd.DataFrame
+   :param df_facilities:
+                         DataFrame containing information about existing facilities. Must have columns:
+
+                             - ``latitude``: Latitude coordinate of the facility
+                             - ``longitude``: Longitude coordinate of the facility
+   :type df_facilities: pandas.DataFrame
    :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
    :type admin_area_boundaries: MultiPolygon or Polygon
-   :param df_potential_facilities: DataFrame containing information about potential facility locations. Must have columns:
-                                   - latitude: Latitude coordinate of the potential facility
-                                   - longitude: Longitude coordinate of the potential facility
-   :type df_potential_facilities: pd.DataFrame, optional
+   :param df_potential_facilities:
+                                   DataFrame containing information about potential facility locations. Must have columns:
+
+                                       - ``latitude``: Latitude coordinate of the potential facility
+                                       - ``longitude``: Longitude coordinate of the potential facility
+   :type df_potential_facilities: pandas.DataFrame, optional
    :param tiles: The tile provider for the base map. Any valid Folium tile provider name can be used.
-                 See folium.Map documentation for available options. (default: "OpenStreetMap")
+                 See folium.Map documentation for available options. (default: ``OpenStreetMap``)
    :type tiles: str, optional
 
    :returns: Interactive Folium map with administrative boundaries and facility markers
@@ -103,16 +107,17 @@ Module Contents
    This function generates an interactive Folium map displaying population density as a heatmap within the specified
    administrative area boundaries.
 
-   :param df_population: DataFrame containing population data. Must have columns:
+   :param df_population:
+                         DataFrame containing population data. Must have columns:
 
-                         - latitude: Latitude coordinate
-                         - longitude: Longitude coordinate
-                         - population: Population value (intensity for the heatmap)
-   :type df_population: pd.DataFrame
+                             - ``latitude``: Latitude coordinate
+                             - ``longitude``: Longitude coordinate
+                             - ``population``: Population value (intensity for the heatmap)
+   :type df_population: pandas.DataFrame
    :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
    :type admin_area_boundaries: MultiPolygon or Polygon
    :param tiles: The tile provider for the base map. Any valid Folium tile provider name can be used.
-                 See folium.Map documentation for available options. (default: "OpenStreetMap")
+                 See folium.Map documentation for available options. (default: ``OpenStreetMap``)
    :type tiles: str, optional
 
    :returns: Interactive Folium map with population heatmap visualization
@@ -126,18 +131,20 @@ Module Contents
    This function creates a Folium map showing population points as circle markers, with size and opacity reflecting the
    relative population values.
 
-   :param df_population: DataFrame containing population data. Must have columns:
-                         - latitude: Latitude coordinate
-                         - longitude: Longitude coordinate
-                         - population: Population value at that point
-   :type df_population: pd.DataFrame
+   :param df_population:
+                         DataFrame containing population data. Must have columns:
+
+                             - ``latitude``: Latitude coordinate
+                             - ``longitude``: Longitude coordinate
+                             - ``population``: Population value at that point
+   :type df_population: pandas.DataFrame
    :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
    :type admin_area_boundaries: MultiPolygon or Polygon
    :param random_sample_n: Number of population points to randomly sample and display.
-                           If None, all points will be displayed (may be performance-intensive for large datasets) (default: None)
+                           If None, all points will be displayed (can be performance-intensive for large datasets) (default: ``None``)
    :type random_sample_n: int, optional
    :param tiles: The tile provider for the base map. Any valid Folium tile provider name can be used.
-                 See folium.Map documentation for available options. (default: "OpenStreetMap")
+                 See folium.Map documentation for available options. (default: ``OpenStreetMap``)
    :type tiles: str, optional
 
    :returns: Interactive Folium map with population points displayed
@@ -152,15 +159,17 @@ Module Contents
    around facilities, with different colors for each facility and varying opacity for different time/distance
    thresholds.
 
-   :param df_isopolygons: DataFrame containing isopolygon geometries. Should have:
-                          - Index representing unique facility identifiers
-                          - Columns named 'ID_X' where X is the distance/time threshold (e.g., 'ID_10' for 10-minute isochrone)
-                          - Each cell contains a Shapely Polygon or MultiPolygon
-   :type df_isopolygons: pd.DataFrame
+   :param df_isopolygons:
+                          DataFrame containing isopolygon geometries. Should have:
+
+                              - Index representing unique facility identifiers
+                              - Columns named ``ID_X`` where X is the distance/time threshold (e.g., ``ID_10`` for 10-minute isochrone)
+                              - Each cell contains a Shapely Polygon or MultiPolygon
+   :type df_isopolygons: pandas.DataFrame
    :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
    :type admin_area_boundaries: MultiPolygon or Polygon
    :param tiles: The tile provider for the base map. Any valid Folium tile provider name can be used.
-                 See folium.Map documentation for available options. (default: "OpenStreetMap")
+                 See folium.Map documentation for available options. (default: ``OpenStreetMap``)
    :type tiles: str, optional
 
    :returns: Interactive Folium map with isopolygons visualized
@@ -177,13 +186,15 @@ Module Contents
    :param open_locations: List of facility identifiers (matching indices in total_fac) that are selected as part of the optimization
                           solution (both existing and new)
    :type open_locations: list
-   :param current: DataFrame containing information about existing facilities, with a column 'Cluster_ID' that identifies each
+   :param current: DataFrame containing information about existing facilities, with a column ``Cluster_ID`` that identifies each
                    facility
-   :type current: pd.DataFrame
-   :param total_fac: DataFrame containing information about all potential facility locations (both existing and new). Must have:
-                     - Index matching the identifiers in open_locations
-                     - Columns 'latitude' and 'longitude' for facility coordinates
-   :type total_fac: pd.DataFrame
+   :type current: pandas.DataFrame
+   :param total_fac:
+                     DataFrame containing information about all facility locations (both existing and potential). Must have:
+
+                         - Index matching the identifiers in open_locations
+                         - Columns ``latitude`` and ``longitude`` for facility coordinates
+   :type total_fac: pandas.DataFrame
    :param admin_area_boundaries: Shapely geometry representing the boundaries of the administrative area
    :type admin_area_boundaries: MultiPolygon or Polygon
 

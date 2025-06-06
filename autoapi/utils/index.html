@@ -162,7 +162,7 @@ functionality of the package.</p>
 on subsequent calls with the same arguments, avoiding redundant computations.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>cache_dir</strong> (<em>str</em><em>, </em><em>optional</em>) – Directory where cache files will be stored. (default: “cache”)</p>
+<dd class="field-odd"><p><strong>cache_dir</strong> (<em>str</em><em>, </em><em>optional</em>) – Directory where cache files will be stored. (default: <code class="docutils literal notranslate"><span class="pre">cache</span></code>)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>A decorated function that implements caching behavior</p>
@@ -202,7 +202,7 @@ on subsequent calls with the same arguments, avoiding redundant computations.</p
 <dd><p>Validate and normalize distance type input.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>distance_type</strong> (<em>str</em>) – The distance type to validate (“length” or “travel_time”)</p>
+<dd class="field-odd"><p><strong>distance_type</strong> (<em>str</em>) – The distance type to validate (<code class="docutils literal notranslate"><span class="pre">length</span></code> or <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Normalized distance type (lowercase, stripped of whitespace)</p>
@@ -229,7 +229,7 @@ on subsequent calls with the same arguments, avoiding redundant computations.</p
 <dd><p>Validate and normalize mode of transport input.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>mode_of_transport</strong> (<em>str</em>) – The mode of transport to validate (e.g., “driving”, “walking”, “cycling”)</p>
+<dd class="field-odd"><p><strong>mode_of_transport</strong> (<em>str</em>) – The mode of transport to validate (e.g., <code class="docutils literal notranslate"><span class="pre">driving</span></code>, <code class="docutils literal notranslate"><span class="pre">walking</span></code>, <code class="docutils literal notranslate"><span class="pre">cycling</span></code>)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Normalized mode of transport (lowercase, stripped of whitespace)</p>
@@ -262,7 +262,7 @@ leading/trailing whitespace before validation.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>fallback_speed</strong> (<em>int</em><em>, </em><em>float</em><em>, or </em><em>None</em>) – The fallback speed to validate, in kilometers per hour.
 If None, no validation is performed.</p></li>
-<li><p><strong>network_type</strong> (<em>str</em>) – The network type/mode of transport (“drive”, “walk”, “bike”)</p></li>
+<li><p><strong>network_type</strong> (<em>str</em>) – The network type/mode of transport (<code class="docutils literal notranslate"><span class="pre">drive</span></code>, <code class="docutils literal notranslate"><span class="pre">walk</span></code>, <code class="docutils literal notranslate"><span class="pre">bike</span></code>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -272,14 +272,20 @@ If None, no validation is performed.</p></li>
 <dd class="field-odd"><p>int, float, or None</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
-<dd class="field-even"><ul class="simple">
-<li><p><strong>ValueError</strong> – If fallback_speed is not a number</p></li>
-<li><p><strong>ValueError</strong> – If fallback_speed is not positive</p></li>
-<li><p><strong>ValueError</strong> – If fallback_speed exceeds reasonable bounds for the given mode of transport:
-- For walking: speed must be &lt;= 7 km/h
-- For cycling: speed must be &lt;= 25 km/h
-- For driving: speed must be &lt;= 130 km/h</p></li>
+<dd class="field-even"><p><strong>ValueError</strong> – <ul>
+<li><p>If fallback_speed is not a number</p></li>
+<li><p>If fallback_speed is not positive</p></li>
+<li><p>If fallback_speed exceeds reasonable bounds for the given mode of transport:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>For walking: speed must be &lt;= 7 km/h</p></li>
+<li><p>For cycling: speed must be &lt;= 25 km/h</p></li>
+<li><p>For driving: speed must be &lt;= 130 km/h</p></li>
 </ul>
+</div></blockquote>
+</li>
+</ul>
+</p>
 </dd>
 </dl>
 <p class="rubric">Notes</p>

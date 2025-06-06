@@ -182,36 +182,42 @@ are contained within the corresponding service area.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>grouped_population</strong> (<em>gpd.GeoDataFrame</em>) – GeoDataFrame containing population points with geometry column.
+<li><p><strong>grouped_population</strong> (<em>geopandas.GeoDataFrame</em>) – GeoDataFrame containing population points with geometry column.
 The index values are used as identifiers in the result.
 Must include a valid geometry column with point geometries.</p></li>
-<li><p><strong>isopolygons</strong> (<em>pd.DataFrame</em>) – DataFrame where each column starting with ‘<a href="#id1"><span class="problematic" id="id2">ID_</span></a>’ contains Shapely Polygon objects
+<li><p><strong>isopolygons</strong> (<em>pandas.DataFrame</em>) – DataFrame where each column starting with <code class="docutils literal notranslate"><span class="pre">ID_</span></code> contains Shapely Polygon objects
 representing service areas at different distances. Each row represents a facility
-isopolygon. The index values are used as Cluster_ID in the result.</p></li>
+isopolygon. The index values are used as <code class="docutils literal notranslate"><span class="pre">Cluster_ID</span></code> in the result.</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p><p>DataFrame with columns:
-- Cluster_ID: The index from the isopolygons input
-- One column for each ‘<a href="#id3"><span class="problematic" id="id4">ID_</span></a>’ column in isopolygons, containing lists of</p>
+<dd class="field-even"><p><p>DataFrame with columns:</p>
 <blockquote>
-<div><p>population indices that fall within the corresponding polygon</p>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">Cluster_ID</span></code>: The index from the isopolygons input</p></li>
+<li><p>One column for each <code class="docutils literal notranslate"><span class="pre">ID_</span></code> column in isopolygons, containing lists of
+population indices that fall within the corresponding polygon</p></li>
+</ul>
 </div></blockquote>
 </p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
+<dd class="field-odd"><p>pandas.DataFrame</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>ValueError</strong> – If either input DataFrame is empty</p>
 </dd>
 </dl>
 <p class="rubric">Notes</p>
-<p>This function:
-1. Ensures both inputs have proper CRS (Coordinate Reference System)
-2. Performs a spatial join to find population points within each isopolygon
-3. Groups results by facility and distance threshold
-4. Returns population indices served by each facility at each distance threshold</p>
+<p>This function:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Ensures both inputs have proper CRS (Coordinate Reference System)</p></li>
+<li><p>Performs a spatial join to find population points within each isopolygon</p></li>
+<li><p>Groups results by facility and distance threshold</p></li>
+<li><p>Returns population indices served by each facility at each distance threshold</p></li>
+</ol>
+</div></blockquote>
 <p class="rubric">Example</p>
 <p>Basic usage with sample data:</p>
 <div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">grouped_population</span><span class="p">:</span>

@@ -78,9 +78,9 @@ Module Contents
    :param admin_area_boundaries: The geographical boundaries of the administrative area for which to retrieve facilities
    :type admin_area_boundaries: Polygon or MultiPolygon
    :param data_src: The data source from which to retrieve facility data. Currently supported:
-                    - "osm": OpenStreetMap (default: "osm")
+                    - "osm": OpenStreetMap (default: ``osm``)
    :type data_src: str, optional
-   :param osm_tags: Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., {'amenity': 'hospital'}). (default: OSM_TAGS)
+   :param osm_tags: Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., ``{amenity: hospital}``). (default: ``OSM_TAGS``)
    :type osm_tags: dict, optional
 
    .. rubric:: Notes
@@ -131,17 +131,20 @@ Module Contents
       This method acts as a dispatcher that calls the appropriate data source-specific method based on the `data_src`
       attribute of the Facilities instance.
 
-      :returns: DataFrame containing facilities information with columns:
-                - osmid (index): Facility identifier (e.g., OSM ID for OpenStreetMap data)
-                - longitude: Longitude coordinate of the facility
-                - latitude: Latitude coordinate of the facility
+      :returns:
+
+                DataFrame containing facilities information with columns:
+
+                    - ``osmid`` (index): Facility identifier (e.g., OSM ID for OpenStreetMap data)
+                    - ``longitude``: Longitude coordinate of the facility
+                    - ``latitude``: Latitude coordinate of the facility
       :rtype: pandas.DataFrame
 
       :raises NotImplementedError: If the specified data source is not implemented
 
       .. rubric:: Notes
 
-      Currently, only the "osm" (OpenStreetMap) data source is implemented. To support additional data sources,
+      Currently, only the ``osm`` (OpenStreetMap) data source is implemented. To support additional data sources,
       implement new methods and update this dispatcher method accordingly, or refactor to use an abstract base class.
 
 
@@ -157,18 +160,22 @@ Module Contents
                       denser grid with more potential facility locations.
       :type spacing: float
 
-      :returns: DataFrame containing potential facility locations with columns:
-                - ID (index): Unique identifier for each potential facility location
-                - longitude: Longitude coordinate of the potential facility
-                - latitude: Latitude coordinate of the potential facility
+      :returns:
+
+                GeoDataFrame containing potential facility locations with columns:
+
+                    - ``ID`` (index): Unique identifier for each potential facility location
+                    - ``longitude``: Longitude coordinate of the potential facility
+                    - ``latitude``: Latitude coordinate of the potential facility
       :rtype: geopandas.GeoDataFrame
 
       .. rubric:: Notes
 
       The grid is created by:
-      1. Finding the bounding box of the administrative area
-      2. Creating a regular grid covering the entire bounding box
-      3. Clipping the grid to include only points within the actual administrative area boundaries
+
+          1. Finding the bounding box of the administrative area
+          2. Creating a regular grid covering the entire bounding box
+          3. Clipping the grid to include only points within the actual administrative area boundaries
 
       The resulting grid points are spaced at regular intervals determined by the spacing parameter.
 

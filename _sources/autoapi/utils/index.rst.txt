@@ -49,7 +49,7 @@ Module Contents
    This decorator saves the result of a function call to a file on disk and loads it
    on subsequent calls with the same arguments, avoiding redundant computations.
 
-   :param cache_dir: Directory where cache files will be stored. (default: "cache")
+   :param cache_dir: Directory where cache files will be stored. (default: ``cache``)
    :type cache_dir: str, optional
 
    :returns: A decorated function that implements caching behavior
@@ -78,7 +78,7 @@ Module Contents
 
    Validate and normalize distance type input.
 
-   :param distance_type: The distance type to validate ("length" or "travel_time")
+   :param distance_type: The distance type to validate (``length`` or ``travel_time``)
    :type distance_type: str
 
    :returns: Normalized distance type (lowercase, stripped of whitespace)
@@ -96,7 +96,7 @@ Module Contents
 
    Validate and normalize mode of transport input.
 
-   :param mode_of_transport: The mode of transport to validate (e.g., "driving", "walking", "cycling")
+   :param mode_of_transport: The mode of transport to validate (e.g., ``driving``, ``walking``, ``cycling``)
    :type mode_of_transport: str
 
    :returns: Normalized mode of transport (lowercase, stripped of whitespace)
@@ -122,18 +122,19 @@ Module Contents
    :param fallback_speed: The fallback speed to validate, in kilometers per hour.
                           If None, no validation is performed.
    :type fallback_speed: int, float, or None
-   :param network_type: The network type/mode of transport ("drive", "walk", "bike")
+   :param network_type: The network type/mode of transport (``drive``, ``walk``, ``bike``)
    :type network_type: str
 
    :returns: The validated fallback speed or None if no fallback speed was provided
    :rtype: int, float, or None
 
-   :raises ValueError: If fallback_speed is not a number
-   :raises ValueError: If fallback_speed is not positive
-   :raises ValueError: If fallback_speed exceeds reasonable bounds for the given mode of transport:
-       - For walking: speed must be <= 7 km/h
-       - For cycling: speed must be <= 25 km/h
-       - For driving: speed must be <= 130 km/h
+   :raises ValueError: - If fallback_speed is not a number
+       - If fallback_speed is not positive
+       - If fallback_speed exceeds reasonable bounds for the given mode of transport:
+       
+           - For walking: speed must be <= 7 km/h
+           - For cycling: speed must be <= 25 km/h
+           - For driving: speed must be <= 130 km/h
 
    .. rubric:: Notes
 

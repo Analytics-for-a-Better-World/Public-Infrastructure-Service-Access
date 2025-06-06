@@ -169,9 +169,9 @@ administrative area. Subclasses must implement the method get_population_data() 
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>admin_area_boundaries</strong> (<em>Polygon</em><em> or </em><em>MultiPolygon</em>) – The geographical boundaries of the administrative area for which to retrieve population data</p></li>
-<li><p><strong>iso3_country_code</strong> (<em>str</em>) – The ISO3 country code for the administrative area (e.g., ‘TLS’ for Timor-Leste)</p></li>
+<li><p><strong>iso3_country_code</strong> (<em>str</em>) – The ISO3 country code for the administrative area (e.g., <code class="docutils literal notranslate"><span class="pre">TLS</span></code> for Timor-Leste)</p></li>
 <li><p><strong>population_resolution</strong> (<em>int</em><em>, </em><em>optional</em>) – The decimal precision to which latitude and longitude coordinates are rounded for aggregation purposes
-(default: 5)</p></li>
+(default: <code class="docutils literal notranslate"><span class="pre">5</span></code>)</p></li>
 </ul>
 </dd>
 </dl>
@@ -194,20 +194,29 @@ administrative area. Subclasses must implement the method get_population_data() 
 <dt class="sig sig-object py" id="population.Population.get_population_gdf">
 <span class="sig-name descname"><span class="pre">get_population_gdf</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">geopandas.GeoDataFrame</span></span></span><a class="headerlink" href="#population.Population.get_population_gdf" title="Link to this definition"></a></dt>
 <dd><p>Get aggregated population data for the administrative area as a GeoDataFrame.</p>
-<p>This method integrates the population data retrieval workflow by:
-1. Retrieving raw population data using the specific implementation of the get_population_data() method
-2. Aggregating the population data based on the specified resolution</p>
+<p>This method integrates the population data retrieval workflow by:</p>
+<blockquote>
+<div><ol class="arabic simple">
+<li><p>Retrieving raw population data using the specific implementation of the get_population_data() method</p></li>
+<li><p>Aggregating the population data based on the specified resolution</p></li>
+</ol>
+</div></blockquote>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>Aggregated population data with columns:
-- longitude: Rounded longitude coordinate
-- latitude: Rounded latitude coordinate
-- population: Total population at the coordinate
-- geometry: Point geometry representing the coordinate
-- ID: Unique identifier for each point</p>
+<dd class="field-odd"><p><p>Aggregated population data with columns:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>: Rounded longitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code>: Rounded latitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">population</span></code>: Total population at the coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">geometry</span></code>: Point geometry representing the coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">ID</span></code>: Unique identifier for each point</p></li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
-<dd class="field-even"><p>GeoDataFrame</p>
+<dd class="field-even"><p>geopandas.GeoDataFrame</p>
 </dd>
 </dl>
 </dd></dl>
@@ -239,13 +248,13 @@ high-resolution population density maps. The data is accessed via the Humanitari
 Humanitarian Data Exchange (HDX) platform for a country specified by its ISO3 code.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>iso3_country_code</strong> (<em>str</em>) – The ISO3 country code for which to download population data (e.g., ‘TLS’ for Timor-Leste)</p>
+<dd class="field-odd"><p><strong>iso3_country_code</strong> (<em>str</em>) – The ISO3 country code for which to download population data (e.g., <code class="docutils literal notranslate"><span class="pre">TLS</span></code> for Timor-Leste)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>Raw population data from Facebook for the specified country</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
+<dd class="field-odd"><p>pandas.DataFrame</p>
 </dd>
 <dt class="field-even">Raises<span class="colon">:</span></dt>
 <dd class="field-even"><p><strong>Exception</strong> – If there are issues with the HDX configuration or data download</p>
@@ -264,19 +273,24 @@ specified administrative area boundaries.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>downloaded_data</strong> (<em>pd.DataFrame</em>) – Raw population data downloaded from Facebook/HDX</p></li>
+<li><p><strong>downloaded_data</strong> (<em>pandas.DataFrame</em>) – Raw population data downloaded from Facebook/HDX</p></li>
 <li><p><strong>iso3_country_code</strong> (<em>str</em>) – ISO3 country code used to identify the population column in the data</p></li>
 <li><p><strong>admin_area_boundaries</strong> (<em>Polygon</em><em> or </em><em>MultiPolygon</em>) – The geographical boundaries used to clip the population data</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Processed population data containing only points within the administrative area, with columns:
-- longitude: Longitude coordinate
-- latitude: Latitude coordinate
-- population: Population count (renamed from country-specific column)</p>
+<dd class="field-even"><p><p>Processed population data containing only points within the administrative area, with columns:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>: Longitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code>: Latitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">population</span></code>: Population count (renamed from country-specific column)</p></li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
+<dd class="field-odd"><p>pandas.DataFrame</p>
 </dd>
 </dl>
 </dd></dl>
@@ -308,7 +322,7 @@ population density estimates globally. The data is accessed via the WorldPop RES
 the most recently available dataset.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
-<dd class="field-odd"><p><strong>iso3_country_code</strong> (<em>str</em>) – The ISO3 country code for which to download population data (e.g., ‘TLS’ for Timor-Leste)</p>
+<dd class="field-odd"><p><strong>iso3_country_code</strong> (<em>str</em>) – The ISO3 country code for which to download population data (e.g., <code class="docutils literal notranslate"><span class="pre">TLS</span></code> for Timor-Leste)</p>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
 <dd class="field-even"><p>File path to the downloaded raster data file</p>
@@ -336,13 +350,18 @@ filtered to include only points within the specified administrative area boundar
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>Processed population data containing only points within the administrative area, with columns:
-- longitude: Longitude coordinate
-- latitude: Latitude coordinate
-- population: Population count</p>
+<dd class="field-even"><p><p>Processed population data containing only points within the administrative area, with columns:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>: Longitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code>: Latitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">population</span></code>: Population count</p></li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
-<dd class="field-odd"><p>pd.DataFrame</p>
+<dd class="field-odd"><p>pandas.DataFrame</p>
 </dd>
 </dl>
 </dd></dl>
@@ -361,9 +380,14 @@ specified vector polygon.</p>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>A boolean mask with the same dimensions as the raster, where:
-- True: pixel is within the polygon
-- False: pixel is outside the polygon</p>
+<dd class="field-even"><p><p>A boolean mask with the same dimensions as the raster, where:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">True</span></code>: pixel is within the polygon</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">False</span></code>: pixel is outside the polygon</p></li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>np.ndarray</p>

@@ -184,15 +184,25 @@ facilities as orange circle markers, within the context of administrative area b
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df_facilities</strong> (<em>pd.DataFrame</em>) – DataFrame containing information about existing facilities. Must have columns:
-- latitude: Latitude coordinate of the facility
-- longitude: Longitude coordinate of the facility</p></li>
+<li><p><strong>df_facilities</strong> (<em>pandas.DataFrame</em>) – <p>DataFrame containing information about existing facilities. Must have columns:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code>: Latitude coordinate of the facility</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>: Longitude coordinate of the facility</p></li>
+</ul>
+</div></blockquote>
+</p></li>
 <li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
-<li><p><strong>df_potential_facilities</strong> (<em>pd.DataFrame</em><em>, </em><em>optional</em>) – DataFrame containing information about potential facility locations. Must have columns:
-- latitude: Latitude coordinate of the potential facility
-- longitude: Longitude coordinate of the potential facility</p></li>
+<li><p><strong>df_potential_facilities</strong> (<em>pandas.DataFrame</em><em>, </em><em>optional</em>) – <p>DataFrame containing information about potential facility locations. Must have columns:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code>: Latitude coordinate of the potential facility</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>: Longitude coordinate of the potential facility</p></li>
+</ul>
+</div></blockquote>
+</p></li>
 <li><p><strong>tiles</strong> (<em>str</em><em>, </em><em>optional</em>) – The tile provider for the base map. Any valid Folium tile provider name can be used.
-See folium.Map documentation for available options. (default: “OpenStreetMap”)</p></li>
+See folium.Map documentation for available options. (default: <code class="docutils literal notranslate"><span class="pre">OpenStreetMap</span></code>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -213,16 +223,18 @@ administrative area boundaries.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df_population</strong> (<em>pd.DataFrame</em>) – <p>DataFrame containing population data. Must have columns:</p>
-<ul>
-<li><p>latitude: Latitude coordinate</p></li>
-<li><p>longitude: Longitude coordinate</p></li>
-<li><p>population: Population value (intensity for the heatmap)</p></li>
+<li><p><strong>df_population</strong> (<em>pandas.DataFrame</em>) – <p>DataFrame containing population data. Must have columns:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code>: Latitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>: Longitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">population</span></code>: Population value (intensity for the heatmap)</p></li>
 </ul>
+</div></blockquote>
 </p></li>
 <li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
 <li><p><strong>tiles</strong> (<em>str</em><em>, </em><em>optional</em>) – The tile provider for the base map. Any valid Folium tile provider name can be used.
-See folium.Map documentation for available options. (default: “OpenStreetMap”)</p></li>
+See folium.Map documentation for available options. (default: <code class="docutils literal notranslate"><span class="pre">OpenStreetMap</span></code>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -243,15 +255,20 @@ relative population values.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df_population</strong> (<em>pd.DataFrame</em>) – DataFrame containing population data. Must have columns:
-- latitude: Latitude coordinate
-- longitude: Longitude coordinate
-- population: Population value at that point</p></li>
+<li><p><strong>df_population</strong> (<em>pandas.DataFrame</em>) – <p>DataFrame containing population data. Must have columns:</p>
+<blockquote>
+<div><ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">latitude</span></code>: Latitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">longitude</span></code>: Longitude coordinate</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">population</span></code>: Population value at that point</p></li>
+</ul>
+</div></blockquote>
+</p></li>
 <li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
 <li><p><strong>random_sample_n</strong> (<em>int</em><em>, </em><em>optional</em>) – Number of population points to randomly sample and display.
-If None, all points will be displayed (may be performance-intensive for large datasets) (default: None)</p></li>
+If None, all points will be displayed (can be performance-intensive for large datasets) (default: <code class="docutils literal notranslate"><span class="pre">None</span></code>)</p></li>
 <li><p><strong>tiles</strong> (<em>str</em><em>, </em><em>optional</em>) – The tile provider for the base map. Any valid Folium tile provider name can be used.
-See folium.Map documentation for available options. (default: “OpenStreetMap”)</p></li>
+See folium.Map documentation for available options. (default: <code class="docutils literal notranslate"><span class="pre">OpenStreetMap</span></code>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -273,13 +290,18 @@ thresholds.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>df_isopolygons</strong> (<em>pd.DataFrame</em>) – DataFrame containing isopolygon geometries. Should have:
-- Index representing unique facility identifiers
-- Columns named ‘ID_X’ where X is the distance/time threshold (e.g., ‘ID_10’ for 10-minute isochrone)
-- Each cell contains a Shapely Polygon or MultiPolygon</p></li>
+<li><p><strong>df_isopolygons</strong> (<em>pandas.DataFrame</em>) – <p>DataFrame containing isopolygon geometries. Should have:</p>
+<blockquote>
+<div><ul>
+<li><p>Index representing unique facility identifiers</p></li>
+<li><p>Columns named <code class="docutils literal notranslate"><span class="pre">ID_X</span></code> where X is the distance/time threshold (e.g., <code class="docutils literal notranslate"><span class="pre">ID_10</span></code> for 10-minute isochrone)</p></li>
+<li><p>Each cell contains a Shapely Polygon or MultiPolygon</p></li>
+</ul>
+</div></blockquote>
+</p></li>
 <li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
 <li><p><strong>tiles</strong> (<em>str</em><em>, </em><em>optional</em>) – The tile provider for the base map. Any valid Folium tile provider name can be used.
-See folium.Map documentation for available options. (default: “OpenStreetMap”)</p></li>
+See folium.Map documentation for available options. (default: <code class="docutils literal notranslate"><span class="pre">OpenStreetMap</span></code>)</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
@@ -302,11 +324,16 @@ existing facilities and proposed new facilities.</p>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>open_locations</strong> (<em>list</em>) – List of facility identifiers (matching indices in total_fac) that are selected as part of the optimization
 solution (both existing and new)</p></li>
-<li><p><strong>current</strong> (<em>pd.DataFrame</em>) – DataFrame containing information about existing facilities, with a column ‘Cluster_ID’ that identifies each
+<li><p><strong>current</strong> (<em>pandas.DataFrame</em>) – DataFrame containing information about existing facilities, with a column <code class="docutils literal notranslate"><span class="pre">Cluster_ID</span></code> that identifies each
 facility</p></li>
-<li><p><strong>total_fac</strong> (<em>pd.DataFrame</em>) – DataFrame containing information about all potential facility locations (both existing and new). Must have:
-- Index matching the identifiers in open_locations
-- Columns ‘latitude’ and ‘longitude’ for facility coordinates</p></li>
+<li><p><strong>total_fac</strong> (<em>pandas.DataFrame</em>) – <p>DataFrame containing information about all facility locations (both existing and potential). Must have:</p>
+<blockquote>
+<div><ul>
+<li><p>Index matching the identifiers in open_locations</p></li>
+<li><p>Columns <code class="docutils literal notranslate"><span class="pre">latitude</span></code> and <code class="docutils literal notranslate"><span class="pre">longitude</span></code> for facility coordinates</p></li>
+</ul>
+</div></blockquote>
+</p></li>
 <li><p><strong>admin_area_boundaries</strong> (<em>MultiPolygon</em><em> or </em><em>Polygon</em>) – Shapely geometry representing the boundaries of the administrative area</p></li>
 </ul>
 </dd>

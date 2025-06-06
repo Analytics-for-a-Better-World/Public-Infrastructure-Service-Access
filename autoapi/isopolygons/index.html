@@ -226,12 +226,17 @@ calculation using specific data sources and algorithms.</p>
 algorithms.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p>DataFrame containing isopolygons with the following structure:
-- Each row represents a facility from facilities_df
-- One column named <code class="docutils literal notranslate"><span class="pre">ID_{distance}</span></code> for each distance value in distance_values, where {distance} is the
-distance value in meters or minutes
-- Each cell contains a Shapely Polygon or MultiPolygon representing the area that can be reached within the
-corresponding distance</p>
+<dd class="field-odd"><p><p>DataFrame containing isopolygons with the following structure:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Each row represents a facility from facilities_df</p></li>
+<li><p>One column named <code class="docutils literal notranslate"><span class="pre">ID_{distance}</span></code> for each distance value in distance_values, where {distance} is the
+distance value in meters or minutes</p></li>
+<li><p>Each cell contains a Shapely Polygon or MultiPolygon representing the area that can be reached within the
+corresponding distance</p></li>
+</ul>
+</div></blockquote>
+</p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
 <dd class="field-even"><p>pandas.DataFrame</p>
@@ -256,12 +261,12 @@ may be computationally intensive for large areas or many facilities.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>facilities_df</strong> (<em>pandas.DataFrame</em>) – DataFrame containing facility locations with ‘longitude’ and ‘latitude’ columns</p></li>
-<li><p><strong>distance_type</strong> (<em>str</em>) – Type of distance to calculate (‘length’ or ‘travel_time’)</p></li>
-<li><p><strong>distance_values</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – List of distance values in meters (for ‘length’) or minutes (for ‘travel_time’)</p></li>
+<li><p><strong>facilities_df</strong> (<em>pandas.DataFrame</em>) – DataFrame containing facility locations with <code class="docutils literal notranslate"><span class="pre">longitude</span></code> and <code class="docutils literal notranslate"><span class="pre">latitude</span></code> columns</p></li>
+<li><p><strong>distance_type</strong> (<em>str</em>) – Type of distance to calculate (<code class="docutils literal notranslate"><span class="pre">length</span></code> or <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>)</p></li>
+<li><p><strong>distance_values</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – List of distance values in meters (for <code class="docutils literal notranslate"><span class="pre">length</span></code>) or minutes (for <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>)</p></li>
 <li><p><strong>road_network</strong> (<em>networkx.MultiDiGraph</em>) – Road network graph to use for calculations</p></li>
-<li><p><strong>node_buffer</strong> (<em>float</em><em>, </em><em>optional</em>) – Buffer distance to apply around network nodes. (default: 0.001)</p></li>
-<li><p><strong>edge_buffer</strong> (<em>float</em><em>, </em><em>optional</em>) – Buffer distance to apply around network edges. (default: 0.0005)</p></li>
+<li><p><strong>node_buffer</strong> (<em>float</em><em>, </em><em>optional</em>) – Buffer distance to apply around network nodes. (default: <code class="docutils literal notranslate"><span class="pre">0.001</span></code>)</p></li>
+<li><p><strong>edge_buffer</strong> (<em>float</em><em>, </em><em>optional</em>) – Buffer distance to apply around network edges. (default: <code class="docutils literal notranslate"><span class="pre">0.0005</span></code>)</p></li>
 </ul>
 </dd>
 </dl>
@@ -304,16 +309,16 @@ may be computationally intensive for large areas or many facilities.</p>
 for each facility using the OpenStreetMap road network data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><p>DataFrame containing isopolygons with the following structure:
-- Each row represents a facility from facilities_df
-- One column named ‘ID_{distance}’ for each distance value in distance_values,</p>
+<dd class="field-odd"><p><p>DataFrame containing isopolygons with the following structure:</p>
 <blockquote>
-<div><p>where {distance} is the distance value in meters or minutes</p>
-</div></blockquote>
-<ul class="simple">
+<div><ul class="simple">
+<li><p>Each row represents a facility from facilities_df</p></li>
+<li><p>One column named <code class="docutils literal notranslate"><span class="pre">ID_{distance}</span></code> for each distance value in distance_values,
+where {distance} is the distance value in meters or minutes</p></li>
 <li><p>Each cell contains a Shapely Polygon or MultiPolygon representing
 the area that can be reached within the corresponding distance</p></li>
 </ul>
+</div></blockquote>
 </p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -345,11 +350,11 @@ approach used by the OsmIsopolygonCalculator.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>facilities_df</strong> (<em>pandas.DataFrame</em>) – DataFrame containing facility locations with ‘longitude’ and ‘latitude’ columns</p></li>
-<li><p><strong>distance_type</strong> (<em>str</em>) – Type of distance to calculate (‘length’ or ‘travel_time’)</p></li>
-<li><p><strong>distance_values</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – List of distance values in meters (for ‘length’) or minutes (for ‘travel_time’)</p></li>
+<li><p><strong>facilities_df</strong> (<em>pandas.DataFrame</em>) – DataFrame containing facility locations with <code class="docutils literal notranslate"><span class="pre">longitude</span></code> and <code class="docutils literal notranslate"><span class="pre">latitude</span></code> columns</p></li>
+<li><p><strong>distance_type</strong> (<em>str</em>) – Type of distance to calculate (<code class="docutils literal notranslate"><span class="pre">length</span></code> or <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>)</p></li>
+<li><p><strong>distance_values</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – List of distance values in meters (for <code class="docutils literal notranslate"><span class="pre">length</span></code>) or minutes (for <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>)</p></li>
 <li><p><strong>road_network</strong> (<em>networkx.MultiDiGraph</em>) – Road network graph to use for calculations</p></li>
-<li><p><strong>buffer</strong> (<em>float</em><em>, </em><em>optional</em>) – Buffer distance in meters to apply around network skeletons. (default: 50)</p></li>
+<li><p><strong>buffer</strong> (<em>float</em><em>, </em><em>optional</em>) – Buffer distance in meters to apply around network skeletons. (default: <code class="docutils literal notranslate"><span class="pre">50</span></code>)</p></li>
 </ul>
 </dd>
 </dl>
@@ -391,16 +396,16 @@ visualization purposes or when computational efficiency is a priority.</p>
 for each facility using the OpenStreetMap road network data.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><p>DataFrame containing isopolygons with the following structure:
-- Each row represents a facility from facilities_df
-- One column named ‘ID_{distance}’ for each distance value in distance_values,</p>
+<dd class="field-odd"><p><p>DataFrame containing isopolygons with the following structure:</p>
 <blockquote>
-<div><p>where {distance} is the distance value in meters or minutes</p>
-</div></blockquote>
-<ul class="simple">
+<div><ul class="simple">
+<li><p>Each row represents a facility from facilities_df</p></li>
+<li><p>One column named <code class="docutils literal notranslate"><span class="pre">ID_{distance}</span></code> for each distance value in distance_values,
+where {distance} is the distance value in meters or minutes</p></li>
 <li><p>Each cell contains a Shapely Polygon or MultiPolygon representing
 the area that can be reached within the corresponding distance</p></li>
 </ul>
+</div></blockquote>
 </p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>
@@ -429,11 +434,11 @@ for each distance value, then buffers them to create isopolygons</p></li>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
-<li><p><strong>facilities_df</strong> (<em>pandas.DataFrame</em>) – DataFrame containing facility locations with ‘longitude’ and ‘latitude’ columns</p></li>
-<li><p><strong>distance_type</strong> (<em>str</em>) – Type of distance to calculate (‘length’ or ‘travel_time’)</p></li>
-<li><p><strong>distance_values</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – List of distance values in meters (for ‘length’) or minutes (for ‘travel_time’)
+<li><p><strong>facilities_df</strong> (<em>pandas.DataFrame</em>) – DataFrame containing facility locations with <code class="docutils literal notranslate"><span class="pre">longitude</span></code> and <code class="docutils literal notranslate"><span class="pre">latitude</span></code> columns</p></li>
+<li><p><strong>distance_type</strong> (<em>str</em>) – Type of distance to calculate (<code class="docutils literal notranslate"><span class="pre">length</span></code> or <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>)</p></li>
+<li><p><strong>distance_values</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – List of distance values in meters (for <code class="docutils literal notranslate"><span class="pre">length</span></code>) or minutes (for <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>)
 Maximum of 4 values allowed by the Mapbox API</p></li>
-<li><p><strong>mode_of_transport</strong> (<em>str</em>) – The mode of transport to use (must be one of ‘driving’, ‘walking’, ‘cycling’)</p></li>
+<li><p><strong>mode_of_transport</strong> (<em>str</em>) – The mode of transport to use (must be one of <code class="docutils literal notranslate"><span class="pre">driving</span></code>, <code class="docutils literal notranslate"><span class="pre">walking</span></code>, <code class="docutils literal notranslate"><span class="pre">cycling</span></code>)</p></li>
 <li><p><strong>mapbox_api_token</strong> (<em>str</em>) – A valid Mapbox API access token with Isochrone API permissions</p></li>
 <li><p><strong>base_url</strong> (<em>str</em><em>, </em><em>optional</em>) – The base URL for the Mapbox Isochrone API, default is ‘<a class="reference external" href="https://api.mapbox.com/isochrone/v1/">https://api.mapbox.com/isochrone/v1/</a>’</p></li>
 </ul>
@@ -489,16 +494,16 @@ and access token.</p>
 for each facility using the Mapbox Isochrone API.</p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
-<dd class="field-odd"><p><p>DataFrame containing isopolygons with the following structure:
-- Each row represents a facility from facilities_df
-- One column named ‘ID_{distance}’ for each distance value in distance_values,</p>
+<dd class="field-odd"><p><p>DataFrame containing isopolygons with the following structure:</p>
 <blockquote>
-<div><p>where {distance} is the distance value in meters or minutes</p>
-</div></blockquote>
-<ul class="simple">
+<div><ul class="simple">
+<li><p>Each row represents a facility from facilities_df</p></li>
+<li><p>One column named <code class="docutils literal notranslate"><span class="pre">ID_{distance}</span></code> for each distance value in distance_values,
+where {distance} is the distance value in meters or minutes</p></li>
 <li><p>Each cell contains a Shapely Polygon or MultiPolygon representing
 the area that can be reached within the corresponding distance</p></li>
 </ul>
+</div></blockquote>
 </p>
 </dd>
 <dt class="field-even">Return type<span class="colon">:</span></dt>

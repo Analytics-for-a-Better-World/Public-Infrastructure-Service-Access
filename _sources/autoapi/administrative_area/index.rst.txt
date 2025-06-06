@@ -73,7 +73,7 @@ Module Contents
 
    :param country_name: The name of the country for which to retrieve administrative areas
    :type country_name: str
-   :param admin_level: The administrative area level to retrieve (0 for country, 1 for first-level divisions, etc.)
+   :param admin_level: The administrative area level to retrieve (``0`` for country, ``1`` for first-level divisions, etc.)
    :type admin_level: int
 
    .. seealso::
@@ -139,7 +139,7 @@ Module Contents
 
       Retrieve the ISO 3166-1 alpha-3 country code for the country.
 
-      :returns: The ISO 3166-1 alpha-3 country code in lowercase (e.g., 'tls' for Timor-Leste)
+      :returns: The ISO 3166-1 alpha-3 country code in lowercase (e.g., ``tls`` for Timor-Leste)
       :rtype: str
 
 
