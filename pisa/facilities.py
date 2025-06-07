@@ -76,7 +76,7 @@ class Facilities:
         The data source from which to retrieve facility data. Currently supported:
         - "osm": OpenStreetMap (default: ``osm``)
     osm_tags : dict, optional
-        Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., ``{amenity: hospital}``). (default: ``OSM_TAGS``)
+        Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., ``{'amenity': 'hospital'}``). (default: ``OSM_TAGS``)
         
     Notes
     -----

@@ -212,8 +212,8 @@ class IsopolygonCalculator(ABC):
                 - Each row represents a facility from facilities_df
                 - One column named ``ID_{distance}`` for each distance value in distance_values, where {distance} is the
                   distance value in meters or minutes
-                - Each cell contains a Shapely Polygon or MultiPolygon representing the area that can be reached within the
-                  corresponding distance
+                - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing the area that can be reached
+                  within the corresponding distance
               
         Raises
         ------
@@ -307,7 +307,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
                 - Each row represents a facility from facilities_df
                 - One column named ``ID_{distance}`` for each distance value in distance_values,
                   where {distance} is the distance value in meters or minutes
-                - Each cell contains a Shapely Polygon or MultiPolygon representing
+                - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing
                   the area that can be reached within the corresponding distance
               
         Notes
@@ -557,7 +557,7 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
                 - Each row represents a facility from facilities_df
                 - One column named ``ID_{distance}`` for each distance value in distance_values,
                   where {distance} is the distance value in meters or minutes
-                - Each cell contains a Shapely Polygon or MultiPolygon representing
+                - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing
                   the area that can be reached within the corresponding distance
               
         Notes
@@ -722,7 +722,7 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
                 - Each row represents a facility from facilities_df
                 - One column named ``ID_{distance}`` for each distance value in distance_values,
                   where {distance} is the distance value in meters or minutes
-                - Each cell contains a Shapely Polygon or MultiPolygon representing
+                - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing
                   the area that can be reached within the corresponding distance
               
         Notes

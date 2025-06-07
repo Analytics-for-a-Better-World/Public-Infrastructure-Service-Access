@@ -259,7 +259,7 @@ def plot_isochrones(
 
             - Index representing unique facility identifiers
             - Columns named ``ID_X`` where X is the distance/time threshold (e.g., ``ID_10`` for 10-minute isochrone)
-            - Each cell contains a Shapely Polygon or MultiPolygon
+            - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon``
     
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
