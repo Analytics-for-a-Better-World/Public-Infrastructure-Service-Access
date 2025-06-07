@@ -80,7 +80,7 @@ Module Contents
    :param data_src: The data source from which to retrieve facility data. Currently supported:
                     - "osm": OpenStreetMap (default: ``osm``)
    :type data_src: str, optional
-   :param osm_tags: Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., ``{amenity: hospital}``). (default: ``OSM_TAGS``)
+   :param osm_tags: Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., ``{'amenity': 'hospital'}``). (default: ``OSM_TAGS``)
    :type osm_tags: dict, optional
 
    .. rubric:: Notes
