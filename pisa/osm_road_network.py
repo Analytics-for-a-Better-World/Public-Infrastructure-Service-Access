@@ -90,14 +90,15 @@ class OsmRoadNetwork:
         """Get the processed OpenStreetMap road network for the administrative area.
         
         This method retrieves the OSM road network for the specified administrative area and processes it according to 
-        the configured distance type. If the distance type is 'travel_time', travel times are added to the network edges.
+        the configured distance type. If the distance type is ``travel_time``, travel times are added to the network edges.
         
         Returns
         -------
         nx.MultiDiGraph
             NetworkX MultiDiGraph representing the road network with appropriate attributes:
-            - If distance_type is 'length', the graph has 'length' attributes on edges (in meters)
-            - If distance_type is 'travel_time', the graph has 'travel_time' attributes on edges (in minutes)
+
+                - If distance_type is ``length``, the graph has ``length`` attributes on edges (in meters)
+                - If distance_type is ``travel_time``, the graph has ``travel_time`` attributes on edges (in minutes)
         """
         road_network = self._download_osm_road_network()
 

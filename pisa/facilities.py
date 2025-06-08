@@ -74,9 +74,9 @@ class Facilities:
         The geographical boundaries of the administrative area for which to retrieve facilities
     data_src : str, optional
         The data source from which to retrieve facility data. Currently supported:
-        - "osm": OpenStreetMap (default: "osm")
+        - "osm": OpenStreetMap (default: ``osm``)
     osm_tags : dict, optional
-        Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., {'amenity': 'hospital'}). (default: OSM_TAGS)
+        Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., ``{'amenity': 'hospital'}``). (default: ``OSM_TAGS``)
         
     Notes
     -----
@@ -115,9 +115,10 @@ class Facilities:
         -------
         pandas.DataFrame
             DataFrame containing facilities information with columns:
-            - osmid (index): Facility identifier (e.g., OSM ID for OpenStreetMap data)
-            - longitude: Longitude coordinate of the facility
-            - latitude: Latitude coordinate of the facility
+
+                - ``osmid`` (index): Facility identifier (e.g., OSM ID for OpenStreetMap data)
+                - ``longitude``: Longitude coordinate of the facility
+                - ``latitude``: Latitude coordinate of the facility
             
         Raises
         ------
@@ -126,7 +127,7 @@ class Facilities:
             
         Notes
         -----
-        Currently, only the "osm" (OpenStreetMap) data source is implemented. To support additional data sources, 
+        Currently, only the ``osm`` (OpenStreetMap) data source is implemented. To support additional data sources,
         implement new methods and update this dispatcher method accordingly, or refactor to use an abstract base class.
         """
         if self.data_src == "osm":
@@ -210,17 +211,19 @@ class Facilities:
         Returns
         -------
         geopandas.GeoDataFrame
-            DataFrame containing potential facility locations with columns:
-            - ID (index): Unique identifier for each potential facility location
-            - longitude: Longitude coordinate of the potential facility
-            - latitude: Latitude coordinate of the potential facility
+            GeoDataFrame containing potential facility locations with columns:
+
+                - ``ID`` (index): Unique identifier for each potential facility location
+                - ``longitude``: Longitude coordinate of the potential facility
+                - ``latitude``: Latitude coordinate of the potential facility
             
         Notes
         -----
         The grid is created by:
-        1. Finding the bounding box of the administrative area
-        2. Creating a regular grid covering the entire bounding box
-        3. Clipping the grid to include only points within the actual administrative area boundaries
+
+            1. Finding the bounding box of the administrative area
+            2. Creating a regular grid covering the entire bounding box
+            3. Clipping the grid to include only points within the actual administrative area boundaries
         
         The resulting grid points are spaced at regular intervals determined by the spacing parameter.
         """
