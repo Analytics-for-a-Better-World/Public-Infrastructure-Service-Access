@@ -123,7 +123,6 @@ class Population(ABC):
             - latitude: Rounded latitude coordinate
             - population: Total population for the coordinate
             - geometry: Point geometry created from the coordinates
-            - ID: Unique identifier for each point
         
         Notes
         -----
@@ -139,7 +138,6 @@ class Population(ABC):
                 "population"
             ]
             .sum()
-            .reset_index(names="ID")
         )
         population["population"] = population["population"].round(2)
         population = GeoDataFrame(

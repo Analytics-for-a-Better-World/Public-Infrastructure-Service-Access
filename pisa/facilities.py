@@ -153,7 +153,6 @@ class Facilities:
         -------
         pandas.DataFrame
             DataFrame containing facilities information with columns:
-            - osmid (index): OSM ID of the facility
             - longitude: Longitude coordinate of the facility
             - latitude: Latitude coordinate of the facility
             
@@ -192,9 +191,10 @@ class Facilities:
 
         # index facilities_df is the OSMID of the facility.
         # We don't strictly need it, but it could be useful for debugging.
-        return facilities_df.set_index("id").rename_axis("osmid")[
-            ["longitude", "latitude"]
-        ]
+        facilities_df = facilities_df.set_index("id")[["longitude", "latitude"]]
+        facilities_df.index.name = None
+
+        return facilities_df
 
     def estimate_potential_facilities(self, spacing: float = 0.05) -> gpd.GeoDataFrame:
         """Create a grid of potential facility locations within the administrative area.
@@ -213,7 +213,6 @@ class Facilities:
         geopandas.GeoDataFrame
             GeoDataFrame containing potential facility locations with columns:
 
-                - ``ID`` (index): Unique identifier for each potential facility location
                 - ``longitude``: Longitude coordinate of the potential facility
                 - ``latitude``: Latitude coordinate of the potential facility
             
@@ -250,6 +249,5 @@ class Facilities:
 
         # create index column numbering the grid points
         grid.index = range(len(grid))
-        grid.index.name = "ID"
 
         return grid
