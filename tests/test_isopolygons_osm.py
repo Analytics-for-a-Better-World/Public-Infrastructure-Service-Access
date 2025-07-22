@@ -168,8 +168,7 @@ class TestInflateSkeletonToIsopolygon:
         """Undesired behavior: the node previously excluded because it was
         too far away is included in the resulting polygon. The problem is
         that buffers are too large.
-
-        These buffers are the default in gpbp/distance.py"""
+        """
 
         poly = OsmIsopolygonCalculator._add_buffer_to_isopolygon_skeleton(
             nodes_gdf=nodes_gdf,

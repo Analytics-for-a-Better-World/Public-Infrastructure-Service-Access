@@ -35,11 +35,8 @@ htmlcov/
 build/
 *.egg-info/
 
-examples/test_ntbk.ipynb
-#examples/gpbp_showcame.ipynb
-
-Public-Infrastructure-Location-Optimiser.code-workspace
+*.code-workspace
 
 data
-publications/PISA Timor Leste/.ipynb_checkpoints/Timor Leste_Estrada_WorldPop_Analysis-checkpoint.ipynb
+*.ipynb_checkpoints/
 *.pkl
