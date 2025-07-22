@@ -164,6 +164,7 @@ Module Contents
 
                 GeoDataFrame containing potential facility locations with columns:
 
+                    - ``ID`` (index): Unique identifier for each potential facility location
                     - ``longitude``: Longitude coordinate of the potential facility
                     - ``latitude``: Latitude coordinate of the potential facility
       :rtype: geopandas.GeoDataFrame
