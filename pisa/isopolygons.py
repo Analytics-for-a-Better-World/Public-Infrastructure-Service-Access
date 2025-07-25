@@ -409,7 +409,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         all_geometries = list(disks) + list(cylinders)
 
         # Merges all_geometries into a single unified geometry, removing overlaps and simplifying the resulting shape
-        geometric_union = gpd.GeoSeries(all_geometries).unary_union
+        geometric_union = gpd.GeoSeries(all_geometries).union_all()
 
         # Removes any interior boundaries (holes) that geometric_union might have had
         buffer_polygon = Polygon(geometric_union.exterior)
