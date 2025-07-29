@@ -15,6 +15,14 @@ Traceback (most recent call last):
     raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
 nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
 ------------------
+BUDGET = [
+    5,
+    20,
+    50,
+]  # budget for the optimization in terms of how many locations can be built
+
+cbc_optimize = partial(jg_opt.OpenOptimize, solver_path=CBC_SOLVER_PATH)
+
 values, solutions = jg_opt.Solve(
     household=population_count,
     current=current,
@@ -78,16 +86,22 @@ The original solver was created with the following parameters:
 
 [0;31m---------------------------------------------------------------------------[0m
 [0;31mRuntimeError[0m                              Traceback (most recent call last)
-Cell [0;32mIn[22], line 1[0m
-[0;32m----> 1[0m values, solutions [38;5;241m=[39m [43mjg_opt[49m[38;5;241;43m.[39;49m[43mSolve[49m[43m([49m
-[1;32m      2[0m [43m    [49m[43mhousehold[49m[38;5;241;43m=[39;49m[43mpopulation_count[49m[43m,[49m
-[1;32m      3[0m [43m    [49m[43mcurrent[49m[38;5;241;43m=[39;49m[43mcurrent[49m[43m,[49m
-[1;32m      4[0m [43m    [49m[43mpotential[49m[38;5;241;43m=[39;49m[43mpotential[49m[43m,[49m
-[1;32m      5[0m [43m    [49m[43maccessibility[49m[38;5;241;43m=[39;49m[43mDISTANCE_TYPE[49m[43m,[49m
-[1;32m      6[0m [43m    [49m[43mbudgets[49m[38;5;241;43m=[39;49m[43mBUDGET[49m[43m,[49m
-[1;32m      7[0m [43m    [49m[43moptimize[49m[38;5;241;43m=[39;49m[43mcbc_optimize[49m[43m,[49m
-[1;32m      8[0m [43m    [49m[38;5;28;43mtype[39;49m[38;5;241;43m=[39;49m[38;5;124;43m"[39;49m[38;5;124;43mID[39;49m[38;5;124;43m"[39;49m[43m,[49m
-[1;32m      9[0m [43m)[49m
+Cell [0;32mIn[20], line 9[0m
+[1;32m      1[0m BUDGET [38;5;241m=[39m [
+[1;32m      2[0m     [38;5;241m5[39m,
+[1;32m      3[0m     [38;5;241m20[39m,
+[1;32m      4[0m     [38;5;241m50[39m,
+[1;32m      5[0m ]  [38;5;66;03m# budget for the optimization in terms of how many locations can be built[39;00m
+[1;32m      7[0m cbc_optimize [38;5;241m=[39m partial(jg_opt[38;5;241m.[39mOpenOptimize, solver_path[38;5;241m=[39mCBC_SOLVER_PATH)
+[0;32m----> 9[0m values, solutions [38;5;241m=[39m [43mjg_opt[49m[38;5;241;43m.[39;49m[43mSolve[49m[43m([49m
+[1;32m     10[0m [43m    [49m[43mhousehold[49m[38;5;241;43m=[39;49m[43mpopulation_count[49m[43m,[49m
+[1;32m     11[0m [43m    [49m[43mcurrent[49m[38;5;241;43m=[39;49m[43mcurrent[49m[43m,[49m
+[1;32m     12[0m [43m    [49m[43mpotential[49m[38;5;241;43m=[39;49m[43mpotential[49m[43m,[49m
+[1;32m     13[0m [43m    [49m[43maccessibility[49m[38;5;241;43m=[39;49m[43mDISTANCE_TYPE[49m[43m,[49m
+[1;32m     14[0m [43m    [49m[43mbudgets[49m[38;5;241;43m=[39;49m[43mBUDGET[49m[43m,[49m
+[1;32m     15[0m [43m    [49m[43moptimize[49m[38;5;241;43m=[39;49m[43mcbc_optimize[49m[43m,[49m
+[1;32m     16[0m [43m    [49m[38;5;28;43mtype[39;49m[38;5;241;43m=[39;49m[38;5;124;43m"[39;49m[38;5;124;43mID[39;49m[38;5;124;43m"[39;49m[43m,[49m
+[1;32m     17[0m [43m)[49m
 
 File [0;32m~/work/Public-Infrastructure-Service-Access/Public-Infrastructure-Service-Access/optimization/jg_opt.py:362[0m, in [0;36mSolve[0;34m(household, current, potential, accessibility, budgets, optimize, type)[0m
 [1;32m    360[0m I [38;5;241m=[39m np[38;5;241m.[39munique([38;5;28mlist[39m(IJ[38;5;241m.[39mkeys()))
