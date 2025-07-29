@@ -385,7 +385,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         ValueError
             If edge_buffer is less than or equal to 0
         AttributeError
-            If the unary_union results in two (or more) disconnected polygons
+            If the union_all results in two (or more) disconnected polygons
             
         Notes
         -----
@@ -409,7 +409,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         all_geometries = list(disks) + list(cylinders)
 
         # Merges all_geometries into a single unified geometry, removing overlaps and simplifying the resulting shape
-        geometric_union = gpd.GeoSeries(all_geometries).unary_union
+        geometric_union = gpd.GeoSeries(all_geometries).union_all()
 
         # Removes any interior boundaries (holes) that geometric_union might have had
         buffer_polygon = Polygon(geometric_union.exterior)
