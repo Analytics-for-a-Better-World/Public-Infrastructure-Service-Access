@@ -31,7 +31,7 @@ If you prefer traditional Python package management:
 
 PISA requires additional tools for certain functionality:
 
-1. **Optimization Solver**: Used to optimize the location of new facilites.
+1. **Optimization Solver**: Used to optimize the location of new facilities.
    - For beginners, we recommend the [COIN-OR Branch-and-Cut solver (CBC)](https://github.com/coin-or/Cbc#download)
    - Note the path to the executable of `cbc` for configuration
    - Advanced users can substitute CBC with other solvers compatible with the package
