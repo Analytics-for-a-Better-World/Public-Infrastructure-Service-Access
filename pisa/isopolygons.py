@@ -533,18 +533,9 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
             Y=self.facilities_df.latitude.values,
             return_dist=True,
         )
-        if any(distance_to_nearest_nodes > 10000):
-            import numpy as np
 
-            high_distance_indices = np.where(distance_to_nearest_nodes > 10000)
-            far_from_road_facilities = self.facilities_df.iloc[high_distance_indices]
-            far_from_road_facilities["nearest_road_node"] = nearest_nodes[
-                high_distance_indices
-            ]
+        self._warn_facilities_too_far_away(nearest_nodes, distance_to_nearest_nodes)
 
-            logger.warning(
-                f"Some facilities are more than 10 km away from the nearest node on the OSM road network. The facilities and their nearest nodes are: {far_from_road_facilities[['nearest_road_node']]} \n It makes sense to visually inspect these in a notebook or compare your results with the Mapbox API."
-            )
         self.nearest_nodes_dict = {
             facility_id: node
             for facility_id, node in zip(self.facilities_df.index, nearest_nodes)
@@ -650,6 +641,24 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
             skeleton = nodes_gdf.geometry.union_all()
 
         return skeleton
+
+    def _warn_facilities_too_far_away(self, nearest_nodes, distance_to_nearest_nodes):
+        """Logs a warning if any facilities are found more than 10km from nearest road node,
+        suggesting manual inspection may be needed to verify results.
+        """
+        if any(distance_to_nearest_nodes > 10000):
+
+            high_distance_indices = np.where(distance_to_nearest_nodes > 10000)
+            far_from_road_facilities = self.facilities_df.iloc[high_distance_indices]
+            far_from_road_facilities["nearest_road_node"] = nearest_nodes[
+                high_distance_indices
+            ]
+
+            logger.warning(
+                f"""Some facilities are more than 10 km away from the nearest node on the OSM road network. 
+                The facilities and their nearest nodes are: {far_from_road_facilities[['nearest_road_node']]} \n 
+                It makes sense to visually inspect these in a notebook or compare your results with the Mapbox API."""
+            )
 
 
 class MapboxIsopolygonCalculator(IsopolygonCalculator):
