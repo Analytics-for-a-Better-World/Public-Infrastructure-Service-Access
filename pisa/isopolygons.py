@@ -4,7 +4,7 @@ This module provides functionality for calculating isopolygons around facilities
 An isopolygon represents the area that can be reached within a specific distance (isodistance) or time (isochrone) from a
 facility.
 
-The module contains an abstract base class IsopolygonCalculator and its implementations for different calculation 
+The module contains an abstract base class IsopolygonCalculator and its implementations for different calculation
 methods.
 
 Examples
@@ -15,13 +15,13 @@ Calculate isochrones around facilities using OpenStreetMap:
 >>> from pisa.facilities import Facilities
 >>> from pisa.osm_road_network import OsmRoadNetwork
 >>> from pisa.isopolygons import OsmIsopolygonCalculator
->>> 
+>>>
 >>> # Get administrative area and facilities
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
 >>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
 >>> facilities = Facilities(admin_area_boundaries=boundaries)
 >>> existing_facilities = facilities.get_existing_facilities()
->>> 
+>>>
 >>> # Create a road network for travel time calculations
 >>> road_network = OsmRoadNetwork(
 >>>     admin_area_boundaries=boundaries,
@@ -29,7 +29,7 @@ Calculate isochrones around facilities using OpenStreetMap:
 >>>     distance_type="travel_time"
 >>> )
 >>> graph = road_network.get_osm_road_network()
->>> 
+>>>
 >>> # Calculate isochrones (5, 10, 15 minutes walking)
 >>> isopolygon_calculator = OsmIsopolygonCalculator(
 >>>     facilities_df=existing_facilities,
@@ -40,7 +40,7 @@ Calculate isochrones around facilities using OpenStreetMap:
 >>> isopolygons = isopolygon_calculator.calculate_isopolygons()
 
 Note:
-    To implement a new way of calculating isopolygons (e.g., using Google Maps), create a class that inherits from 
+    To implement a new way of calculating isopolygons (e.g., using Google Maps), create a class that inherits from
     IsopolygonCalculator and implements calculate_isopolygons.
 
 See Also
@@ -57,6 +57,7 @@ from abc import ABC, abstractmethod
 
 import geopandas as gpd
 import networkx as nx
+import numpy as np
 import osmnx as ox
 import pandas as pd
 import requests
@@ -66,8 +67,7 @@ from pandas import DataFrame
 from shapely import Polygon
 from shapely.geometry import shape
 
-from pisa.utils import (disk_cache, validate_distance_type,
-                        validate_mode_of_transport)
+from pisa.utils import disk_cache, validate_distance_type, validate_mode_of_transport
 
 logger = logging.getLogger(__name__)
 
@@ -92,20 +92,20 @@ class IsopolygonCalculator(ABC):
     @staticmethod
     def _validate_facilities_df_format(facilities_df: DataFrame) -> DataFrame:
         """Validate that facilities DataFrame has the required format.
-        
-        This validation ensures that the facilities DataFrame contains the minimum required information for isopolygon 
+
+        This validation ensures that the facilities DataFrame contains the minimum required information for isopolygon
         calculation: longitude and latitude coordinates for at least one facility.
 
         Parameters
         ----------
         facilities_df : pandas.DataFrame
             DataFrame containing facility locations to validate
-            
+
         Returns
         -------
         pandas.DataFrame
             The validated DataFrame (unchanged)
-            
+
         Raises
         ------
         ValueError
@@ -129,25 +129,25 @@ class IsopolygonCalculator(ABC):
     @staticmethod
     def _validate_distance_values_are_ints(distance_values) -> list[int]:
         """Ensure that distance values are integers and properly formatted as a list.
-        
+
         Parameters
         ----------
         distance_values : int or list[int]
             Either a single integer or a list of integers representing distances for isopolygon calculations
-            
+
         Returns
         -------
         list[int]
-            A list containing the validated distance values. If input was a single integer, returns a single-element 
+            A list containing the validated distance values. If input was a single integer, returns a single-element
             list.
-            
+
         Raises
         ------
         TypeError
             If distance_values is neither an integer nor a list of integers
         TypeError
             If any element in the distance_values list is not an integer
-            
+
         Notes
         -----
         The requirement that all distance values be integers comes from the Mapbox Isochrone API,
@@ -165,20 +165,20 @@ class IsopolygonCalculator(ABC):
 
     def _validate_distance_upper_limits(self) -> None:
         """Validate that distance values are within permitted limits.
-        
+
         This method checks that all distance values are within the API-imposed limits:
         - For 'length' type: maximum of 100,000 meters
         - For 'travel_time' type: maximum of 60 minutes
-        
+
         Returns
         -------
         None
-        
+
         Raises
         ------
         ValueError
             If any distance value exceeds the maximum limit for its distance type
-            
+
         Notes
         -----
         These limits are imposed by the Mapbox Isochrone API specifications. Even when using other providers (e.g., OSM),
@@ -197,13 +197,13 @@ class IsopolygonCalculator(ABC):
     @abstractmethod
     def calculate_isopolygons(self) -> DataFrame:
         """Calculate isopolygons for the specified facilities.
-        
-        This abstract method must be implemented by subclasses to provide the actual implementation of isopolygon 
+
+        This abstract method must be implemented by subclasses to provide the actual implementation of isopolygon
         calculation using specific data sources and algorithms.
-        
+
         Specific implementations should provide detailed error handling and logging appropriate to their data sources and
         algorithms.
-        
+
         Returns
         -------
         pandas.DataFrame
@@ -214,7 +214,7 @@ class IsopolygonCalculator(ABC):
                   distance value in meters or minutes
                 - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing the area that can be reached
                   within the corresponding distance
-              
+
         Raises
         ------
         NotImplementedError
@@ -225,11 +225,11 @@ class IsopolygonCalculator(ABC):
 
 class OsmIsopolygonCalculator(IsopolygonCalculator):
     """OpenStreetMap-based implementation of isopolygon calculation.
-    
-    This implementation uses OpenStreetMap road network data to calculate isopolygons (isochrones or isodistances) 
+
+    This implementation uses OpenStreetMap road network data to calculate isopolygons (isochrones or isodistances)
     around facilities. It leverages the NetworkX and OSMnx libraries for network analysis.
-    
-    This implementation performs network-based calculations on an OSM road network, which provides accurate results but 
+
+    This implementation performs network-based calculations on an OSM road network, which provides accurate results but
     may be computationally intensive for large areas or many facilities.
 
     Parameters
@@ -246,7 +246,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         Buffer distance to apply around network nodes. (default: ``0.001``)
     edge_buffer : float, optional
         Buffer distance to apply around network edges. (default: ``0.0005``)
-        
+
     See Also
     --------
     IsopolygonCalculator : Abstract base class
@@ -275,18 +275,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
             Y=self.facilities_df.latitude.values,
             return_dist=True,
         )
-        if any(distance_to_nearest_nodes > 10000):
-            import numpy as np
-
-            high_distance_indices = np.where(distance_to_nearest_nodes > 10000)
-            far_from_road_facilities = self.facilities_df.iloc[high_distance_indices]
-            far_from_road_facilities["nearest_road_node"] = nearest_nodes[
-                high_distance_indices
-            ]
-
-            logger.warning(
-                f"Some facilities are more than 10 km away from the nearest node on the OSM road network. The facilities and their nearest nodes are: {far_from_road_facilities[['nearest_road_node']]} \n It makes sense to visually inspect these in a notebook or compare your results with the Mapbox API."
-            )
+        self._warn_facilities_too_far_away(nearest_nodes, distance_to_nearest_nodes)
 
         self.nearest_nodes_dict = {
             facility_id: node
@@ -295,10 +284,10 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
 
     def calculate_isopolygons(self) -> DataFrame:
         """Calculate isopolygons for each facility at different distances.
-        
+
         This method generates isopolygons (areas reachable within specific travel times or distances)
         for each facility using the OpenStreetMap road network data.
-        
+
         Returns
         -------
         pandas.DataFrame
@@ -309,7 +298,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
                   where {distance} is the distance value in meters or minutes
                 - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing
                   the area that can be reached within the corresponding distance
-              
+
         Notes
         -----
         - Distances are computed with respect to the nearest node to the facility,
@@ -360,10 +349,10 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         edge_buffer: float,
     ) -> Polygon:
         """Convert an isopolygon skeleton into a proper polygon by buffering.
-        
-        This method takes the "skeleton" of an isopolygon (nodes and edges from the road network) and turns it into a 
+
+        This method takes the "skeleton" of an isopolygon (nodes and edges from the road network) and turns it into a
         proper polygon by buffering and merging the geometries.
-        
+
         Parameters
         ----------
         nodes_gdf : geopandas.GeoSeries
@@ -374,19 +363,19 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
             Buffer distance to apply around nodes
         edge_buffer : float
             Buffer distance to apply around edges
-            
+
         Returns
         -------
         shapely.geometry.Polygon
             A polygon representing the merged buffer zones
-            
+
         Raises
         ------
         ValueError
             If edge_buffer is less than or equal to 0
         AttributeError
             If the union_all results in two (or more) disconnected polygons
-            
+
         Notes
         -----
         - The function is sensitive to buffer size values. If they are too large relative to the distances between
@@ -424,10 +413,10 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         distance_type: str,
     ) -> tuple[gpd.GeoSeries, gpd.GeoSeries]:
         """Get nodes and edges within a specified distance from a center node.
-        
+
         This method extracts all nodes and edges within a specified distance from a center node
         in a road network, returning them as separate GeoSeries to form the "skeleton" of an isopolygon.
-        
+
         Parameters
         ----------
         road_network : nx.MultiDiGraph
@@ -438,14 +427,14 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
             The maximum distance value (in meters for 'length', minutes for 'travel_time')
         distance_type : str
             The type of distance to use ('length' or 'travel_time')
-            
+
         Returns
         -------
         tuple[gpd.GeoSeries, gpd.GeoSeries]
             A tuple containing:
             - nodes_gdf: GeoSeries of node geometries
             - edges_gdf: GeoSeries of edge geometries
-            
+
         Notes
         -----
         - If an edge doesn't have geometry data in the road_network, a straight line
@@ -472,15 +461,33 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
                 gpd.GeoSeries([], name="geometry", crs=nodes_gdf.crs),
             )
 
+    def _warn_facilities_too_far_away(self, nearest_nodes, distance_to_nearest_nodes):
+        """Logs a warning if any facilities are found more than 10km from nearest road node,
+        suggesting manual inspection may be needed to verify results.
+        """
+        if any(distance_to_nearest_nodes > 10000):
+
+            high_distance_indices = np.where(distance_to_nearest_nodes > 10000)
+            far_from_road_facilities = self.facilities_df.iloc[high_distance_indices]
+            far_from_road_facilities["nearest_road_node"] = nearest_nodes[
+                high_distance_indices
+            ]
+
+            logger.warning(
+                f"""Some facilities are more than 10 km away from the nearest node on the OSM road network. 
+                The facilities and their nearest nodes are: {far_from_road_facilities[['nearest_road_node']]} \n 
+                It makes sense to visually inspect these in a notebook or compare your results with the Mapbox API."""
+            )
+
 
 class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
     """Alternative OpenStreetMap-based implementation of isopolygon calculation.
-    
+
     This implementation uses OpenStreetMap road network data to calculate isopolygons
     (isochrones or isodistances) around facilities. It takes a simpler approach
     by buffering network skeletons rather than the more complex node and edge buffering
     approach used by the OsmIsopolygonCalculator.
-    
+
     Parameters
     ----------
     facilities_df : pandas.DataFrame
@@ -493,13 +500,13 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         Road network graph to use for calculations
     buffer : float, optional
         Buffer distance in meters to apply around network skeletons. (default: ``50``)
-        
+
     See Also
     --------
     IsopolygonCalculator : Abstract base class
     OsmIsopolygonCalculator : OSM-based implementation with precise node/edge buffering
     MapboxIsopolygonCalculator : Mapbox API-based implementation
-        
+
     Notes
     -----
     This implementation generally produces less accurate but smoother isopolygons
@@ -545,10 +552,10 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
 
     def calculate_isopolygons(self) -> DataFrame:
         """Calculate isopolygons for each facility at different distances.
-        
+
         This method generates isopolygons (areas reachable within specific travel times or distances)
         for each facility using the OpenStreetMap road network data.
-        
+
         Returns
         -------
         pandas.DataFrame
@@ -559,7 +566,7 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
                   where {distance} is the distance value in meters or minutes
                 - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing
                   the area that can be reached within the corresponding distance
-              
+
         Notes
         -----
         - Distances are computed with respect to the nearest node to the facility,
@@ -600,10 +607,10 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
         distance_type: str,
     ):
         """Get the skeleton of an isopolygon from a road network.
-        
+
         This method extracts all nodes and edges within a specified distance from a center node
         in a road network, and returns the union of their geometries as the "skeleton" of the isopolygon.
-        
+
         Parameters
         ----------
         road_network : nx.MultiDiGraph
@@ -614,13 +621,13 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
             The maximum distance value (in meters for 'length', minutes for 'travel_time')
         distance_type : str
             The type of distance to use ('length' or 'travel_time')
-            
+
         Returns
         -------
         shapely.geometry
             The union of geometries of all nodes and edges within the specified distance,
             representing the "skeleton" of the isopolygon
-            
+
         Notes
         -----
         If no edges are found (e.g., if all other nodes are beyond the distance threshold),
@@ -647,10 +654,10 @@ class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
 
 class MapboxIsopolygonCalculator(IsopolygonCalculator):
     """Mapbox-based implementation of isopolygon calculation.
-    
+
     This implementation uses the Mapbox Isochrone API to calculate isopolygons
     (isochrones or isodistances) around facilities.
-    
+
     Parameters
     ----------
     facilities_df : pandas.DataFrame
@@ -666,19 +673,19 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
         A valid Mapbox API access token with Isochrone API permissions
     base_url : str, optional
         The base URL for the Mapbox Isochrone API, default is 'https://api.mapbox.com/isochrone/v1/'
-        
+
     See Also
     --------
     IsopolygonCalculator : Abstract base class
     OsmIsopolygonCalculator : OSM-based implementation with precise node/edge buffering
     OsmIsopolygonCalculatorAlternative : Simplified OSM-based implementation
-        
+
     Notes
     -----
     From Mapbox docs: When providing geographic coordinates to a Mapbox API,
     they should be formatted in the order longitude, latitude and specified as decimal degrees
     in the WGS84 coordinate system. This pattern matches existing standards, including GeoJSON and KML.
-    
+
     This implementation is subject to Mapbox API rate limits and requires a valid Mapbox account
     and access token.
     """
@@ -710,10 +717,10 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
     def calculate_isopolygons(self) -> DataFrame:
         """Calculate isopolygons for all facilities using the Mapbox API.
-        
+
         This method generates isopolygons (areas reachable within specific travel times or distances)
         for each facility using the Mapbox Isochrone API.
-        
+
         Returns
         -------
         pandas.DataFrame
@@ -724,7 +731,7 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
                   where {distance} is the distance value in meters or minutes
                 - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing
                   the area that can be reached within the corresponding distance
-              
+
         Notes
         -----
         - Requires a valid Mapbox API token with appropriate permissions
@@ -757,14 +764,14 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
     def _build_request_url(self, longitude: float, latitude: float) -> str:
         """Build the Mapbox API request URL for isopolygon calculation.
-        
+
         Parameters
         ----------
         longitude : float
             The longitude coordinate of the facility
         latitude : float
             The latitude coordinate of the facility
-            
+
         Returns
         -------
         str
@@ -778,15 +785,15 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
     def _handle_rate_limit(self, request_count: int) -> None:
         """Handle Mapbox API rate limiting.
-        
-        The Mapbox API has a rate limit of 300 requests per minute. This method pauses execution for 60 seconds when 
+
+        The Mapbox API has a rate limit of 300 requests per minute. This method pauses execution for 60 seconds when
         reaching this limit to avoid rate limit errors.
-        
+
         Parameters
         ----------
         request_count : int
             The current count of API requests that have been made
-            
+
         Returns
         -------
         None
@@ -799,20 +806,20 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     @disk_cache("mapbox_cache")
     def _fetch_isopolygons(self, request_url: str) -> list:
         """Fetch isopolygon data from the Mapbox Isochrone API.
-        
-        This method makes a GET request to the Mapbox Isochrone API and handles various potential errors that might 
+
+        This method makes a GET request to the Mapbox Isochrone API and handles various potential errors that might
         occur during the request.
-        
+
         Parameters
         ----------
         request_url : str
             The complete URL for the Mapbox Isochrone API request
-            
+
         Returns
         -------
         list
             List of GeoJSON Feature objects representing isopolygons
-            
+
         Raises
         ------
         ValueError
@@ -825,7 +832,7 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
             If the request times out (>60 seconds)
         RuntimeError
             For unexpected errors during the API request
-            
+
         Notes
         -----
         This method uses the disk_cache decorator to avoid making repeated requests for the same URL, which helps reduce
@@ -877,20 +884,20 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     @staticmethod
     def _validate_mapbox_distance_values(distance_values: list[int]) -> list[int]:
         """Validate distance values against Mapbox API requirements.
-        
-        The Mapbox Isochrone API accepts a maximum of 4 distinct contour values, which must be provided in ascending 
+
+        The Mapbox Isochrone API accepts a maximum of 4 distinct contour values, which must be provided in ascending
         order. This method validates the input against these constraints and sorts the values.
 
         Parameters
         ----------
         distance_values : list[int]
             List of integer distances to validate
-            
+
         Returns
         -------
         list[int]
             Sorted list of distance values in ascending order
-            
+
         Raises
         ------
         ValueError
@@ -906,22 +913,22 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     @staticmethod
     def _validate_mapbox_token_not_empty(mapbox_api_token: str) -> str:
         """Validate that the Mapbox API token is not empty.
-        
+
         Parameters
         ----------
         mapbox_api_token : str
             The Mapbox API token to validate
-            
+
         Returns
         -------
         str
             The validated Mapbox API token (unchanged)
-            
+
         Raises
         ------
         ValueError
             If the Mapbox API token is empty
-            
+
         Notes
         -----
         This simple validation ensures that an API token has been provided.
