@@ -2,7 +2,7 @@ import streamlit as st
 from streamlit_folium import st_folium
 
 from pisa.constants import VALID_MODES_OF_TRANSPORT, VALID_DISTANCE_TYPES
-from pisa.isopolygons import OsmIsopolygonCalculatorAlternative
+from pisa.isopolygons import OsmIsopolygonCalculator
 from pisa.osm_road_network import OsmRoadNetwork
 from pisa.visualisation import plot_isochrones
 
@@ -45,7 +45,7 @@ def road_network(ss):
             ss.distance_type).get_osm_road_network()
         st.success("OSM road network retrieved.")
 
-        isopolygons = OsmIsopolygonCalculatorAlternative(
+        isopolygons = OsmIsopolygonCalculator(
             ss.existing_facilities_df,
             ss.distance_type,
             [int(x.split()[0]) for x in ss.distance_values],  # distance values must be a list of integers
