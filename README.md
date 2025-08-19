@@ -4,7 +4,6 @@ PISA assists policymakers in identifying and planning key resources such as road
 
 ## Documentation
 
-For detailed documentation on the code, read the [docs](
 For detailed documentation on the code, read the [docs](https://analytics-for-a-better-world.github.io/Public-Infrastructure-Service-Access/index.html).
 
 ## Local Development
