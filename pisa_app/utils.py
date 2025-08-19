@@ -2,7 +2,7 @@ import folium
 import streamlit as st
 from typing import Type
 
-from pisa.isopolygons import MapboxIsopolygonCalculator, OsmIsopolygonCalculatorAlternative, IsopolygonCalculator
+from pisa.isopolygons import MapboxIsopolygonCalculator, OsmIsopolygonCalculator, IsopolygonCalculator
 
 
 @st.cache_data(show_spinner=False)
@@ -163,7 +163,7 @@ def get_isopolygon_calculator(strategy: str, ss) -> tuple[Type[IsopolygonCalcula
             "mapbox_api_token": ss.mapbox_api_token,
         }
     elif strategy == "osm":
-        return OsmIsopolygonCalculatorAlternative, {
+        return OsmIsopolygonCalculator, {
             "distance_type": ss.distance_type,
             "distance_values": [int(x.split()[0]) for x in ss.distance_values],
             "road_network": ss.road_network,
