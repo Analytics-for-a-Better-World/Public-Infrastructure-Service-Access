@@ -1,4 +1,11 @@
-# Public Infrastructure Service Access
+# Public Infrastructure Service Access (PISA)
+
+PISA assists policymakers in identifying and planning key resources such as roads, bridges, and healthcare centres. It helps to optimise the placement of new infrastructure investments. Its goal is to increase access to public services, reduce expenses, and improve the quality of life in a region. 
+
+## Documentation
+
+For detailed documentation on the code, read the [docs](
+https://analytics-for-a-better-world.github.io/Public-Infrastructure-Service-Access/index.html).
 
 ## Local Development
 
