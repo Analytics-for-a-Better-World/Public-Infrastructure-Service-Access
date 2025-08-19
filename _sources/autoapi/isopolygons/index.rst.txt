@@ -79,6 +79,7 @@ Classes
 
    isopolygons.IsopolygonCalculator
    isopolygons.OsmIsopolygonCalculator
+   isopolygons.OsmIsopolygonCalculatorAlternative
    isopolygons.MapboxIsopolygonCalculator
 
 
@@ -162,6 +163,9 @@ Module Contents
       :obj:`IsopolygonCalculator`
           Abstract base class
 
+      :obj:`OsmIsopolygonCalculatorAlternative`
+          Simplified OSM-based implementation
+
       :obj:`MapboxIsopolygonCalculator`
           Mapbox API-based implementation
 
@@ -206,6 +210,88 @@ Module Contents
         not the facility itself
       - The method creates network "skeletons" and then buffers nodes and edges
         separately with different buffer sizes to create accurate isopolygons
+      - This implementation provides more accurate isopolygons compared to the
+        alternative implementation but may be more computationally intensive
+
+
+
+.. py:class:: OsmIsopolygonCalculatorAlternative(facilities_df: pandas.DataFrame, distance_type: str, distance_values: list[int], road_network: networkx.MultiDiGraph, buffer: float = 100)
+
+   Bases: :py:obj:`IsopolygonCalculator`
+
+
+   Alternative OpenStreetMap-based implementation of isopolygon calculation.
+
+   This implementation uses OpenStreetMap road network data to calculate isopolygons
+   (isochrones or isodistances) around facilities. It takes a simpler approach
+   by buffering network skeletons rather than the more complex node and edge buffering
+   approach used by the OsmIsopolygonCalculator.
+
+   :param facilities_df: DataFrame containing facility locations with ``longitude`` and ``latitude`` columns
+   :type facilities_df: pandas.DataFrame
+   :param distance_type: Type of distance to calculate (``length`` or ``travel_time``)
+   :type distance_type: str
+   :param distance_values: List of distance values in meters (for ``length``) or minutes (for ``travel_time``)
+   :type distance_values: list[int]
+   :param road_network: Road network graph to use for calculations
+   :type road_network: networkx.MultiDiGraph
+   :param buffer: Buffer distance in meters to apply around network skeletons. (default: ``50``)
+   :type buffer: float, optional
+
+   .. seealso::
+
+      :obj:`IsopolygonCalculator`
+          Abstract base class
+
+      :obj:`OsmIsopolygonCalculator`
+          OSM-based implementation with precise node/edge buffering
+
+      :obj:`MapboxIsopolygonCalculator`
+          Mapbox API-based implementation
+
+   .. rubric:: Notes
+
+   This implementation generally produces less accurate but smoother isopolygons
+   compared to the standard OsmIsopolygonCalculator. It may be more suitable for
+   visualization purposes or when computational efficiency is a priority.
+
+
+   .. py:attribute:: road_network
+
+
+   .. py:attribute:: buffer
+      :value: 100
+
+
+
+   .. py:attribute:: nearest_nodes_dict
+
+
+   .. py:method:: calculate_isopolygons() -> pandas.DataFrame
+
+      Calculate isopolygons for each facility at different distances.
+
+      This method generates isopolygons (areas reachable within specific travel times or distances)
+      for each facility using the OpenStreetMap road network data.
+
+      :returns:
+
+                DataFrame containing isopolygons with the following structure:
+
+                    - Each row represents a facility from facilities_df
+                    - One column named ``ID_{distance}`` for each distance value in distance_values,
+                      where {distance} is the distance value in meters or minutes
+                    - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing
+                      the area that can be reached within the corresponding distance
+      :rtype: pandas.DataFrame
+
+      .. rubric:: Notes
+
+      - Distances are computed with respect to the nearest node to the facility,
+        not the facility itself
+      - The method creates network "skeletons" (unions of node and edge geometries)
+        for each distance value, then buffers them to create isopolygons
+      - Computation time increases with the number of facilities and distance values
 
 
 
@@ -240,6 +326,9 @@ Module Contents
 
       :obj:`OsmIsopolygonCalculator`
           OSM-based implementation with precise node/edge buffering
+
+      :obj:`OsmIsopolygonCalculatorAlternative`
+          Simplified OSM-based implementation
 
    .. rubric:: Notes
 

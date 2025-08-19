@@ -66,6 +66,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#isopolygons.logger"><code class="docutils literal notranslate"><span class="pre">logger</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#isopolygons.IsopolygonCalculator"><code class="docutils literal notranslate"><span class="pre">IsopolygonCalculator</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#isopolygons.OsmIsopolygonCalculator"><code class="docutils literal notranslate"><span class="pre">OsmIsopolygonCalculator</span></code></a></li>
+<li class="toctree-l4"><a class="reference internal" href="#isopolygons.OsmIsopolygonCalculatorAlternative"><code class="docutils literal notranslate"><span class="pre">OsmIsopolygonCalculatorAlternative</span></code></a></li>
 <li class="toctree-l4"><a class="reference internal" href="#isopolygons.MapboxIsopolygonCalculator"><code class="docutils literal notranslate"><span class="pre">MapboxIsopolygonCalculator</span></code></a></li>
 </ul>
 </li>
@@ -179,7 +180,10 @@ IsopolygonCalculator and implements calculate_isopolygons.</p>
 <tr class="row-even"><td><p><a class="reference internal" href="#isopolygons.OsmIsopolygonCalculator" title="isopolygons.OsmIsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OsmIsopolygonCalculator</span></code></a></p></td>
 <td><p>OpenStreetMap-based implementation of isopolygon calculation.</p></td>
 </tr>
-<tr class="row-odd"><td><p><a class="reference internal" href="#isopolygons.MapboxIsopolygonCalculator" title="isopolygons.MapboxIsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MapboxIsopolygonCalculator</span></code></a></p></td>
+<tr class="row-odd"><td><p><a class="reference internal" href="#isopolygons.OsmIsopolygonCalculatorAlternative" title="isopolygons.OsmIsopolygonCalculatorAlternative"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OsmIsopolygonCalculatorAlternative</span></code></a></p></td>
+<td><p>Alternative OpenStreetMap-based implementation of isopolygon calculation.</p></td>
+</tr>
+<tr class="row-even"><td><p><a class="reference internal" href="#isopolygons.MapboxIsopolygonCalculator" title="isopolygons.MapboxIsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MapboxIsopolygonCalculator</span></code></a></p></td>
 <td><p>Mapbox-based implementation of isopolygon calculation.</p></td>
 </tr>
 </tbody>
@@ -271,6 +275,8 @@ may be computationally intensive for large areas or many facilities.</p>
 <dl class="simple">
 <dt><a class="reference internal" href="#isopolygons.IsopolygonCalculator" title="isopolygons.IsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IsopolygonCalculator</span></code></a></dt><dd><p>Abstract base class</p>
 </dd>
+<dt><a class="reference internal" href="#isopolygons.OsmIsopolygonCalculatorAlternative" title="isopolygons.OsmIsopolygonCalculatorAlternative"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OsmIsopolygonCalculatorAlternative</span></code></a></dt><dd><p>Simplified OSM-based implementation</p>
+</dd>
 <dt><a class="reference internal" href="#isopolygons.MapboxIsopolygonCalculator" title="isopolygons.MapboxIsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MapboxIsopolygonCalculator</span></code></a></dt><dd><p>Mapbox API-based implementation</p>
 </dd>
 </dl>
@@ -325,6 +331,94 @@ the area that can be reached within the corresponding distance</p></li>
 not the facility itself</p></li>
 <li><p>The method creates network “skeletons” and then buffers nodes and edges
 separately with different buffer sizes to create accurate isopolygons</p></li>
+<li><p>This implementation provides more accurate isopolygons compared to the
+alternative implementation but may be more computationally intensive</p></li>
+</ul>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py" id="isopolygons.OsmIsopolygonCalculatorAlternative">
+<em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">isopolygons.</span></span><span class="sig-name descname"><span class="pre">OsmIsopolygonCalculatorAlternative</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">facilities_df</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">pandas.DataFrame</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance_type</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">distance_values</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">list</span><span class="p"><span class="pre">[</span></span><span class="pre">int</span><span class="p"><span class="pre">]</span></span></span></em>, <em class="sig-param"><span class="n"><span class="pre">road_network</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">networkx.MultiDiGraph</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">buffer</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">100</span></span></em><span class="sig-paren">)</span><a class="headerlink" href="#isopolygons.OsmIsopolygonCalculatorAlternative" title="Link to this definition"></a></dt>
+<dd><p>Bases: <a class="reference internal" href="#isopolygons.IsopolygonCalculator" title="isopolygons.IsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IsopolygonCalculator</span></code></a></p>
+<p>Alternative OpenStreetMap-based implementation of isopolygon calculation.</p>
+<p>This implementation uses OpenStreetMap road network data to calculate isopolygons
+(isochrones or isodistances) around facilities. It takes a simpler approach
+by buffering network skeletons rather than the more complex node and edge buffering
+approach used by the OsmIsopolygonCalculator.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>facilities_df</strong> (<em>pandas.DataFrame</em>) – DataFrame containing facility locations with <code class="docutils literal notranslate"><span class="pre">longitude</span></code> and <code class="docutils literal notranslate"><span class="pre">latitude</span></code> columns</p></li>
+<li><p><strong>distance_type</strong> (<em>str</em>) – Type of distance to calculate (<code class="docutils literal notranslate"><span class="pre">length</span></code> or <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>)</p></li>
+<li><p><strong>distance_values</strong> (<em>list</em><em>[</em><em>int</em><em>]</em>) – List of distance values in meters (for <code class="docutils literal notranslate"><span class="pre">length</span></code>) or minutes (for <code class="docutils literal notranslate"><span class="pre">travel_time</span></code>)</p></li>
+<li><p><strong>road_network</strong> (<em>networkx.MultiDiGraph</em>) – Road network graph to use for calculations</p></li>
+<li><p><strong>buffer</strong> (<em>float</em><em>, </em><em>optional</em>) – Buffer distance in meters to apply around network skeletons. (default: <code class="docutils literal notranslate"><span class="pre">50</span></code>)</p></li>
+</ul>
+</dd>
+</dl>
+<div class="admonition seealso">
+<p class="admonition-title">See also</p>
+<dl class="simple">
+<dt><a class="reference internal" href="#isopolygons.IsopolygonCalculator" title="isopolygons.IsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IsopolygonCalculator</span></code></a></dt><dd><p>Abstract base class</p>
+</dd>
+<dt><a class="reference internal" href="#isopolygons.OsmIsopolygonCalculator" title="isopolygons.OsmIsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OsmIsopolygonCalculator</span></code></a></dt><dd><p>OSM-based implementation with precise node/edge buffering</p>
+</dd>
+<dt><a class="reference internal" href="#isopolygons.MapboxIsopolygonCalculator" title="isopolygons.MapboxIsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">MapboxIsopolygonCalculator</span></code></a></dt><dd><p>Mapbox API-based implementation</p>
+</dd>
+</dl>
+</div>
+<p class="rubric">Notes</p>
+<p>This implementation generally produces less accurate but smoother isopolygons
+compared to the standard OsmIsopolygonCalculator. It may be more suitable for
+visualization purposes or when computational efficiency is a priority.</p>
+<dl class="py attribute">
+<dt class="sig sig-object py" id="isopolygons.OsmIsopolygonCalculatorAlternative.road_network">
+<span class="sig-name descname"><span class="pre">road_network</span></span><a class="headerlink" href="#isopolygons.OsmIsopolygonCalculatorAlternative.road_network" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="isopolygons.OsmIsopolygonCalculatorAlternative.buffer">
+<span class="sig-name descname"><span class="pre">buffer</span></span><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">100</span></em><a class="headerlink" href="#isopolygons.OsmIsopolygonCalculatorAlternative.buffer" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py" id="isopolygons.OsmIsopolygonCalculatorAlternative.nearest_nodes_dict">
+<span class="sig-name descname"><span class="pre">nearest_nodes_dict</span></span><a class="headerlink" href="#isopolygons.OsmIsopolygonCalculatorAlternative.nearest_nodes_dict" title="Link to this definition"></a></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="isopolygons.OsmIsopolygonCalculatorAlternative.calculate_isopolygons">
+<span class="sig-name descname"><span class="pre">calculate_isopolygons</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">pandas.DataFrame</span></span></span><a class="headerlink" href="#isopolygons.OsmIsopolygonCalculatorAlternative.calculate_isopolygons" title="Link to this definition"></a></dt>
+<dd><p>Calculate isopolygons for each facility at different distances.</p>
+<p>This method generates isopolygons (areas reachable within specific travel times or distances)
+for each facility using the OpenStreetMap road network data.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p><p>DataFrame containing isopolygons with the following structure:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Each row represents a facility from facilities_df</p></li>
+<li><p>One column named <code class="docutils literal notranslate"><span class="pre">ID_{distance}</span></code> for each distance value in distance_values,
+where {distance} is the distance value in meters or minutes</p></li>
+<li><p>Each cell contains a Shapely <code class="docutils literal notranslate"><span class="pre">Polygon</span></code> or <code class="docutils literal notranslate"><span class="pre">MultiPolygon</span></code> representing
+the area that can be reached within the corresponding distance</p></li>
+</ul>
+</div></blockquote>
+</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>pandas.DataFrame</p>
+</dd>
+</dl>
+<p class="rubric">Notes</p>
+<ul class="simple">
+<li><p>Distances are computed with respect to the nearest node to the facility,
+not the facility itself</p></li>
+<li><p>The method creates network “skeletons” (unions of node and edge geometries)
+for each distance value, then buffers them to create isopolygons</p></li>
+<li><p>Computation time increases with the number of facilities and distance values</p></li>
 </ul>
 </dd></dl>
 
@@ -356,6 +450,8 @@ Maximum of 4 values allowed by the Mapbox API</p></li>
 <dt><a class="reference internal" href="#isopolygons.IsopolygonCalculator" title="isopolygons.IsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">IsopolygonCalculator</span></code></a></dt><dd><p>Abstract base class</p>
 </dd>
 <dt><a class="reference internal" href="#isopolygons.OsmIsopolygonCalculator" title="isopolygons.OsmIsopolygonCalculator"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OsmIsopolygonCalculator</span></code></a></dt><dd><p>OSM-based implementation with precise node/edge buffering</p>
+</dd>
+<dt><a class="reference internal" href="#isopolygons.OsmIsopolygonCalculatorAlternative" title="isopolygons.OsmIsopolygonCalculatorAlternative"><code class="xref py py-obj docutils literal notranslate"><span class="pre">OsmIsopolygonCalculatorAlternative</span></code></a></dt><dd><p>Simplified OSM-based implementation</p>
 </dd>
 </dl>
 </div>
