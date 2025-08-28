@@ -5,11 +5,15 @@
 ### World Health Organization Nepal
 - [An assessment of geographical accessibility to COVID-19 testing in Nepal (2021)](https://www.thelancet.com/journals/lansea/article/PIIS2772-3682(24)00086-6/fulltext)
 - [Coordination strategies to improve PCR laboratory testing scale-up in Nepal: an analysis based on COVID-19 response](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/Coordination%20strategies_Nepal.pdf)
+- [Within-laboratory SARS-CoV-2 real time PCR testing operations in Nepal: a simulation-based analysis]()
 ### 510 - Red Cross
 - [A method for huge scale maximum covering facility location problems with an application to water well placement in West Darfur](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/ClusteringMethod_Sudan.pdf)
+### Amref Health Africa
+- [A Decision Support Tool for Domain-Driven Mobile Clinic Routing: A Case Study in Kenya](https://aisel.aisnet.org/sigdsa2024/12/)
 
-### Thesis Work
+### Other relevant publications
 
+- [Enhancing digital road networks for better transportation in developing countries](https://www.researchgate.net/publication/384542150_Enhancing_digital_road_networks_for_better_transportation_in_developing_countries)
 - [Method for analyzing climate criticality of infrastructure networks by Teun van der Laan, 2024](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/Final_Master_Thesis_UvA%20(1)%20-%20Teun.pdf)
 - [Optimization of Cold Storage Locations in Madhya Pradesh to Reduce Tomato Losses by Nick Koelemeij, 2024](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/MSc_Thesis_Nick_Koelemeij__15th_of_July__2024_.pdf)
 - [Optimizing Stroke Care Accessibility for At-Risk Populations by Merel Bonewit, 2024](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/blob/main/publications/Bonewit%2C%20Merel%20Msc.pdf)
