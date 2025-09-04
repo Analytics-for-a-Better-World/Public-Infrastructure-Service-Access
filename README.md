@@ -6,6 +6,12 @@ PISA assists policymakers in identifying and planning key resources such as road
 
 For detailed documentation on the code, read the [docs](https://analytics-for-a-better-world.github.io/Public-Infrastructure-Service-Access/index.html).
 
+> ⚠️ **Important:**  
+> The latest version of PISA contains significant refactoring and improvements.  
+> If you need the original codebase, use version `1.0.0` available from the [GitHub releases](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/releases/tag/v1.0.0).  
+> For new projects and ongoing development, it is **recommended to use the latest version** to benefit from updated features and optimizations.
+
+
 ## Local Development
 
 ### Installation
@@ -31,7 +37,10 @@ If you prefer traditional Python package management:
 4. Activate the virtual environment:
    - Windows: `venv\Scripts\activate`
    - macOS/Linux: `source venv/bin/activate`
-5. Install the package: `pip install dist/pisa-1.0.0-py3-none-any.whl`
+5. Install the package: `pip install dist/pisa-2.0.0-py3-none-any.whl`
+
+> If you need the original codebase, use the wheel file for version `1.0.0` (`pip install dist/gpbp-1.0.0-py3-none-any.whl`)
+
 
 #### External Dependencies
 
