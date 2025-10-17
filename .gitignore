@@ -7,8 +7,15 @@ model_files/*
 # Results
 results/*
 
+# Sphinx documentation
+docs/_build/
+
+# MacOS
+.DS_Store
+
 # Virtual environment
 venv
+.env
 
 config.py
 
@@ -28,15 +35,8 @@ htmlcov/
 build/
 *.egg-info/
 
-examples/test_ntbk.ipynb
-#examples/gpbp_showcame.ipynb
-
-Public-Infrastructure-Location-Optimiser.code-workspace
+*.code-workspace
 
 data
-publications/.DS_Store
-publications/WHO Nepal Paper/.DS_Store
-publications/PISA Timor Leste/.ipynb_checkpoints/Timor Leste_Estrada_WorldPop_Analysis-checkpoint.ipynb
-publications/PISA Timor Leste/.DS_Store
+*.ipynb_checkpoints/
 *.pkl
-.DS_Store
