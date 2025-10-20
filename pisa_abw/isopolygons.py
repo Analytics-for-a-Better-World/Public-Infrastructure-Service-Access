@@ -240,6 +240,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
     See Also
     --------
     IsopolygonCalculator : Abstract base class
+    OsmIsopolygonCalculatorAlternative : Simplified OSM-based implementation
     MapboxIsopolygonCalculator : Mapbox API-based implementation
     """
 
@@ -293,6 +294,8 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
           not the facility itself
         - The method creates network "skeletons" and then buffers nodes and edges
           separately with different buffer sizes to create accurate isopolygons
+        - This implementation provides more accurate isopolygons compared to the
+          alternative implementation but may be more computationally intensive
         """
         # Initialize an empty DataFrame to store isopolygons
         index = self.nearest_nodes_dict.keys()
@@ -455,6 +458,187 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
             )
 
 
+class OsmIsopolygonCalculatorAlternative(IsopolygonCalculator):
+    """Alternative OpenStreetMap-based implementation of isopolygon calculation.
+
+    This implementation uses OpenStreetMap road network data to calculate isopolygons
+    (isochrones or isodistances) around facilities. It takes a simpler approach
+    by buffering network skeletons rather than the more complex node and edge buffering
+    approach used by the OsmIsopolygonCalculator.
+
+    Parameters
+    ----------
+    facilities_df : pandas.DataFrame
+        DataFrame containing facility locations with ``longitude`` and ``latitude`` columns
+    distance_type : str
+        Type of distance to calculate (``length`` or ``travel_time``)
+    distance_values : list[int]
+        List of distance values in meters (for ``length``) or minutes (for ``travel_time``)
+    road_network : networkx.MultiDiGraph
+        Road network graph to use for calculations
+    buffer : float, optional
+        Buffer distance in meters to apply around network skeletons. (default: ``50``)
+
+    See Also
+    --------
+    IsopolygonCalculator : Abstract base class
+    OsmIsopolygonCalculator : OSM-based implementation with precise node/edge buffering
+    MapboxIsopolygonCalculator : Mapbox API-based implementation
+
+    Notes
+    -----
+    This implementation generally produces less accurate but smoother isopolygons
+    compared to the standard OsmIsopolygonCalculator. It may be more suitable for
+    visualization purposes or when computational efficiency is a priority.
+    """
+
+    def __init__(
+        self,
+        facilities_df: DataFrame,
+        distance_type: str,
+        distance_values: list[int],
+        road_network: MultiDiGraph,
+        buffer: float = 100,  # in meters
+    ):
+        super().__init__(facilities_df, distance_type, distance_values)
+        self.road_network = road_network
+        self.buffer = buffer
+
+        # Find the nearest node in the road network and create a dictionary to store the match with the respective facility
+        nearest_nodes, distance_to_nearest_nodes = ox.distance.nearest_nodes(
+            G=self.road_network,
+            X=self.facilities_df.longitude.values,
+            Y=self.facilities_df.latitude.values,
+            return_dist=True,
+        )
+
+        self._warn_facilities_too_far_away(nearest_nodes, distance_to_nearest_nodes)
+
+        self.nearest_nodes_dict = {
+            facility_id: node
+            for facility_id, node in zip(self.facilities_df.index, nearest_nodes)
+        }
+
+    def calculate_isopolygons(self) -> DataFrame:
+        """Calculate isopolygons for each facility at different distances.
+
+        This method generates isopolygons (areas reachable within specific travel times or distances)
+        for each facility using the OpenStreetMap road network data.
+
+        Returns
+        -------
+        pandas.DataFrame
+            DataFrame containing isopolygons with the following structure:
+
+                - Each row represents a facility from facilities_df
+                - One column named ``ID_{distance}`` for each distance value in distance_values,
+                  where {distance} is the distance value in meters or minutes
+                - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon`` representing
+                  the area that can be reached within the corresponding distance
+
+        Notes
+        -----
+        - Distances are computed with respect to the nearest node to the facility,
+          not the facility itself
+        - The method creates network "skeletons" (unions of node and edge geometries)
+          for each distance value, then buffers them to create isopolygons
+        - Computation time increases with the number of facilities and distance values
+        """
+        index = self.nearest_nodes_dict.keys()
+        columns = [f"ID_{d}" for d in self.distance_values]
+        isopolygons = pd.DataFrame(index=index, columns=columns)
+        isopolygons.index.name = self.facilities_df.index.name
+
+        for distance_value in self.distance_values:
+            # Get skeletons for all nodes at this distance value
+            skeletons = [
+                self._get_skeleton_nodes_and_edges(
+                    self.road_network, node, distance_value, self.distance_type
+                )
+                for node in self.nearest_nodes_dict.values()
+            ]
+
+            # "Inflate" skeletons to isopolygons at this distance value
+            isopolygon_series = pd.Series(skeletons).apply(
+                lambda x: ox.utils_geo.buffer_geometry(x, self.buffer)
+            )
+
+            # Assign column with isopolygons to the dataframe
+            isopolygons[f"ID_{distance_value}"] = isopolygon_series.values
+
+        return isopolygons
+
+    @staticmethod
+    def _get_skeleton_nodes_and_edges(
+        road_network: nx.MultiDiGraph,
+        center_node: int,
+        distance_value: int,
+        distance_type: str,
+    ):
+        """Get the skeleton of an isopolygon from a road network.
+
+        This method extracts all nodes and edges within a specified distance from a center node
+        in a road network, and returns the union of their geometries as the "skeleton" of the isopolygon.
+
+        Parameters
+        ----------
+        road_network : nx.MultiDiGraph
+            The road network graph
+        center_node : int
+            The node ID from which to measure distance
+        distance_value : int
+            The maximum distance value (in meters for 'length', minutes for 'travel_time')
+        distance_type : str
+            The type of distance to use ('length' or 'travel_time')
+
+        Returns
+        -------
+        shapely.geometry
+            The union of geometries of all nodes and edges within the specified distance,
+            representing the "skeleton" of the isopolygon
+
+        Notes
+        -----
+        If no edges are found (e.g., if all other nodes are beyond the distance threshold),
+        the method returns only the union of node geometries.
+        """
+        subgraph = nx.ego_graph(
+            road_network, center_node, radius=distance_value, distance=distance_type
+        )
+
+        try:
+            nodes_gdf, edges_gdf = ox.graph_to_gdfs(subgraph)
+
+            skeleton = (edges_gdf.geometry.union_all()).union(
+                nodes_gdf.geometry.union_all()
+            )
+
+        except ValueError:  # if no edges are found
+            nodes_gdf = ox.graph_to_gdfs(subgraph, edges=False)
+
+            skeleton = nodes_gdf.geometry.union_all()
+
+        return skeleton
+
+    def _warn_facilities_too_far_away(self, nearest_nodes, distance_to_nearest_nodes):
+        """Logs a warning if any facilities are found more than 10km from nearest road node,
+        suggesting manual inspection may be needed to verify results.
+        """
+        if any(distance_to_nearest_nodes > 10000):
+
+            high_distance_indices = np.where(distance_to_nearest_nodes > 10000)
+            far_from_road_facilities = self.facilities_df.iloc[high_distance_indices]
+            far_from_road_facilities["nearest_road_node"] = nearest_nodes[
+                high_distance_indices
+            ]
+
+            logger.warning(
+                f"""Some facilities are more than 10 km away from the nearest node on the OSM road network. 
+                The facilities and their nearest nodes are: {far_from_road_facilities[['nearest_road_node']]} \n 
+                It makes sense to visually inspect these in a notebook or compare your results with the Mapbox API."""
+            )
+
+
 class MapboxIsopolygonCalculator(IsopolygonCalculator):
     """Mapbox-based implementation of isopolygon calculation.
 
@@ -481,6 +665,7 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
     --------
     IsopolygonCalculator : Abstract base class
     OsmIsopolygonCalculator : OSM-based implementation with precise node/edge buffering
+    OsmIsopolygonCalculatorAlternative : Simplified OSM-based implementation
 
     Notes
     -----
