@@ -8,7 +8,7 @@ For detailed documentation on the code, read the [docs](https://analytics-for-a-
 
 > ⚠️ **Important:**  
 > The latest version of PISA contains significant refactoring and improvements.  
-> If you need the original codebase, use version `1.0.0` available from the [GitHub releases](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/releases/tag/v1.0.0).  
+> If you need the original codebase, use version `0.1.0` available from the [GitHub releases](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/releases/tag/v0.1.0) or refer to the [list of releases](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/releases) for more information.  
 > For new projects and ongoing development, it is **recommended to use the latest version** to benefit from updated features and optimizations.
 
 
@@ -39,7 +39,7 @@ If you prefer traditional Python package management:
    - macOS/Linux: `source venv/bin/activate`
 5. Install the package: `pip install dist/pisa-2.0.0-py3-none-any.whl`
 
-> If you need the original codebase, use the wheel file for version `1.0.0` (`pip install dist/gpbp-1.0.0-py3-none-any.whl`)
+> If you need the original codebase, use the wheel file for version `0.1.0` (`pip install dist/gpbp-0.1.0-py3-none-any.whl`)
 
 
 #### External Dependencies
