@@ -1,17 +1,17 @@
 Traceback (most recent call last):
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/jupyter_cache/executors/utils.py", line 58, in single_nb_execution
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/jupyter_cache/executors/utils.py", line 58, in single_nb_execution
     executenb(
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 1305, in execute
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 1305, in execute
     return NotebookClient(nb=nb, resources=resources, km=km, **kwargs).execute()
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/jupyter_core/utils/__init__.py", line 165, in wrapped
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/jupyter_core/utils/__init__.py", line 165, in wrapped
     return loop.run_until_complete(inner)
   File "/opt/hostedtoolcache/Python/3.10.18/x64/lib/python3.10/asyncio/base_events.py", line 649, in run_until_complete
     return future.result()
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 705, in async_execute
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 705, in async_execute
     await self.async_execute_cell(
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 1058, in async_execute_cell
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 1058, in async_execute_cell
     await self._check_raise_for_error(cell, cell_index, exec_reply)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 914, in _check_raise_for_error
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 914, in _check_raise_for_error
     raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
 nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
 ------------------
@@ -30,13 +30,13 @@ values, solutions = jg_opt.Solve(
 WARNING:pyomo.opt:Failed to create solver with name '_cbc_shell':
 Failed to set executable for solver cbc. File with name=D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\cbc.exe either does not exist or it is not executable. To skip this validation, call set_executable with validate=False.
 Traceback (most recent call last):
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 148, in __call__
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 148, in __call__
     opt = self._cls[_name](**kwds)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/solvers/plugins/solvers/CBCplugin.py", line 88, in __init__
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/solvers/plugins/solvers/CBCplugin.py", line 88, in __init__
     super(CBCSHELL, self).__init__(**kwds)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/solver/shellcmd.py", line 66, in __init__
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/solver/shellcmd.py", line 66, in __init__
     self.set_executable(name=executable, validate=validate)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/solver/shellcmd.py", line 115, in set_executable
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/solver/shellcmd.py", line 115, in set_executable
     raise ValueError(
 ValueError: Failed to set executable for solver cbc. File with name=D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\cbc.exe either does not exist or it is not executable. To skip this validation, call set_executable with validate=False.
 ----- stderr -----
@@ -54,13 +54,13 @@ The original solver was created with the following parameters:
 	_args: ()
 	options: {}
 Traceback (most recent call last):
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 148, in __call__
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 148, in __call__
     opt = self._cls[_name](**kwds)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/solvers/plugins/solvers/CBCplugin.py", line 50, in __new__
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/solvers/plugins/solvers/CBCplugin.py", line 50, in __new__
     opt.set_problem_format(ProblemFormat.cpxlp)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 113, in __getattr__
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 113, in __getattr__
     self._solver_error(attr)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 116, in _solver_error
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 116, in _solver_error
     raise RuntimeError(
 RuntimeError: Attempting to use an unavailable solver.
 
@@ -114,12 +114,12 @@ File [0;32m~/work/Public-Infrastructure-Service-Access/Public-Infrastructure-Se
 [1;32m    129[0m     np[38;5;241m.[39mceil(M[38;5;241m.[39mweighted_coverage() [38;5;241m-[39m np[38;5;241m.[39mfinfo(np[38;5;241m.[39mfloat16)[38;5;241m.[39meps)
 [1;32m    130[0m )
 
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py:99[0m, in [0;36mUnknownSolver.solve[0;34m(self, *args, **kwds)[0m
+File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py:99[0m, in [0;36mUnknownSolver.solve[0;34m(self, *args, **kwds)[0m
 [1;32m     97[0m [38;5;28;01mdef[39;00m[38;5;250m [39m[38;5;21msolve[39m([38;5;28mself[39m, [38;5;241m*[39margs, [38;5;241m*[39m[38;5;241m*[39mkwds):
 [1;32m     98[0m [38;5;250m    [39m[38;5;124;03m"""Perform optimization and return an SolverResults object."""[39;00m
 [0;32m---> 99[0m     [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43m_solver_error[49m[43m([49m[38;5;124;43m'[39;49m[38;5;124;43msolve[39;49m[38;5;124;43m'[39;49m[43m)[49m
 
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py:116[0m, in [0;36mUnknownSolver._solver_error[0;34m(self, method_name)[0m
+File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py:116[0m, in [0;36mUnknownSolver._solver_error[0;34m(self, method_name)[0m
 [1;32m    115[0m     [38;5;28;01mdef[39;00m[38;5;250m [39m[38;5;21m_solver_error[39m([38;5;28mself[39m, method_name):
 [0;32m--> 116[0m         [38;5;28;01mraise[39;00m [38;5;167;01mRuntimeError[39;00m(
 [1;32m    117[0m [38;5;250m            [39m[38;5;124;03m"""Attempting to use an unavailable solver.[39;00m

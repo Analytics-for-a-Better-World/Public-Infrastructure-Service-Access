@@ -6,7 +6,7 @@
   <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Public Infrastructure Service Access (PISA) &mdash; Public Infrastructure Service Access 1.0.0 documentation</title>
+  <title>Public Infrastructure Service Access (PISA) &mdash; Public Infrastructure Service Access 2.0.0 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
       <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
       <link rel="stylesheet" type="text/css" href="_static/mystnb.4510f1fc1dee50b3e5859aac5469c37c29e427902b24a333a5f9fcb2f0b3ac41.css" />
@@ -15,7 +15,7 @@
   
       <script src="_static/jquery.js?v=5d32c60e"></script>
       <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=8d563738"></script>
+      <script src="_static/documentation_options.js?v=51b770b3"></script>
       <script src="_static/doctools.js?v=9bcbadda"></script>
       <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
@@ -93,11 +93,19 @@ If you need the original codebase, use version <code class="docutils literal not
 For new projects and ongoing development, it is <strong>recommended to use the latest version</strong> to benefit from updated features and optimizations.</p>
 </div></blockquote>
 </section>
+<section id="user-installation">
+<h2>User Installation<a class="headerlink" href="#user-installation" title="Link to this heading"></a></h2>
+<p>To install the latest version of PISA, you can use pip:</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>pisa_abw
+</pre></div>
+</div>
+<p>It is recommended to use a virtual environment to avoid dependency conflicts.</p>
+</section>
 <section id="local-development">
 <h2>Local Development<a class="headerlink" href="#local-development" title="Link to this heading"></a></h2>
 <section id="installation">
 <h3>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h3>
-<p>This project can be installed in two ways:</p>
+<p>The source code of this project can be installed in two ways to make it accessible for development and testing:</p>
 <section id="option-1-using-poetry-recommended">
 <h4>Option 1: Using Poetry (Recommended)<a class="headerlink" href="#option-1-using-poetry-recommended" title="Link to this heading"></a></h4>
 <p>This project uses <a class="reference external" href="https://python-poetry.org/">Poetry</a> for dependency and packaging management.</p>
@@ -121,7 +129,7 @@ For new projects and ongoing development, it is <strong>recommended to use the l
 <li><p>macOS/Linux: <code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">venv/bin/activate</span></code></p></li>
 </ul>
 </li>
-<li><p>Install the package: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">dist/pisa-2.0.0-py3-none-any.whl</span></code></p></li>
+<li><p>Install the package: <code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">dist/pisa_abw-2.0.0-py3-none-any.whl</span></code></p></li>
 </ol>
 <blockquote>
 <div><p>If you need the original codebase, use the wheel file for version <code class="docutils literal notranslate"><span class="pre">0.1.0</span></code> (<code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">dist/gpbp-0.1.0-py3-none-any.whl</span></code>)</p>
@@ -161,7 +169,7 @@ For new projects and ongoing development, it is <strong>recommended to use the l
 <p>We provide two examples to understand and interact with the package:</p>
 <ol class="arabic simple">
 <li><p>Some example usage can be seen in the <code class="docutils literal notranslate"><span class="pre">examples/pisa_showcase_*.ipynb</span></code> notebooks. These notebooks show the basic package data flow and allow you to explore the outputs of each function. The notebooks differ in the tool used to generate isopolygons: OSM or Mapbox. Note that Mapbox requires an API key (see External Dependencies section above).</p></li>
-<li><p>A more visual example can be seen in the <a class="reference external" href="https://streamlit.io/">Streamlit</a> app to interact with the package using a graphical interface. You can start the app by running <code class="docutils literal notranslate"><span class="pre">streamlit</span> <span class="pre">run</span> <span class="pre">pisa_app/main_page.py</span></code> from the main repository directory, which will automatically open a browser window.</p></li>
+<li><p>A more visual example can be seen in the <a class="reference external" href="https://streamlit.io/">Streamlit</a> app to interact with the package using a graphical interface. You can start the app by running <code class="docutils literal notranslate"><span class="pre">streamlit</span> <span class="pre">run</span> <span class="pre">pisa_abw_app/main_page.py</span></code> from the main repository directory, which will automatically open a browser window.</p></li>
 </ol>
 </section>
 </section>
@@ -169,25 +177,25 @@ For new projects and ongoing development, it is <strong>recommended to use the l
 <h2>Deploying/running the web interface (Docker)<a class="headerlink" href="#deploying-running-the-web-interface-docker" title="Link to this heading"></a></h2>
 <p>Docker is a tool that allows you to package an application and its dependencies in a virtual container that can run on most operating systems. The web interface for the PISA project can be run using Docker. To do this, you need to have Docker installed on your system. You can download Docker from <a class="reference external" href="https://www.docker.com/products/docker-desktop">here</a>.</p>
 <p>After you have installed Docker, you can run the following command in the repository to build an image of the PISA project. The Dockerfile uses Poetry to install the application and its dependencies inside the image, consistent with the recommended installation method, and includes all necessary geospatial libraries.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>pisa<span class="w"> </span>.
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>pisa_abw<span class="w"> </span>.
 </pre></div>
 </div>
-<p>Now that you have built the image, you can run a container using it. The following command will run a container from the <code class="docutils literal notranslate"><span class="pre">pisa</span></code> image and expose the web interface on port 8501 to localhost only. The command will show the URL on which it’s accessible. The container will be named <code class="docutils literal notranslate"><span class="pre">pisa</span></code> as well.</p>
-<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">127</span>.0.0.1:8501:8501<span class="w"> </span>--name<span class="w"> </span>pisa<span class="w"> </span>pisa
+<p>Now that you have built the image, you can run a container using it. The following command will run a container from the <code class="docutils literal notranslate"><span class="pre">pisa_abw</span></code> image and expose the web interface on port 8501 to localhost only. The command will show the URL on which it’s accessible. The container will be named <code class="docutils literal notranslate"><span class="pre">pisa_abw</span></code> as well.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">127</span>.0.0.1:8501:8501<span class="w"> </span>--name<span class="w"> </span>pisa_abw<span class="w"> </span>pisa_abw
 </pre></div>
 </div>
 <p>You can use the following commands to manage the container after the initial run:</p>
 <div class="highlight-sh notranslate"><div class="highlight"><pre><span></span><span class="c1"># Stop the container</span>
-docker<span class="w"> </span>stop<span class="w"> </span>pisa
+docker<span class="w"> </span>stop<span class="w"> </span>pisa_abw
 
 <span class="c1"># Start a stopped container</span>
-docker<span class="w"> </span>start<span class="w"> </span>pisa
+docker<span class="w"> </span>start<span class="w"> </span>pisa_abw
 
 <span class="c1"># View logs from the container</span>
-docker<span class="w"> </span>logs<span class="w"> </span>pisa
+docker<span class="w"> </span>logs<span class="w"> </span>pisa_abw
 
 <span class="c1"># Remove the container (if you need to start fresh)</span>
-docker<span class="w"> </span>rm<span class="w"> </span>pisa
+docker<span class="w"> </span>rm<span class="w"> </span>pisa_abw
 </pre></div>
 </div>
 <p>The image is also ready to be deployed on a server or a cloud platform that supports Docker.</p>
