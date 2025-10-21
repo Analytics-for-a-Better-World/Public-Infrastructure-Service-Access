@@ -8,7 +8,7 @@
 
 project = "Public Infrastructure Service Access"
 author = "EiriniK"
-release = "1.0.0"
+release = "2.0.0"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -24,7 +24,7 @@ autoapi_dirs = ["../pisa"]
 # AutoAPI configuration
 autoapi_options = [
     "members",
-    "undoc-members", 
+    "undoc-members",
     "show-inheritance",
     "show-module-summary",
     "special-members",
@@ -33,9 +33,11 @@ autoapi_options = [
 # Skip documenting module-level variables like loggers
 autoapi_python_class_content = "class"
 
+
 def skip_member(app, what, name, obj, skip, options):
     """Skip certain members from being documented."""
     import logging
+
     # Skip logger objects specifically
     if name == "logger" and isinstance(obj, logging.Logger):
         return True
@@ -44,9 +46,11 @@ def skip_member(app, what, name, obj, skip, options):
         return True
     return skip
 
+
 def setup(sphinx):
     """Connect the skip function to the autoapi-skip-member event."""
     sphinx.connect("autoapi-skip-member", skip_member)
+
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.

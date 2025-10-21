@@ -11,12 +11,22 @@ For detailed documentation on the code, read the [docs](https://analytics-for-a-
 > If you need the original codebase, use version `0.1.0` available from the [GitHub releases](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/releases/tag/v0.1.0) or refer to the [list of releases](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/releases) for more information.  
 > For new projects and ongoing development, it is **recommended to use the latest version** to benefit from updated features and optimizations.
 
+## User Installation
+
+To install the latest version of PISA, you can use pip:
+
+```sh
+pip install pisa_abw
+```
+
+It is recommended to use a virtual environment to avoid dependency conflicts.
+
 
 ## Local Development
 
 ### Installation
 
-This project can be installed in two ways:
+The source code of this project can be installed in two ways to make it accessible for development and testing:
 
 #### Option 1: Using Poetry (Recommended)
 
@@ -37,7 +47,7 @@ If you prefer traditional Python package management:
 4. Activate the virtual environment:
    - Windows: `venv\Scripts\activate`
    - macOS/Linux: `source venv/bin/activate`
-5. Install the package: `pip install dist/pisa-2.0.0-py3-none-any.whl`
+5. Install the package: `pip install dist/pisa_abw-2.0.0-py3-none-any.whl`
 
 > If you need the original codebase, use the wheel file for version `0.1.0` (`pip install dist/gpbp-0.1.0-py3-none-any.whl`)
 

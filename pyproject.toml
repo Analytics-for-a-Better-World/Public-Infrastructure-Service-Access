@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "pisa"
+name = "pisa_abw"
 version = "2.0.0"
 description = "Estimate and optimize service coverage of public infrastructure facilities."
 authors = ["EiriniK <Eirini.Kousathana@ortec.com>"]
