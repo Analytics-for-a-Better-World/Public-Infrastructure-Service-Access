@@ -1,7 +1,7 @@
 """Population data retrieval and processing module for geographic analysis.
 
-This module provides classes and functions for retrieving, processing, and analyzing population data from various 
-sources such as Facebook's Data for Good and WorldPop. It includes an abstract base class that defines the common 
+This module provides classes and functions for retrieving, processing, and analyzing population data from various
+sources such as Facebook's Data for Good and WorldPop. It includes an abstract base class that defines the common
 interface, and concrete implementations for specific data sources.
 
 The module supports retrieving population data within specified administrative boundaries, aggregating the data at
@@ -11,8 +11,8 @@ Examples
 --------
 Retrieve and process population data from WorldPop:
 
->>> from pisa.administrative_area import AdministrativeArea
->>> from pisa.population import WorldpopPopulation
+>>> from pisa_abw.administrative_area import AdministrativeArea
+>>> from pisa_abw.population import WorldpopPopulation
 >>>
 >>> # Get administrative area boundaries
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
@@ -53,10 +53,10 @@ from shapely import MultiPolygon, Polygon
 @dataclass
 class Population(ABC):
     """Abstract base class for Population data retrieval and processing.
-    
-    This class provides the core functionality for retrieving and processing population data for a specified 
+
+    This class provides the core functionality for retrieving and processing population data for a specified
     administrative area. Subclasses must implement the method get_population_data() to support different data sources.
-    
+
     Parameters
     ----------
     admin_area_boundaries : Polygon or MultiPolygon
@@ -64,7 +64,7 @@ class Population(ABC):
     iso3_country_code : str
         The ISO3 country code for the administrative area (e.g., ``TLS`` for Timor-Leste)
     population_resolution : int, optional
-        The decimal precision to which latitude and longitude coordinates are rounded for aggregation purposes 
+        The decimal precision to which latitude and longitude coordinates are rounded for aggregation purposes
         (default: ``5``)
     """
 
@@ -79,7 +79,7 @@ class Population(ABC):
 
             1. Retrieving raw population data using the specific implementation of the get_population_data() method
             2. Aggregating the population data based on the specified resolution
-        
+
         Returns
         -------
         geopandas.GeoDataFrame
@@ -95,15 +95,13 @@ class Population(ABC):
         return self._group_population(population_df, self.population_resolution)
 
     @staticmethod
-    def _group_population(
-        population_df: pd.DataFrame, population_resolution: int
-    ) -> GeoDataFrame:
+    def _group_population(population_df: pd.DataFrame, population_resolution: int) -> GeoDataFrame:
         """Group population data by coordinates based on a specified resolution.
-        
-        This method aggregates population data by rounding longitude and latitude coordinates to a specified decimal 
+
+        This method aggregates population data by rounding longitude and latitude coordinates to a specified decimal
         precision (population_resolution), then grouping by these rounded coordinates. For each unique coordinate pair,
         the population values are summed.
-        
+
         Parameters
         ----------
         population_df : pandas.DataFrame
@@ -111,10 +109,10 @@ class Population(ABC):
             - longitude: Longitude coordinate
             - latitude: Latitude coordinate
             - population: Population count
-            
+
         population_resolution : int
             Number of decimal places to round the coordinates to
-            
+
         Returns
         -------
         geopandas.GeoDataFrame
@@ -123,22 +121,17 @@ class Population(ABC):
             - latitude: Rounded latitude coordinate
             - population: Total population for the coordinate
             - geometry: Point geometry created from the coordinates
-        
+
         Notes
         -----
-        This method creates point geometries using the rounded coordinates and assigns a unique ID to each point based 
+        This method creates point geometries using the rounded coordinates and assigns a unique ID to each point based
         on its position in the dataframe.
         """
-        population_df.loc[:, ["longitude", "latitude"]] = population_df[
-            ["longitude", "latitude"]
-        ].round(population_resolution)
-
-        population = (
-            population_df.groupby(["longitude", "latitude"], as_index=False)[
-                "population"
-            ]
-            .sum()
+        population_df.loc[:, ["longitude", "latitude"]] = population_df[["longitude", "latitude"]].round(
+            population_resolution
         )
+
+        population = population_df.groupby(["longitude", "latitude"], as_index=False)["population"].sum()
         population["population"] = population["population"].round(2)
         population = GeoDataFrame(
             population,
@@ -149,10 +142,10 @@ class Population(ABC):
     @abstractmethod
     def _get_population_df(self) -> pd.DataFrame:
         """Get population data from a specific data source.
-        
+
         This abstract method must be implemented by subclasses to provide population data retrieval from specific sources
          (e.g., Facebook, WorldPop).
-        
+
         Returns
         -------
         pandas.DataFrame
@@ -160,7 +153,7 @@ class Population(ABC):
             - longitude: Longitude coordinate
             - latitude: Latitude coordinate
             - population: Population count at the coordinate
-            
+
         Raises
         ------
         NotImplementedError
@@ -171,12 +164,12 @@ class Population(ABC):
 
 class FacebookPopulation(Population):
     """Population data from Facebook's High Resolution Population Density Maps.
-    
-    This class retrieves and processes population data from Facebook's Data for Good program, which provides 
+
+    This class retrieves and processes population data from Facebook's Data for Good program, which provides
     high-resolution population density maps. The data is accessed via the Humanitarian Data Exchange (HDX) platform.
-    
+
     The class follows the same initialization pattern as its parent class Population.
-    
+
     See Also
     --------
     Population : Parent abstract class
@@ -185,10 +178,10 @@ class FacebookPopulation(Population):
 
     def _get_population_df(self) -> pd.DataFrame:
         """Download and process population data from Facebook.
-        
+
         Implements the abstract method from the Population class to retrieve population data specifically from Facebook's
          High Resolution Population Density Maps via the HDX platform.
-        
+
         Returns
         -------
         pandas.DataFrame
@@ -212,39 +205,35 @@ class FacebookPopulation(Population):
     @staticmethod
     def download_population_facebook(iso3_country_code: str) -> pd.DataFrame:
         """Download Facebook population data for a specific country.
-        
-        This method retrieves population data from Facebook's High Resolution Population Density Maps via the 
+
+        This method retrieves population data from Facebook's High Resolution Population Density Maps via the
         Humanitarian Data Exchange (HDX) platform for a country specified by its ISO3 code.
-        
+
         Parameters
         ----------
         iso3_country_code : str
             The ISO3 country code for which to download population data (e.g., ``TLS`` for Timor-Leste)
-        
+
         Returns
         -------
         pandas.DataFrame
             Raw population data from Facebook for the specified country
-            
+
         Raises
         ------
         Exception
             If there are issues with the HDX configuration or data download
-            
+
         Notes
         -----
         The method accesses the Facebook population dataset from the year 2020.
         """
         try:
-            Configuration.create(
-                hdx_site="prod", user_agent="Get_Population_Data", hdx_read_only=True
-            )
+            Configuration.create(hdx_site="prod", user_agent="Get_Population_Data", hdx_read_only=True)
         except Exception as e:
             print(f"Warning: Unable to configure HDX. Error: {e}")
 
-        resource = Resource.search_in_hdx(
-            f"name:{iso3_country_code.lower()}_general_2020_csv.zip"
-        )
+        resource = Resource.search_in_hdx(f"name:{iso3_country_code.lower()}_general_2020_csv.zip")
         if not resource:
             raise ValueError(f"No resource found for country code: {iso3_country_code}")
 
@@ -261,10 +250,10 @@ class FacebookPopulation(Population):
         admin_area_boundaries: Polygon | MultiPolygon,
     ) -> pd.DataFrame:
         """Process Facebook population data for a specific administrative area.
-        
-        This method transforms raw Facebook population data into a filtered dataset that only includes points within the 
+
+        This method transforms raw Facebook population data into a filtered dataset that only includes points within the
         specified administrative area boundaries.
-        
+
         Parameters
         ----------
         downloaded_data : pandas.DataFrame
@@ -273,7 +262,7 @@ class FacebookPopulation(Population):
             ISO3 country code used to identify the population column in the data
         admin_area_boundaries : Polygon or MultiPolygon
             The geographical boundaries used to clip the population data
-            
+
         Returns
         -------
         pandas.DataFrame
@@ -285,25 +274,21 @@ class FacebookPopulation(Population):
         """
         gdf = GeoDataFrame(
             downloaded_data,
-            geometry=points_from_xy(
-                downloaded_data["longitude"], downloaded_data["latitude"]
-            ),
+            geometry=points_from_xy(downloaded_data["longitude"], downloaded_data["latitude"]),
         )
         gdf = clip(gdf, admin_area_boundaries)
-        df = gdf.drop(columns=["geometry"]).rename(
-            columns={f"{iso3_country_code.lower()}_general_2020": "population"}
-        )
+        df = gdf.drop(columns=["geometry"]).rename(columns={f"{iso3_country_code.lower()}_general_2020": "population"})
         return df
 
 
 class WorldpopPopulation(Population):
     """Population data from WorldPop global population data.
-    
-    This class retrieves and processes population data from the WorldPop project, which provides high-resolution 
+
+    This class retrieves and processes population data from the WorldPop project, which provides high-resolution
     population density estimates globally. The data is accessed via the WorldPop REST API.
-    
+
     The class follows the same initialization pattern as its parent class Population.
-    
+
     See Also
     --------
     Population : Parent abstract class
@@ -312,10 +297,10 @@ class WorldpopPopulation(Population):
 
     def _get_population_df(self) -> pd.DataFrame:
         """Download and process population data from WorldPop.
-        
+
         Implements the abstract method from the Population class to retrieve population data specifically from WorldPop's
          REST API.
-        
+
         Returns
         -------
         pandas.DataFrame
@@ -338,20 +323,20 @@ class WorldpopPopulation(Population):
     @staticmethod
     def download_population_worldpop(iso3_country_code: str) -> str:
         """Download population data from WorldPop for a specific country.
-        
-        This method retrieves population data from the WorldPop REST API for a country specified by its ISO3 code, using 
+
+        This method retrieves population data from the WorldPop REST API for a country specified by its ISO3 code, using
         the most recently available dataset.
-        
+
         Parameters
         ----------
         iso3_country_code : str
             The ISO3 country code for which to download population data (e.g., ``TLS`` for Timor-Leste)
-        
+
         Returns
         -------
         str
             File path to the downloaded raster data file
-            
+
         Raises
         ------
         requests.exceptions.RequestException
@@ -373,21 +358,19 @@ class WorldpopPopulation(Population):
         return filehandle
 
     @staticmethod
-    def process_population_worldpop(
-        file_path: str, admin_area_boundaries: Polygon | MultiPolygon
-    ) -> pd.DataFrame:
+    def process_population_worldpop(file_path: str, admin_area_boundaries: Polygon | MultiPolygon) -> pd.DataFrame:
         """Process WorldPop raster data for a specific administrative area.
-        
-        This method converts the downloaded WorldPop raster data into a DataFrame of point-based population values, 
+
+        This method converts the downloaded WorldPop raster data into a DataFrame of point-based population values,
         filtered to include only points within the specified administrative area boundaries.
-        
+
         Parameters
         ----------
         file_path : str
             Path to the downloaded WorldPop raster file
         admin_area_boundaries : Polygon or MultiPolygon
             The geographical boundaries used to filter the population data
-            
+
         Returns
         -------
         pandas.DataFrame
@@ -419,21 +402,19 @@ class WorldpopPopulation(Population):
         return df
 
     @staticmethod
-    def get_admarea_mask(
-        vector_polygon: Polygon | MultiPolygon, raster_layer: rasterio.DatasetReader
-    ) -> np.ndarray:
+    def get_admarea_mask(vector_polygon: Polygon | MultiPolygon, raster_layer: rasterio.DatasetReader) -> np.ndarray:
         """Create a boolean mask identifying raster pixels within a vector polygon.
-        
-        This method creates a mask that can be used to filter raster data to include only points that fall within a 
+
+        This method creates a mask that can be used to filter raster data to include only points that fall within a
         specified vector polygon.
-        
+
         Parameters
         ----------
         vector_polygon : Polygon or MultiPolygon
             The vector geometry used to create the mask
         raster_layer : rasterio.DatasetReader
             The open raster dataset to be masked
-            
+
         Returns
         -------
         np.ndarray
@@ -441,7 +422,7 @@ class WorldpopPopulation(Population):
 
                 - ``True``: pixel is within the polygon
                 - ``False``: pixel is outside the polygon
-            
+
         Notes
         -----
         The method uses rasterio's mask function with the all_touched=True parameter,
@@ -449,9 +430,7 @@ class WorldpopPopulation(Population):
         whose centers are within it. It then creates a boolean mask by checking
         which pixels have values greater than zero.
         """
-        gtraster, bound = mask(
-            raster_layer, [vector_polygon], all_touched=True, crop=False
-        )
+        gtraster, bound = mask(raster_layer, [vector_polygon], all_touched=True, crop=False)
 
         # Keep only non zero values
         adm_mask = gtraster[0] > 0

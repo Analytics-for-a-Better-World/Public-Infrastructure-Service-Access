@@ -1,9 +1,8 @@
-import folium
 import streamlit as st
 from streamlit_folium import st_folium
 
-from pisa.visualisation import plot_facilities
-from pisa.facilities import Facilities
+from pisa_abw.facilities import Facilities
+from pisa_abw.visualisation import plot_facilities
 
 
 def facility_data(ss):
@@ -52,9 +51,9 @@ def potential_facilities(ss):
     if pot_fac_button:
         ss.potential_facilities_gdf = ss.facilities.estimate_potential_facilities(ss.spacing)
 
-        ss.fac_map_obj = plot_facilities(ss.existing_facilities_df, ss.admin_area_boundaries,
-                                         ss.potential_facilities_gdf)
-
+        ss.fac_map_obj = plot_facilities(
+            ss.existing_facilities_df, ss.admin_area_boundaries, ss.potential_facilities_gdf
+        )
 
         st_folium(
             ss.fac_map_obj,

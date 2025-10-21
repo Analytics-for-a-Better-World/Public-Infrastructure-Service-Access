@@ -6,7 +6,7 @@ import pytest
 from geopandas import GeoDataFrame
 from shapely.geometry import MultiPolygon, Point, Polygon
 
-from pisa.facilities import Facilities
+from pisa_abw.facilities import Facilities
 
 
 @pytest.fixture
@@ -58,9 +58,7 @@ class TestFacilities:
     def test_init_with_custom_tags(self, simple_polygon):
         """Test initialization with custom location tags"""
         custom_tags = {"amenity": "school"}
-        facilities = Facilities(
-            admin_area_boundaries=simple_polygon, data_src="osm", osm_tags=custom_tags
-        )
+        facilities = Facilities(admin_area_boundaries=simple_polygon, data_src="osm", osm_tags=custom_tags)
 
         assert facilities.admin_area_boundaries == simple_polygon
         assert facilities.data_src == "osm"
@@ -68,19 +66,13 @@ class TestFacilities:
 
     def test_get_existing_facilities_invalid_data_src(self, simple_polygon):
         """Test error when using invalid data source"""
-        facilities = Facilities(
-            admin_area_boundaries=simple_polygon, data_src="invalid"
-        )
+        facilities = Facilities(admin_area_boundaries=simple_polygon, data_src="invalid")
 
-        with pytest.raises(
-            NotImplementedError, match="Data source 'invalid' not implemented"
-        ):
+        with pytest.raises(NotImplementedError, match="Data source 'invalid' not implemented"):
             facilities.get_existing_facilities()
 
-    @patch("pisa.facilities.ox.features_from_polygon")
-    def test_get_existing_facilities_osm(
-        self, mocked_osm_response, fake_facilities_gdf, multi_polygon
-    ):
+    @patch("pisa_abw.facilities.ox.features_from_polygon")
+    def test_get_existing_facilities_osm(self, mocked_osm_response, fake_facilities_gdf, multi_polygon):
         mocked_osm_response.return_value = fake_facilities_gdf
 
         facilities_df = Facilities._get_existing_facilities_osm(
@@ -139,20 +131,12 @@ class TestFacilities:
         # Check grid spacing
         for i in range(len(result) - 1):
             if result.iloc[i].longitude == result.iloc[i + 1].longitude:
-                assert (
-                    result.iloc[i + 1].latitude - result.iloc[i].latitude
-                    == test_spacing
-                )
+                assert result.iloc[i + 1].latitude - result.iloc[i].latitude == test_spacing
             if result.iloc[i].latitude == result.iloc[i + 1].latitude:
-                assert (
-                    result.iloc[i + 1].longitude - result.iloc[i].longitude
-                    == test_spacing
-                )
+                assert result.iloc[i + 1].longitude - result.iloc[i].longitude == test_spacing
 
         # Should have more points with smaller spacing
-        result_smaller = facilities.estimate_potential_facilities(
-            spacing=test_spacing / 2
-        )
+        result_smaller = facilities.estimate_potential_facilities(spacing=test_spacing / 2)
         assert len(result_smaller) > len(result)
 
     def test_estimate_potential_facilities_grid_multipolygon(self, multi_polygon):
@@ -171,32 +155,25 @@ class TestFacilities:
         assert len(result) == 17
 
         # Should have more points with smaller spacing
-        result_smaller = facilities.estimate_potential_facilities(
-            spacing=test_spacing / 2
-        )
+        result_smaller = facilities.estimate_potential_facilities(spacing=test_spacing / 2)
         assert len(result_smaller) > len(result)
 
         point_in_grid = (test_spacing, test_spacing)
         point_not_in_grid = (0, 2.0)
         point_not_in_grid2 = (test_spacing, test_spacing / 2)
         assert (
-            result.loc[
-                (result["longitude"] == point_in_grid[0])
-                & (result["latitude"] == point_in_grid[1])
-            ].shape[0]
+            result.loc[(result["longitude"] == point_in_grid[0]) & (result["latitude"] == point_in_grid[1])].shape[0]
             == 1
         )
         assert (
             result.loc[
-                (result["longitude"] == point_not_in_grid[0])
-                & (result["latitude"] == point_not_in_grid[1])
+                (result["longitude"] == point_not_in_grid[0]) & (result["latitude"] == point_not_in_grid[1])
             ].shape[0]
             == 0
         )
         assert (
             result.loc[
-                (result["longitude"] == point_not_in_grid2[0])
-                & (result["latitude"] == point_not_in_grid2[1])
+                (result["longitude"] == point_not_in_grid2[0]) & (result["latitude"] == point_not_in_grid2[1])
             ].shape[0]
             == 0
         )

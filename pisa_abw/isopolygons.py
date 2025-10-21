@@ -11,10 +11,10 @@ Examples
 --------
 Calculate isochrones around facilities using OpenStreetMap:
 
->>> from pisa.administrative_area import AdministrativeArea
->>> from pisa.facilities import Facilities
->>> from pisa.osm_road_network import OsmRoadNetwork
->>> from pisa.isopolygons import OsmIsopolygonCalculator
+>>> from pisa_abw.administrative_area import AdministrativeArea
+>>> from pisa_abw.facilities import Facilities
+>>> from pisa_abw.osm_road_network import OsmRoadNetwork
+>>> from pisa_abw.isopolygons import OsmIsopolygonCalculator
 >>>
 >>> # Get administrative area and facilities
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
@@ -59,7 +59,6 @@ import geopandas as gpd
 import networkx as nx
 import numpy as np
 import osmnx as ox
-import pandas as pd
 import requests
 from geopandas import GeoSeries
 from networkx import MultiDiGraph
@@ -67,7 +66,7 @@ from pandas import DataFrame
 from shapely import Polygon
 from shapely.geometry import shape
 
-from pisa.utils import disk_cache, validate_distance_type, validate_mode_of_transport
+from pisa_abw.utils import disk_cache, validate_distance_type, validate_mode_of_transport
 
 logger = logging.getLogger(__name__)
 
@@ -113,13 +112,8 @@ class IsopolygonCalculator(ABC):
         ValueError
             If facilities_df has no rows (empty DataFrame)
         """
-        if (
-            "longitude" not in facilities_df.columns
-            or "latitude" not in facilities_df.columns
-        ):
-            raise ValueError(
-                "facilities_df must have columns 'longitude' and 'latitude'"
-            )
+        if "longitude" not in facilities_df.columns or "latitude" not in facilities_df.columns:
+            raise ValueError("facilities_df must have columns 'longitude' and 'latitude'")
 
         if len(facilities_df) == 0:
             raise ValueError("facilities_df must have at least one row")
@@ -185,14 +179,10 @@ class IsopolygonCalculator(ABC):
          the same limits are applied for consistency across implementations.
         """
         if self.distance_type == "length" and max(self.distance_values) > 100000:
-            raise ValueError(
-                "One or more distance values are larger than the permitted 100.000 meters limit."
-            )
+            raise ValueError("One or more distance values are larger than the permitted 100.000 meters limit.")
 
         if self.distance_type == "travel_time" and max(self.distance_values) > 60:
-            raise ValueError(
-                "One or more distance values are larger than the permitted 60 minutes limit."
-            )
+            raise ValueError("One or more distance values are larger than the permitted 60 minutes limit.")
 
     @abstractmethod
     def calculate_isopolygons(self) -> DataFrame:
@@ -277,8 +267,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         self._warn_facilities_too_far_away(nearest_nodes, distance_to_nearest_nodes)
 
         self.nearest_nodes_dict = {
-            facility_id: node
-            for facility_id, node in zip(self.facilities_df.index, nearest_nodes)
+            facility_id: node for facility_id, node in zip(self.facilities_df.index, nearest_nodes)
         }
 
     def calculate_isopolygons(self) -> DataFrame:
@@ -325,16 +314,10 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
                         node_buffer=self.node_buff,
                         edge_buffer=self.edge_buff,
                     )
-                    isopolygons.loc[facility_id, "ID_" + str(distance_value)] = (
-                        new_isopolygon
-                    )
+                    isopolygons.loc[facility_id, "ID_" + str(distance_value)] = new_isopolygon
 
-                except (
-                    AttributeError
-                ):  # Probably trying to catch 'MultiPolygon' object has no attribute 'exterior' from _inflate_skeleton, but it wasn't specified in the code before
-                    logger.info(
-                        f"problem with node {road_node} belonging to facility {facility_id}"
-                    )  # stops execution
+                except AttributeError:  # Probably trying to catch 'MultiPolygon' object has no attribute 'exterior' from _inflate_skeleton, but it wasn't specified in the code before
+                    logger.info(f"problem with node {road_node} belonging to facility {facility_id}")  # stops execution
 
         return isopolygons
 
@@ -440,9 +423,7 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
           edges_gdf will be an empty GeoSeries
         - The method uses NetworkX's ego_graph to extract the subgraph within the specified distance
         """
-        subgraph = nx.ego_graph(
-            road_network, center_node, radius=distance_value, distance=distance_type
-        )
+        subgraph = nx.ego_graph(road_network, center_node, radius=distance_value, distance=distance_type)
 
         try:
             nodes_gdf, edges_gdf = ox.graph_to_gdfs(subgraph)
@@ -463,16 +444,13 @@ class OsmIsopolygonCalculator(IsopolygonCalculator):
         suggesting manual inspection may be needed to verify results.
         """
         if any(distance_to_nearest_nodes > 10000):
-
             high_distance_indices = np.where(distance_to_nearest_nodes > 10000)
             far_from_road_facilities = self.facilities_df.iloc[high_distance_indices]
-            far_from_road_facilities["nearest_road_node"] = nearest_nodes[
-                high_distance_indices
-            ]
+            far_from_road_facilities["nearest_road_node"] = nearest_nodes[high_distance_indices]
 
             logger.warning(
                 f"""Some facilities are more than 10 km away from the nearest node on the OSM road network. 
-                The facilities and their nearest nodes are: {far_from_road_facilities[['nearest_road_node']]} \n 
+                The facilities and their nearest nodes are: {far_from_road_facilities[["nearest_road_node"]]} \n 
                 It makes sense to visually inspect these in a notebook or compare your results with the Mapbox API."""
             )
 
@@ -529,15 +507,11 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
 
         super().__init__(facilities_df, distance_type, distance_values)
 
-        self.distance_values = self._validate_mapbox_distance_values(
-            self.distance_values
-        )
+        self.distance_values = self._validate_mapbox_distance_values(self.distance_values)
 
         self.base_url = base_url
 
-        self.contour_type = (
-            "contours_meters" if self.distance_type == "length" else "contours_minutes"
-        )
+        self.contour_type = "contours_meters" if self.distance_type == "length" else "contours_minutes"
 
     def calculate_isopolygons(self) -> DataFrame:
         """Calculate isopolygons for all facilities using the Mapbox API.
@@ -685,25 +659,17 @@ class MapboxIsopolygonCalculator(IsopolygonCalculator):
             if response.status_code == 401:
                 raise ValueError("Unauthorized: Invalid Mapbox access token") from e
             elif response.status_code == 403:
-                raise PermissionError(
-                    "Forbidden: The Mapbox token doesn't have access to this resource"
-                ) from e
+                raise PermissionError("Forbidden: The Mapbox token doesn't have access to this resource") from e
             else:
-                raise requests.exceptions.HTTPError(
-                    f"HTTP Error {response.status_code}: {e}"
-                ) from e
+                raise requests.exceptions.HTTPError(f"HTTP Error {response.status_code}: {e}") from e
 
         except requests.exceptions.Timeout as e:
-            raise TimeoutError(
-                "Request timed out: Mapbox servers took too long to respond."
-            ) from e
+            raise TimeoutError("Request timed out: Mapbox servers took too long to respond.") from e
 
         except Exception as e:
             # Last resort for unexpected errors
             logger.error(f"Unexpected error in Mapbox API request: {e}", exc_info=True)
-            raise RuntimeError(
-                f"Unexpected error when connecting to Mapbox: {str(e)}"
-            ) from e
+            raise RuntimeError(f"Unexpected error when connecting to Mapbox: {str(e)}") from e
 
     @staticmethod
     def _validate_mapbox_distance_values(distance_values: list[int]) -> list[int]:

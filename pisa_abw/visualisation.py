@@ -11,10 +11,10 @@ Examples
 --------
 Create interactive maps for facilities and population:
 
->>> from pisa.administrative_area import AdministrativeArea
->>> from pisa.facilities import Facilities
->>> from pisa.population import WorldpopPopulation
->>> from pisa.visualisation import plot_facilities, plot_population
+>>> from pisa_abw.administrative_area import AdministrativeArea
+>>> from pisa_abw.facilities import Facilities
+>>> from pisa_abw.population import WorldpopPopulation
+>>> from pisa_abw.visualisation import plot_facilities, plot_population
 >>>
 >>> # Get administrative area and data
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
@@ -59,10 +59,10 @@ def plot_facilities(
     tiles="OpenStreetMap",
 ) -> folium.Map:
     """Plot facilities on an interactive map with administrative area boundaries.
-    
-    This function creates a Folium map showing existing facilities as blue circle markers, and optionally potential 
+
+    This function creates a Folium map showing existing facilities as blue circle markers, and optionally potential
     facilities as orange circle markers, within the context of administrative area boundaries.
-    
+
     Parameters
     ----------
     df_facilities : pandas.DataFrame
@@ -70,20 +70,20 @@ def plot_facilities(
 
             - ``latitude``: Latitude coordinate of the facility
             - ``longitude``: Longitude coordinate of the facility
-    
+
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
-        
+
     df_potential_facilities : pandas.DataFrame, optional
         DataFrame containing information about potential facility locations. Must have columns:
 
             - ``latitude``: Latitude coordinate of the potential facility
             - ``longitude``: Longitude coordinate of the potential facility
-        
+
     tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
         See folium.Map documentation for available options. (default: ``OpenStreetMap``)
-        
+
     Returns
     -------
     folium.Map
@@ -139,15 +139,15 @@ def plot_population_heatmap(
     df_population: pd.DataFrame, admin_area_boundaries: MultiPolygon | Polygon, tiles="OpenStreetMap"
 ) -> folium.Map:
     """Create a heatmap visualization of population density.
-    
-    This function generates an interactive Folium map displaying population density as a heatmap within the specified 
+
+    This function generates an interactive Folium map displaying population density as a heatmap within the specified
     administrative area boundaries.
-    
+
     Parameters
     ----------
     df_population : pandas.DataFrame
         DataFrame containing population data. Must have columns:
-        
+
             - ``latitude``: Latitude coordinate
             - ``longitude``: Longitude coordinate
             - ``population``: Population value (intensity for the heatmap)
@@ -156,7 +156,7 @@ def plot_population_heatmap(
     tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
         See folium.Map documentation for available options. (default: ``OpenStreetMap``)
-        
+
     Returns
     -------
     folium.Map
@@ -188,10 +188,10 @@ def plot_population(
     tiles="OpenStreetMap",
 ) -> folium.Map:
     """Plot population points on an interactive map.
-    
-    This function creates a Folium map showing population points as circle markers, with size and opacity reflecting the 
+
+    This function creates a Folium map showing population points as circle markers, with size and opacity reflecting the
     relative population values.
-    
+
     Parameters
     ----------
     df_population : pandas.DataFrame
@@ -200,18 +200,18 @@ def plot_population(
             - ``latitude``: Latitude coordinate
             - ``longitude``: Longitude coordinate
             - ``population``: Population value at that point
-    
+
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
-        
+
     random_sample_n : int, optional
         Number of population points to randomly sample and display.
         If None, all points will be displayed (can be performance-intensive for large datasets) (default: ``None``)
-        
+
     tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
         See folium.Map documentation for available options. (default: ``OpenStreetMap``)
-        
+
     Returns
     -------
     folium.Map
@@ -247,11 +247,11 @@ def plot_isochrones(
     tiles: str = "OpenStreetMap",
 ) -> folium.Map:
     """Plot isochrones/isopolygons for multiple facilities on an interactive map.
-    
+
     This function creates a Folium map displaying isopolygons (areas reachable within specific travel times or distances)
-    around facilities, with different colors for each facility and varying opacity for different time/distance 
+    around facilities, with different colors for each facility and varying opacity for different time/distance
     thresholds.
-    
+
     Parameters
     ----------
     df_isopolygons : pandas.DataFrame
@@ -260,14 +260,14 @@ def plot_isochrones(
             - Index representing unique facility identifiers
             - Columns named ``ID_X`` where X is the distance/time threshold (e.g., ``ID_10`` for 10-minute isochrone)
             - Each cell contains a Shapely ``Polygon`` or ``MultiPolygon``
-    
+
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
-        
+
     tiles : str, optional
         The tile provider for the base map. Any valid Folium tile provider name can be used.
         See folium.Map documentation for available options. (default: ``OpenStreetMap``)
-        
+
     Returns
     -------
     folium.Map
@@ -319,39 +319,37 @@ def plot_isochrones(
 
 
 def plot_results(
-        open_locations: list,
-        current: pd.DataFrame,
-        total_fac: pd.DataFrame,
-        admin_area_boundaries: MultiPolygon | Polygon) -> folium.Map:
+    open_locations: list, current: pd.DataFrame, total_fac: pd.DataFrame, admin_area_boundaries: MultiPolygon | Polygon
+) -> folium.Map:
     """Plot optimization results showing existing and proposed facility locations.
-    
-    This function creates a Folium map displaying the results of a facility location optimization model, showing both 
+
+    This function creates a Folium map displaying the results of a facility location optimization model, showing both
     existing facilities and proposed new facilities.
-    
+
     Parameters
     ----------
     open_locations : list
-        List of facility identifiers (matching indices in total_fac) that are selected as part of the optimization 
+        List of facility identifiers (matching indices in total_fac) that are selected as part of the optimization
         solution (both existing and new)
-    
+
     current : pandas.DataFrame
         DataFrame containing information about existing facilities, with a column ``Cluster_ID`` that identifies each
         facility
-        
+
     total_fac : pandas.DataFrame
         DataFrame containing information about all facility locations (both existing and potential). Must have:
 
             - Index matching the identifiers in open_locations
             - Columns ``latitude`` and ``longitude`` for facility coordinates
-        
+
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
-        
+
     Returns
     -------
     folium.Map
         Interactive Folium map showing optimization results with markers
-        
+
     Notes
     -----
     - Existing facilities are shown with blue hospital icons
@@ -363,7 +361,7 @@ def plot_results(
     )
 
     for location in open_locations:
-        existing = location in current['Cluster_ID'].values
+        existing = location in current["Cluster_ID"].values
         location_data = total_fac.loc[location]
 
         folium.Marker(
@@ -384,22 +382,22 @@ def plot_results(
 
 def _start_coordinates_from_admin_area(admin_area_boundaries: MultiPolygon | Polygon) -> list:
     """Calculate the center coordinates for initializing a map from administrative area boundaries.
-    
+
     Parameters
     ----------
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
-        
+
     Returns
     -------
     list
-        A list of [latitude, longitude] coordinates representing the centroid of the administrative area, suitable for 
+        A list of [latitude, longitude] coordinates representing the centroid of the administrative area, suitable for
         initializing a Folium map
-        
+
     Notes
     -----
-    This function calculates the centroid of the administrative area boundaries and returns the coordinates in the 
-    format [latitude, longitude] required by Folium, which is the reverse of the standard [longitude, latitude] format 
+    This function calculates the centroid of the administrative area boundaries and returns the coordinates in the
+    format [latitude, longitude] required by Folium, which is the reverse of the standard [longitude, latitude] format
     used by Shapely.
     """
     return list(admin_area_boundaries.centroid.coords)[0][::-1]
@@ -407,18 +405,18 @@ def _start_coordinates_from_admin_area(admin_area_boundaries: MultiPolygon | Pol
 
 def _bounding_box_from_admin_area(admin_area_boundaries: MultiPolygon | Polygon) -> list:
     """Calculate the bounding box coordinates for a map from administrative area boundaries.
-    
+
     Parameters
     ----------
     admin_area_boundaries : MultiPolygon or Polygon
         Shapely geometry representing the boundaries of the administrative area
-        
+
     Returns
     -------
     list
         A list containing two coordinate pairs in the format expected by Folium's fit_bounds method:
         [[southwest_latitude, southwest_longitude], [northeast_latitude, northeast_longitude]]
-        
+
     Notes
     -----
     This function extracts the bounding box coordinates from the administrative area boundaries

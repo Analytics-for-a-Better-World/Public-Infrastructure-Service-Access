@@ -1,8 +1,8 @@
 import streamlit as st
 from streamlit_folium import st_folium
 
-from pisa.visualisation import plot_population_heatmap
-from pisa.population import WorldpopPopulation, FacebookPopulation
+from pisa_abw.population import FacebookPopulation, WorldpopPopulation
+from pisa_abw.visualisation import plot_population_heatmap
 
 
 def population_data(ss):
@@ -24,28 +24,25 @@ def population_data(ss):
         country_code = ss.adm_area.get_iso3_country_code()
 
         if worldpop_button:
-            ss.population_gdf = WorldpopPopulation(ss.admin_area_boundaries, country_code, ss.population_resolution
-                                                   ).get_population_gdf()
+            ss.population_gdf = WorldpopPopulation(
+                ss.admin_area_boundaries, country_code, ss.population_resolution
+            ).get_population_gdf()
 
         elif fb_pop_button:
             try:
-                ss.population_gdf = FacebookPopulation(ss.admin_area_boundaries, country_code, ss.population_resolution
-                                                       ).get_population_gdf()
+                ss.population_gdf = FacebookPopulation(
+                    ss.admin_area_boundaries, country_code, ss.population_resolution
+                ).get_population_gdf()
             except ValueError:
                 st.warning(
-                    (
-                        f"No facebook population data available for the selected country {ss.country}. "
-                    ),
+                    (f"No facebook population data available for the selected country {ss.country}. "),
                     icon="⚠️",
                 )
                 return
 
         ss.pop_map_obj = plot_population_heatmap(ss.population_gdf, ss.admin_area_boundaries)
 
-        if (
-                ss.population_gdf is not None
-                and ss.existing_facilities_df is not None
-        ):
+        if ss.population_gdf is not None and ss.existing_facilities_df is not None:
             st.success(
                 "Facilities and population data retrieved. Proceed with calculation of potential location facilities."
             )

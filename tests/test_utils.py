@@ -1,6 +1,6 @@
 import pytest
 
-from pisa.utils import (
+from pisa_abw.utils import (
     validate_distance_type,
     validate_fallback_speed,
     validate_mode_of_transport,

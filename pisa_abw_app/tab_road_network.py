@@ -1,10 +1,10 @@
 import streamlit as st
 from streamlit_folium import st_folium
 
-from pisa.constants import VALID_MODES_OF_TRANSPORT, VALID_DISTANCE_TYPES
-from pisa.isopolygons import OsmIsopolygonCalculator
-from pisa.osm_road_network import OsmRoadNetwork
-from pisa.visualisation import plot_isochrones
+from pisa_abw.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
+from pisa_abw.isopolygons import OsmIsopolygonCalculator
+from pisa_abw.osm_road_network import OsmRoadNetwork
+from pisa_abw.visualisation import plot_isochrones
 
 
 def road_network(ss):
@@ -40,16 +40,16 @@ def road_network(ss):
 
     if road_button:
         ss.road_network = OsmRoadNetwork(
-            ss.admin_area_boundaries,
-            ss.network_type,
-            ss.distance_type).get_osm_road_network()
+            ss.admin_area_boundaries, ss.network_type, ss.distance_type
+        ).get_osm_road_network()
         st.success("OSM road network retrieved.")
 
         isopolygons = OsmIsopolygonCalculator(
             ss.existing_facilities_df,
             ss.distance_type,
             [int(x.split()[0]) for x in ss.distance_values],  # distance values must be a list of integers
-            ss.road_network).calculate_isopolygons()
+            ss.road_network,
+        ).calculate_isopolygons()
 
         ss.road_network_map_obj = plot_isochrones(isopolygons, ss.admin_area_boundaries)
 

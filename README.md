@@ -82,7 +82,7 @@ This file is ignored by git by default for security.
 We provide two examples to understand and interact with the package: 
 
 1. Some example usage can be seen in the `examples/pisa_showcase_*.ipynb` notebooks. These notebooks show the basic package data flow and allow you to explore the outputs of each function. The notebooks differ in the tool used to generate isopolygons: OSM or Mapbox. Note that Mapbox requires an API key (see External Dependencies section above).
-2. A more visual example can be seen in the [Streamlit](https://streamlit.io/) app to interact with the package using a graphical interface. You can start the app by running `streamlit run pisa_app/main_page.py` from the main repository directory, which will automatically open a browser window.
+2. A more visual example can be seen in the [Streamlit](https://streamlit.io/) app to interact with the package using a graphical interface. You can start the app by running `streamlit run pisa_abw_app/main_page.py` from the main repository directory, which will automatically open a browser window.
 
 ## Deploying/running the web interface (Docker)
 
@@ -91,29 +91,29 @@ Docker is a tool that allows you to package an application and its dependencies 
 After you have installed Docker, you can run the following command in the repository to build an image of the PISA project. The Dockerfile uses Poetry to install the application and its dependencies inside the image, consistent with the recommended installation method, and includes all necessary geospatial libraries.
 
 ```sh
-docker build -t pisa .
+docker build -t pisa_abw .
 ```
 
-Now that you have built the image, you can run a container using it. The following command will run a container from the `pisa` image and expose the web interface on port 8501 to localhost only. The command will show the URL on which it's accessible. The container will be named `pisa` as well.
+Now that you have built the image, you can run a container using it. The following command will run a container from the `pisa_abw` image and expose the web interface on port 8501 to localhost only. The command will show the URL on which it's accessible. The container will be named `pisa_abw` as well.
 
 ```sh
-docker run -p 127.0.0.1:8501:8501 --name pisa pisa
+docker run -p 127.0.0.1:8501:8501 --name pisa_abw pisa_abw
 ```
 
 You can use the following commands to manage the container after the initial run:
 
 ```sh
 # Stop the container
-docker stop pisa
+docker stop pisa_abw
 
 # Start a stopped container
-docker start pisa
+docker start pisa_abw
 
 # View logs from the container
-docker logs pisa
+docker logs pisa_abw
 
 # Remove the container (if you need to start fresh)
-docker rm pisa
+docker rm pisa_abw
 ```
 
 The image is also ready to be deployed on a server or a cloud platform that supports Docker.

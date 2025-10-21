@@ -9,8 +9,8 @@ Examples
 --------
 Retrieve existing facilities and generate potential facility locations:
 
->>> from pisa.administrative_area import AdministrativeArea
->>> from pisa.facilities import Facilities
+>>> from pisa_abw.administrative_area import AdministrativeArea
+>>> from pisa_abw.facilities import Facilities
 >>>
 >>> # Get administrative area boundaries
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
@@ -46,7 +46,7 @@ from osmnx._errors import InsufficientResponseError
 from pandas import DataFrame
 from shapely import MultiPolygon, Polygon
 
-from pisa.constants import OSM_TAGS
+from pisa_abw.constants import OSM_TAGS
 
 # Suppress user warning about geometry in geographic CRS. Centroid is calculated
 # over a single facility (e.g. a hospital), so distances are very small and
@@ -64,10 +64,10 @@ logger = logging.getLogger(__name__)
 @dataclass
 class Facilities:
     """Retrieve and manage facility location data for a given administrative area.
-    
-    This class provides functionality to retrieve existing facilities within a specified administrative area from 
+
+    This class provides functionality to retrieve existing facilities within a specified administrative area from
     various data sources (currently supporting OpenStreetMap).
-    
+
     Parameters
     ----------
     admin_area_boundaries : Polygon or MultiPolygon
@@ -77,40 +77,41 @@ class Facilities:
         - "osm": OpenStreetMap (default: ``osm``)
     osm_tags : dict, optional
         Dictionary of OpenStreetMap tags to identify facilities of interest (e.g., ``{'amenity': 'hospital'}``). (default: ``OSM_TAGS``)
-        
+
     Notes
     -----
-    The default OSM_TAGS are defined in the constants module and typically target health facilities. To use 
+    The default OSM_TAGS are defined in the constants module and typically target health facilities. To use
     different facility types, provide custom osm_tags when creating the Facilities object.
-    
+
     See Also
     --------
     AdministrativeArea : Class for retrieving administrative area boundaries
     IsopolygonCalculator : Class for calculating service areas around facilities
-    
+
     Examples
     --------
-    >>> from pisa.administrative_area import AdministrativeArea
-    >>> from pisa.facilities import Facilities
-    >>> 
+    >>> from pisa_abw.administrative_area import AdministrativeArea
+    >>> from pisa_abw.facilities import Facilities
+    >>>
     >>> # Get an administrative area for a specific country and region
     >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
     >>> boundaries = admin_area.get_admin_area_boundaries("Baucau")
-    >>> 
+    >>>
     >>> # Get hospital facilities within the administrative area
     >>> facilities = Facilities(admin_area_boundaries=boundaries)
     >>> existing_facilities = facilities.get_existing_facilities()
     """
+
     admin_area_boundaries: Polygon | MultiPolygon
     data_src: str = "osm"
     osm_tags: dict = field(default_factory=lambda: OSM_TAGS)
 
     def get_existing_facilities(self) -> DataFrame:
         """Retrieve existing facilities from the specified data source.
-        
-        This method acts as a dispatcher that calls the appropriate data source-specific method based on the `data_src` 
+
+        This method acts as a dispatcher that calls the appropriate data source-specific method based on the `data_src`
         attribute of the Facilities instance.
-        
+
         Returns
         -------
         pandas.DataFrame
@@ -119,12 +120,12 @@ class Facilities:
                 - ``osmid`` (index): Facility identifier (e.g., OSM ID for OpenStreetMap data)
                 - ``longitude``: Longitude coordinate of the facility
                 - ``latitude``: Latitude coordinate of the facility
-            
+
         Raises
         ------
         NotImplementedError
             If the specified data source is not implemented
-            
+
         Notes
         -----
         Currently, only the ``osm`` (OpenStreetMap) data source is implemented. To support additional data sources,
@@ -137,39 +138,35 @@ class Facilities:
         raise NotImplementedError(f"Data source '{self.data_src}' not implemented")
 
     @staticmethod
-    def _get_existing_facilities_osm(
-        osm_tags: dict, admin_area_boundaries: Polygon | MultiPolygon
-    ) -> DataFrame:
+    def _get_existing_facilities_osm(osm_tags: dict, admin_area_boundaries: Polygon | MultiPolygon) -> DataFrame:
         """Fetch existing facilities from OpenStreetMap (OSM) within a specified administrative area.
-        
+
         Parameters
         ----------
         osm_tags : dict
             Dictionary of OSM tags to filter facilities (e.g., {'amenity': 'school'})
         admin_area_boundaries : Polygon or MultiPolygon
             Geographic area within which to search for facilities, defined as a shapely Polygon or MultiPolygon object
-            
+
         Returns
         -------
         pandas.DataFrame
             DataFrame containing facilities information with columns:
             - longitude: Longitude coordinate of the facility
             - latitude: Latitude coordinate of the facility
-            
+
         Notes
         -----
-        This method uses the OSMnx library to retrieve facilities matching the specified tags from OpenStreetMap. If no 
+        This method uses the OSMnx library to retrieve facilities matching the specified tags from OpenStreetMap. If no
         facilities are found, it returns an empty DataFrame with the expected structure.
-        
+
         In case of an InsufficientResponseError from the OSM API, an empty GeoDataFrame is created as a fallback.
         """
         logger.info(f"Retrieving existing facilities with tags {osm_tags} using OSM.")
 
         # retrieves facilities GeodataFrame from osm
         try:
-            facilities_gdf = ox.features_from_polygon(
-                polygon=admin_area_boundaries, tags=osm_tags
-            )
+            facilities_gdf = ox.features_from_polygon(polygon=admin_area_boundaries, tags=osm_tags)
         except InsufficientResponseError:
             facilities_gdf = gpd.GeoDataFrame(
                 pd.DataFrame(columns=["id", "element", "amenity", "geometry"]),
@@ -183,9 +180,7 @@ class Facilities:
         facilities_gdf["latitude"] = facilities_gdf.geometry.centroid.y
 
         # reset multiindex and drop some columns. It becomes a DataFrame
-        facilities_df = facilities_gdf.reset_index().drop(
-            columns=["element", "amenity", "geometry"]
-        )
+        facilities_df = facilities_gdf.reset_index().drop(columns=["element", "amenity", "geometry"])
 
         logger.info("Successfully retrieved existing facilities from OSM.")
 
@@ -198,16 +193,16 @@ class Facilities:
 
     def estimate_potential_facilities(self, spacing: float = 0.05) -> gpd.GeoDataFrame:
         """Create a grid of potential facility locations within the administrative area.
-        
-        This method generates a regular grid of points within the administrative area boundaries that can be used as 
+
+        This method generates a regular grid of points within the administrative area boundaries that can be used as
         potential locations for new facilities in optimization scenarios.
-        
+
         Parameters
         ----------
         spacing : float
-            The distance between adjacent points in the grid, in coordinate units (degrees). Smaller values create a 
+            The distance between adjacent points in the grid, in coordinate units (degrees). Smaller values create a
             denser grid with more potential facility locations.
-            
+
         Returns
         -------
         geopandas.GeoDataFrame
@@ -215,7 +210,7 @@ class Facilities:
 
                 - ``longitude``: Longitude coordinate of the potential facility
                 - ``latitude``: Latitude coordinate of the potential facility
-            
+
         Notes
         -----
         The grid is created by:
@@ -223,7 +218,7 @@ class Facilities:
             1. Finding the bounding box of the administrative area
             2. Creating a regular grid covering the entire bounding box
             3. Clipping the grid to include only points within the actual administrative area boundaries
-        
+
         The resulting grid points are spaced at regular intervals determined by the spacing parameter.
         """
         # Get the bounds of the polygon

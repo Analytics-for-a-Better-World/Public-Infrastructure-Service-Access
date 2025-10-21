@@ -8,8 +8,8 @@ Examples
 --------
 Retrieve and process a road network for walking travel time analysis:
 
->>> from pisa.administrative_area import AdministrativeArea
->>> from pisa.osm_road_network import OsmRoadNetwork
+>>> from pisa_abw.administrative_area import AdministrativeArea
+>>> from pisa_abw.osm_road_network import OsmRoadNetwork
 >>>
 >>> # Get administrative area boundaries
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
@@ -41,8 +41,7 @@ import networkx as nx
 import osmnx as ox
 from shapely import MultiPolygon, Polygon
 
-from pisa.utils import (validate_distance_type, validate_fallback_speed,
-                        validate_mode_of_transport)
+from pisa_abw.utils import validate_distance_type, validate_fallback_speed, validate_mode_of_transport
 
 logger = logging.getLogger(__name__)
 
@@ -66,6 +65,7 @@ class OsmRoadNetwork:
         The speed to be used for road types where OSM does not provide a speed attribute.
         If not provided, osmnx will do the imputation (recommended).
     """
+
     def __init__(
         self,
         admin_area_boundaries: Polygon | MultiPolygon,
@@ -88,10 +88,10 @@ class OsmRoadNetwork:
 
     def get_osm_road_network(self) -> nx.MultiDiGraph:
         """Get the processed OpenStreetMap road network for the administrative area.
-        
-        This method retrieves the OSM road network for the specified administrative area and processes it according to 
+
+        This method retrieves the OSM road network for the specified administrative area and processes it according to
         the configured distance type. If the distance type is ``travel_time``, travel times are added to the network edges.
-        
+
         Returns
         -------
         nx.MultiDiGraph
@@ -109,7 +109,7 @@ class OsmRoadNetwork:
 
     def _download_osm_road_network(self) -> nx.MultiDiGraph:
         """Download the OSM road network from OpenStreetMap for the administrative area.
-        
+
         Returns
         -------
         nx.MultiDiGraph
@@ -120,7 +120,7 @@ class OsmRoadNetwork:
     @staticmethod
     def _set_network_type(mode_of_transport: str) -> str:
         """Convert mode of transport to OSMnx network type.
-    
+
         This method maps PISA's mode of transport terminology to the terminology used by the OSMnx library:
         - 'driving' -> 'drive'
         - 'walking' -> 'walk'
@@ -130,7 +130,7 @@ class OsmRoadNetwork:
         ----------
         mode_of_transport : str
             The mode of transport (must be one of 'driving', 'walking', or 'cycling')
-            
+
         Returns
         -------
         str
@@ -158,7 +158,7 @@ class OsmRoadNetwork:
         fallback_speed : int, float, or None
             The default speed (in km/h) to use when speed limits are not available. If None, OSMnx's default values will
              be used
-            
+
         Returns
         -------
         nx.MultiDiGraph

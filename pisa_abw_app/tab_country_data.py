@@ -1,7 +1,7 @@
-import streamlit as st
-from pisa.administrative_area import AdministrativeArea
 import pycountry
+import streamlit as st
 
+from pisa_abw.administrative_area import AdministrativeArea
 
 countries = sorted([country.name for country in list(pycountry.countries)])
 
@@ -13,9 +13,7 @@ def country_data(ss):
     ss.submitted_country = st.button("Submit Country")
 
     if ss.submitted_country:
-        ss.adm_area = AdministrativeArea(
-            ss.country, ss.level
-        )
+        ss.adm_area = AdministrativeArea(ss.country, ss.level)
         st.write("Choose administrative area")
         ss.adm_areas_str = ss.adm_area.get_admin_area_names()
 
@@ -29,6 +27,4 @@ def country_data(ss):
     if submitted_admarea:
         ss.admin_area_boundaries = ss.adm_area.get_admin_area_boundaries(ss.adm_names)
         if ss.admin_area_boundaries is not None:
-            st.success(
-                "Administrative area is set. Continue with Facility and Population data."
-            )
+            st.success("Administrative area is set. Continue with Facility and Population data.")
