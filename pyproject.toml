@@ -1,11 +1,11 @@
 [tool.poetry]
-name = "pisa"
+name = "pisa_abw"
 version = "2.0.0"
 description = "Estimate and optimize service coverage of public infrastructure facilities."
 authors = ["EiriniK <Eirini.Kousathana@ortec.com>"]
 readme = "README.md"
 packages = [
-    {include = "pisa"}
+    {include = "pisa_abw"}
 ]
 
 [tool.poetry.dependencies]
@@ -54,7 +54,7 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
-pythonpath = ["pisa"]
+pythonpath = ["pisa_abw"]
 log_cli = true
 log_cli_level = "INFO"
 log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s (%(filename)s:%(lineno)s)"

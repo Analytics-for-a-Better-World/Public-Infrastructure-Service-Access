@@ -3,7 +3,7 @@ import pycountry
 import pytest
 from shapely.geometry import Polygon
 
-from pisa.administrative_area import AdministrativeArea
+from pisa_abw.administrative_area import AdministrativeArea
 
 
 def get_shape_data_by_country(admin_level: int) -> gpd.GeoDataFrame:
@@ -12,10 +12,7 @@ def get_shape_data_by_country(admin_level: int) -> gpd.GeoDataFrame:
     else:
         data = {
             f"NAME_{admin_level}": ["AreaA", "AreaB"],
-            "geometry": [
-                Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]),
-                Polygon([(1, 1), (2, 1), (2, 2), (1, 2)])
-            ],
+            "geometry": [Polygon([(0, 0), (1, 0), (1, 1), (0, 1)]), Polygon([(1, 1), (2, 1), (2, 2), (1, 2)])],
         }
     return gpd.GeoDataFrame(data, crs="EPSG:4326")
 
@@ -26,7 +23,7 @@ def patch_download(mocker):
     mocker.patch.object(
         AdministrativeArea,
         "_download_admin_areas",
-        lambda self, country, admin_level: get_shape_data_by_country(admin_level)
+        lambda self, country, admin_level: get_shape_data_by_country(admin_level),
     )
 
 
