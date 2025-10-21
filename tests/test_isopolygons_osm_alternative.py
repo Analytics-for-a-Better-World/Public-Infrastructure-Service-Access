@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import Point
 
-from pisa.isopolygons import OsmIsopolygonCalculatorAlternative
+from pisa_abw.isopolygons import OsmIsopolygonCalculatorAlternative
 
 
 @pytest.fixture
@@ -23,9 +23,7 @@ def dataframe_with_lon_and_lat() -> pd.DataFrame:
 class TestOsmCalculateIsopolygonsAlternative:
     @pytest.fixture(autouse=True)
     def setup(self, dataframe_with_lon_and_lat):
-        self.graph = ox.load_graphml(
-            "tests/test_data/walk_network_4_nodes_6_edges.graphml"
-        )
+        self.graph = ox.load_graphml("tests/test_data/walk_network_4_nodes_6_edges.graphml")
 
         self.graph_nodes, self.graph_edges = ox.graph_to_gdfs(self.graph)
 
@@ -57,25 +55,19 @@ class TestOsmCalculateIsopolygonsAlternative:
 
     def test_nodes_in_isopolygon_5909483619_5(self):
         # The only node less than 5m away from 5909483619 is itself
-        nodes_within = self.graph_nodes[
-            self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_5"])
-        ]
-        assert set(nodes_within.index) == {
-            5909483619
-        }, "The only node in this isopolygon should be 5909483619"
+        nodes_within = self.graph_nodes[self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_5"])]
+        assert set(nodes_within.index) == {5909483619}, "The only node in this isopolygon should be 5909483619"
 
     def test_no_edges_in_isopolygon_5909483619_5(self):
         # Since the only node less than 5m away from 5909483619 is itself, there
         # are no edges from the road network in this isopolygon
 
-        assert not any(
-            self.graph_edges.within(self.isopolygons.loc[5909483619, "ID_5"])
-        ), "There should be no edges in this isopolygon"
+        assert not any(self.graph_edges.within(self.isopolygons.loc[5909483619, "ID_5"])), (
+            "There should be no edges in this isopolygon"
+        )
 
     def test_nodes_in_isopolygon_5909483619_50(self):
-        nodes_within = self.graph_nodes[
-            self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_50"])
-        ]
+        nodes_within = self.graph_nodes[self.graph_nodes.within(self.isopolygons.loc[5909483619, "ID_50"])]
 
         # Node 5909483569 is farther than 50m from node 5909483619
         assert set(nodes_within.index) == {
@@ -85,9 +77,7 @@ class TestOsmCalculateIsopolygonsAlternative:
         }, "Nodes 5909483619, 5909483625 and 5909483636 should be in this isopolygon, but 5909483569 should not"
 
     def test_nodes_in_isopolygon_5909483625_50(self):
-        nodes_within = self.graph_nodes[
-            self.graph_nodes.within(self.isopolygons.loc[5909483625, "ID_50"])
-        ]
+        nodes_within = self.graph_nodes[self.graph_nodes.within(self.isopolygons.loc[5909483625, "ID_50"])]
 
         # Nodes 5909483636 and 5909483569 are farther than 50m away from node 5909483625
         assert set(nodes_within.index) == {
@@ -100,9 +90,7 @@ class TestGetSkeletonNodesAndEdgesAlternative:
     @pytest.fixture(autouse=True)
     def setup(self):
         """All tests use the same graph"""
-        self.road_network = ox.load_graphml(
-            "tests/test_data/walk_network_4_nodes_6_edges.graphml"
-        )
+        self.road_network = ox.load_graphml("tests/test_data/walk_network_4_nodes_6_edges.graphml")
 
         self.road_nodes, self.road_edges = ox.graph_to_gdfs(self.road_network)
 
@@ -128,13 +116,13 @@ class TestGetSkeletonNodesAndEdgesAlternative:
             distance_type="length",
         )
 
-        assert self.road_edges.loc[(5909483625, 5909483619, 0)].geometry.within(
-            skeleton
-        ), "Edge (5909483625, 5909483619) should be within the skeleton"
+        assert self.road_edges.loc[(5909483625, 5909483619, 0)].geometry.within(skeleton), (
+            "Edge (5909483625, 5909483619) should be within the skeleton"
+        )
 
-        assert self.road_edges.loc[(5909483636, 5909483619, 0)].geometry.within(
-            skeleton
-        ), "Edge (5909483636, 5909483619) should be within the skeleton"
+        assert self.road_edges.loc[(5909483636, 5909483619, 0)].geometry.within(skeleton), (
+            "Edge (5909483636, 5909483619) should be within the skeleton"
+        )
 
         assert not self.road_edges.loc[(5909483619, 5909483569, 0)].geometry.within(
             skeleton
