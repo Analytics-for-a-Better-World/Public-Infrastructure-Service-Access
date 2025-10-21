@@ -5,7 +5,7 @@ import osmnx as ox
 import pytest
 from shapely.geometry import Polygon
 
-from pisa.osm_road_network import OsmRoadNetwork
+from pisa_abw.osm_road_network import OsmRoadNetwork
 
 
 @pytest.fixture
@@ -34,7 +34,7 @@ def mock_graph():
     ],
 )
 def test_osm_road_network_travel_time(mock_geometry, mode_of_transport, fallback_speed, mocker, mock_graph):
-    mocker.patch("pisa.osm_road_network.ox.graph_from_polygon", return_value=mock_graph)
+    mocker.patch("pisa_abw.osm_road_network.ox.graph_from_polygon", return_value=mock_graph)
 
     road_network = OsmRoadNetwork(
         admin_area_boundaries=mock_geometry,

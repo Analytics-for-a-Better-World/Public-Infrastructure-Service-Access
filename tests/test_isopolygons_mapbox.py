@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from pisa.isopolygons import MapboxIsopolygonCalculator
+from pisa_abw.isopolygons import MapboxIsopolygonCalculator
 
 
 @pytest.fixture
@@ -50,9 +50,7 @@ def test_invalid_facilities_df(facilities_df, error_message, valid_mapbox_api_to
         ("mode_of_transport", "flying"),
     ],
 )
-def test_invalid_distance_type_or_route_profile(
-    param_name, invalid_value, valid_facilities_df, valid_mapbox_api_token
-):
+def test_invalid_distance_type_or_route_profile(param_name, invalid_value, valid_facilities_df, valid_mapbox_api_token):
     params = {
         "facilities_df": valid_facilities_df,
         "distance_type": "length",
@@ -67,9 +65,7 @@ def test_invalid_distance_type_or_route_profile(
 
 
 def test_too_many_distance_values(valid_facilities_df, valid_mapbox_api_token):
-    with pytest.raises(
-        ValueError, match="Mapbox API accepts a maximum of 4 distance_values"
-    ):
+    with pytest.raises(ValueError, match="Mapbox API accepts a maximum of 4 distance_values"):
         MapboxIsopolygonCalculator(
             facilities_df=valid_facilities_df,
             distance_type="length",
@@ -87,9 +83,7 @@ def test_too_many_distance_values(valid_facilities_df, valid_mapbox_api_token):
         [10, "oops"],
     ],
 )
-def test_wrong_format_distance_values(
-    distance_values, valid_facilities_df, valid_mapbox_api_token
-):
+def test_wrong_format_distance_values(distance_values, valid_facilities_df, valid_mapbox_api_token):
     with pytest.raises(TypeError, match="distance_values must be a list of integers"):
         MapboxIsopolygonCalculator(
             facilities_df=valid_facilities_df,
@@ -101,16 +95,13 @@ def test_wrong_format_distance_values(
 
 
 def test_validate_mapbox_distance_values():
-
     assert MapboxIsopolygonCalculator._validate_mapbox_distance_values([3, 1, 4]) == [
         1,
         3,
         4,
     ]
 
-    with pytest.raises(
-        ValueError, match="Mapbox API accepts a maximum of 4 distance_values"
-    ):
+    with pytest.raises(ValueError, match="Mapbox API accepts a maximum of 4 distance_values"):
         MapboxIsopolygonCalculator._validate_mapbox_distance_values([1, 2, 3, 4, 5])
 
 
