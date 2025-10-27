@@ -6,9 +6,9 @@ from streamlit_folium import st_folium
 from streamlit_plotly_events import plotly_events
 
 from optimization import maxcovering as mc
-from pisa_abw.population_served_by_isopolygons import get_population_served_by_isopolygons
-from pisa_abw.visualisation import plot_results
-from pisa_abw_app.utils import get_isopolygon_calculator
+from pisa.population_served_by_isopolygons import get_population_served_by_isopolygons
+from pisa.visualisation import plot_results
+from pisa_app.utils import get_isopolygon_calculator
 
 
 def pisa_optimization(ss):

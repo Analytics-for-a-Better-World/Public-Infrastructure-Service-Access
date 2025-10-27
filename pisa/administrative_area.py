@@ -9,7 +9,7 @@ Examples
 --------
 Retrieve administrative boundaries for a country and its subdivisions:
 
->>> from pisa_abw.administrative_area import AdministrativeArea
+>>> from pisa.administrative_area import AdministrativeArea
 >>>
 >>> # Get country-level boundaries
 >>> country = AdministrativeArea("Timor-Leste", admin_level=0)

@@ -12,7 +12,7 @@ Retrieve population coverage for example points and polygons::
 >>> from shapely.geometry import Point, Polygon
 >>> import geopandas as gpd
 >>> import pandas as pd
->>> from pisa_abw.population_served_by_isopolygons import get_population_served_by_isopolygons
+>>> from pisa.population_served_by_isopolygons import get_population_served_by_isopolygons
 >>>
 >>> # Get administrative area and facilities
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)

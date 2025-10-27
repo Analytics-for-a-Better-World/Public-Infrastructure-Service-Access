@@ -6,7 +6,7 @@ import pytest
 import rasterio
 from shapely.geometry import MultiPolygon, Polygon
 
-from pisa_abw.population import FacebookPopulation, Population, WorldpopPopulation
+from pisa.population import FacebookPopulation, Population, WorldpopPopulation
 
 
 @pytest.fixture
@@ -55,8 +55,8 @@ def population_instance_worldpop(multipolygon):
     return WorldpopPopulation(multipolygon, iso3_country_code="XYZ")
 
 
-@patch("pisa_abw.population.Resource.search_in_hdx")
-@patch("pisa_abw.population.urllib.request.urlretrieve")
+@patch("pisa.population.Resource.search_in_hdx")
+@patch("pisa.population.urllib.request.urlretrieve")
 def test_download_population_facebook(mock_urlretrieve, mock_search, population_instance_facebook):
     mock_search.return_value = [{"download_url": "http://example.com/data.zip"}]
     mock_urlretrieve.return_value = ("/tmp/data.zip", None)
@@ -125,8 +125,8 @@ class TestProcessPopulationFacebook:
         assert result["population"].sum() == 0
 
 
-@patch("pisa_abw.population.requests.get")
-@patch("pisa_abw.population.urllib.request.urlretrieve")
+@patch("pisa.population.requests.get")
+@patch("pisa.population.urllib.request.urlretrieve")
 def test_download_population_worldpop(mock_urlretrieve, mock_requests, population_instance_worldpop):
     mock_requests.return_value.json.return_value = {"data": [{"files": ["http://example.com/data.tif"]}]}
     mock_urlretrieve.return_value = ("/tmp/data.tif", None)
@@ -148,8 +148,8 @@ class TestProcessPopulationWorldpop:
         fake_raster_dataset,
         population_instance_worldpop,
     ):
-        mock_open = mocker.patch("pisa_abw.population.rasterio.open", return_value=mock_raster_dataset)
-        mock_mask = mocker.patch("pisa_abw.population.mask", return_value=(fake_raster_dataset, None))
+        mock_open = mocker.patch("pisa.population.rasterio.open", return_value=mock_raster_dataset)
+        mock_mask = mocker.patch("pisa.population.mask", return_value=(fake_raster_dataset, None))
 
         df = population_instance_worldpop.process_population_worldpop(
             "fake_path.tif", population_instance_worldpop.admin_area_boundaries
@@ -188,7 +188,7 @@ class TestAdmArea:
         mock_raster_dataset,
         fake_raster_dataset,
     ):
-        mock_mask = mocker.patch("pisa_abw.population.mask", return_value=(fake_raster_dataset, None))
+        mock_mask = mocker.patch("pisa.population.mask", return_value=(fake_raster_dataset, None))
 
         adm_mask = population_instance_worldpop.get_admarea_mask(multipolygon, mock_raster_dataset)
 

@@ -1,8 +1,8 @@
 import streamlit as st
 from streamlit_folium import st_folium
 
-from pisa_abw.facilities import Facilities
-from pisa_abw.visualisation import plot_facilities
+from pisa.facilities import Facilities
+from pisa.visualisation import plot_facilities
 
 
 def facility_data(ss):

@@ -16,7 +16,7 @@ import pickle
 from functools import wraps
 from typing import Callable
 
-from pisa_abw.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
+from pisa.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
 
 logger = logging.getLogger(__name__)
 

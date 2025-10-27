@@ -1,7 +1,7 @@
 import pycountry
 import streamlit as st
 
-from pisa_abw.administrative_area import AdministrativeArea
+from pisa.administrative_area import AdministrativeArea
 
 countries = sorted([country.name for country in list(pycountry.countries)])
 

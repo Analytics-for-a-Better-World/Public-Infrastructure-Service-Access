@@ -3,7 +3,7 @@ import pycountry
 import pytest
 from shapely.geometry import Polygon
 
-from pisa_abw.administrative_area import AdministrativeArea
+from pisa.administrative_area import AdministrativeArea
 
 
 def get_shape_data_by_country(admin_level: int) -> gpd.GeoDataFrame:

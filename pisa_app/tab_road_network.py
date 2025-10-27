@@ -1,10 +1,10 @@
 import streamlit as st
 from streamlit_folium import st_folium
 
-from pisa_abw.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
-from pisa_abw.isopolygons import OsmIsopolygonCalculator
-from pisa_abw.osm_road_network import OsmRoadNetwork
-from pisa_abw.visualisation import plot_isochrones
+from pisa.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
+from pisa.isopolygons import OsmIsopolygonCalculator
+from pisa.osm_road_network import OsmRoadNetwork
+from pisa.visualisation import plot_isochrones
 
 
 def road_network(ss):

@@ -9,8 +9,8 @@ Examples
 --------
 Retrieve existing facilities and generate potential facility locations:
 
->>> from pisa_abw.administrative_area import AdministrativeArea
->>> from pisa_abw.facilities import Facilities
+>>> from pisa.administrative_area import AdministrativeArea
+>>> from pisa.facilities import Facilities
 >>>
 >>> # Get administrative area boundaries
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
@@ -46,7 +46,7 @@ from osmnx._errors import InsufficientResponseError
 from pandas import DataFrame
 from shapely import MultiPolygon, Polygon
 
-from pisa_abw.constants import OSM_TAGS
+from pisa.constants import OSM_TAGS
 
 # Suppress user warning about geometry in geographic CRS. Centroid is calculated
 # over a single facility (e.g. a hospital), so distances are very small and
@@ -90,8 +90,8 @@ class Facilities:
 
     Examples
     --------
-    >>> from pisa_abw.administrative_area import AdministrativeArea
-    >>> from pisa_abw.facilities import Facilities
+    >>> from pisa.administrative_area import AdministrativeArea
+    >>> from pisa.facilities import Facilities
     >>>
     >>> # Get an administrative area for a specific country and region
     >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)

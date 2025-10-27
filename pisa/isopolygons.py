@@ -11,10 +11,10 @@ Examples
 --------
 Calculate isochrones around facilities using OpenStreetMap:
 
->>> from pisa_abw.administrative_area import AdministrativeArea
->>> from pisa_abw.facilities import Facilities
->>> from pisa_abw.osm_road_network import OsmRoadNetwork
->>> from pisa_abw.isopolygons import OsmIsopolygonCalculator
+>>> from pisa.administrative_area import AdministrativeArea
+>>> from pisa.facilities import Facilities
+>>> from pisa.osm_road_network import OsmRoadNetwork
+>>> from pisa.isopolygons import OsmIsopolygonCalculator
 >>>
 >>> # Get administrative area and facilities
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
@@ -66,7 +66,7 @@ from pandas import DataFrame
 from shapely import Polygon
 from shapely.geometry import shape
 
-from pisa_abw.utils import disk_cache, validate_distance_type, validate_mode_of_transport
+from pisa.utils import disk_cache, validate_distance_type, validate_mode_of_transport
 
 logger = logging.getLogger(__name__)
 

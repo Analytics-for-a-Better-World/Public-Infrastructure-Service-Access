@@ -1,8 +1,8 @@
 import streamlit as st
 from streamlit_folium import st_folium
 
-from pisa_abw.population import FacebookPopulation, WorldpopPopulation
-from pisa_abw.visualisation import plot_population_heatmap
+from pisa.population import FacebookPopulation, WorldpopPopulation
+from pisa.visualisation import plot_population_heatmap
 
 
 def population_data(ss):

@@ -11,10 +11,10 @@ Examples
 --------
 Create interactive maps for facilities and population:
 
->>> from pisa_abw.administrative_area import AdministrativeArea
->>> from pisa_abw.facilities import Facilities
->>> from pisa_abw.population import WorldpopPopulation
->>> from pisa_abw.visualisation import plot_facilities, plot_population
+>>> from pisa.administrative_area import AdministrativeArea
+>>> from pisa.facilities import Facilities
+>>> from pisa.population import WorldpopPopulation
+>>> from pisa.visualisation import plot_facilities, plot_population
 >>>
 >>> # Get administrative area and data
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)

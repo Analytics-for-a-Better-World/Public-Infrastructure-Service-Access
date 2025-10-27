@@ -8,8 +8,8 @@ Examples
 --------
 Retrieve and process a road network for walking travel time analysis:
 
->>> from pisa_abw.administrative_area import AdministrativeArea
->>> from pisa_abw.osm_road_network import OsmRoadNetwork
+>>> from pisa.administrative_area import AdministrativeArea
+>>> from pisa.osm_road_network import OsmRoadNetwork
 >>>
 >>> # Get administrative area boundaries
 >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
@@ -41,7 +41,7 @@ import networkx as nx
 import osmnx as ox
 from shapely import MultiPolygon, Polygon
 
-from pisa_abw.utils import validate_distance_type, validate_fallback_speed, validate_mode_of_transport
+from pisa.utils import validate_distance_type, validate_fallback_speed, validate_mode_of_transport
 
 logger = logging.getLogger(__name__)
 

@@ -41,6 +41,6 @@ EXPOSE 8501
 
 HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
 
-WORKDIR /app/pisa_abw_app
+WORKDIR /app/pisa_app
 
 ENTRYPOINT ["streamlit", "run", "main_page.py", "--server.port=8501"]

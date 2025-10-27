@@ -3,7 +3,7 @@ from typing import Type
 import folium
 import streamlit as st
 
-from pisa_abw.isopolygons import IsopolygonCalculator, MapboxIsopolygonCalculator, OsmIsopolygonCalculator
+from pisa.isopolygons import IsopolygonCalculator, MapboxIsopolygonCalculator, OsmIsopolygonCalculator
 
 
 @st.cache_data(show_spinner=False)
