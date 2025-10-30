@@ -10,15 +10,12 @@ constants : Module containing constants used by these utility functions
 """
 
 import hashlib
-import logging
 import os
 import pickle
 from functools import wraps
 from typing import Callable
 
 from pisa.constants import VALID_DISTANCE_TYPES, VALID_MODES_OF_TRANSPORT
-
-logger = logging.getLogger(__name__)
 
 
 def disk_cache(cache_dir: str = "cache") -> Callable:
@@ -48,7 +45,6 @@ def disk_cache(cache_dir: str = "cache") -> Callable:
     -----
     - Cache files are stored as pickle files
     - Cache keys are generated using SHA-256 hash of function name and arguments
-    - Logs cache hits/misses using the logging module
     - Creates cache directory if it doesn't exist
     - Cache files are named using the hash of the function name and arguments
 
@@ -73,20 +69,12 @@ def disk_cache(cache_dir: str = "cache") -> Callable:
             hash_key.update(pickle.dumps(kwargs))
             filename = f"{cache_dir}/{hash_key.hexdigest()}.pkl"
 
-            # add logging information
-            logger.info("\n=== Cache Status ===")
-            logger.info(f"Function: {func.__name__}")
-            logger.debug(f"Args: {args}")
-            logger.info(f"Cache file: {filename}")
-
             # check if the cache file exists:
             if os.path.exists(filename):
-                logger.info("Cache HIT - Loading cached result")
                 with open(filename, "rb") as f:
                     return pickle.load(f)
             else:
                 # Call the function and cache its result
-                logger.info("Cache MISS - Computing new result")
                 result = func(*args, **kwargs)
                 with open(filename, "wb") as f:
                     pickle.dump(result, f)
@@ -160,7 +148,9 @@ def validate_mode_of_transport(mode_of_transport: str) -> str:
     return mode_of_transport
 
 
-def validate_fallback_speed(fallback_speed: int | float | None, network_type: str) -> int | float | None:
+def validate_fallback_speed(
+    fallback_speed: int | float | None, network_type: str
+) -> int | float | None:
     """Validate that a fallback speed is within reasonable bounds for the given transport mode.
 
     Parameters
