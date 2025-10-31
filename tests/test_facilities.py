@@ -6,7 +6,7 @@ import pytest
 from geopandas import GeoDataFrame
 from shapely.geometry import MultiPolygon, Point, Polygon
 
-from pisa_abw.facilities import Facilities
+from pisa.facilities import Facilities
 
 
 @pytest.fixture
@@ -71,7 +71,7 @@ class TestFacilities:
         with pytest.raises(NotImplementedError, match="Data source 'invalid' not implemented"):
             facilities.get_existing_facilities()
 
-    @patch("pisa_abw.facilities.ox.features_from_polygon")
+    @patch("pisa.facilities.ox.features_from_polygon")
     def test_get_existing_facilities_osm(self, mocked_osm_response, fake_facilities_gdf, multi_polygon):
         mocked_osm_response.return_value = fake_facilities_gdf
 

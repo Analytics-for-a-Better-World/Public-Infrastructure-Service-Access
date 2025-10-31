@@ -19,7 +19,7 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.viewcode",
 ]
-autoapi_dirs = ["../pisa_abw"]
+autoapi_dirs = ["../pisa"]
 
 # AutoAPI configuration
 autoapi_options = [

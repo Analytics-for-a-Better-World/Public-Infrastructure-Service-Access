@@ -30,4 +30,4 @@ jobs:
       - name: Install package
         run: poetry install
       - name: Test with coverage
-        run: poetry run pytest --cov=pisa_abw --cov-report=term-missing tests/
+        run: poetry run pytest --cov=pisa --cov-report=term-missing tests/

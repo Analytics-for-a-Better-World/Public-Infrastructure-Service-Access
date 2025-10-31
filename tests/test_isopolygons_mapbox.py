@@ -1,7 +1,7 @@
 import pandas as pd
 import pytest
 
-from pisa_abw.isopolygons import MapboxIsopolygonCalculator
+from pisa.isopolygons import MapboxIsopolygonCalculator
 
 
 @pytest.fixture

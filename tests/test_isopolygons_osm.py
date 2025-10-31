@@ -6,7 +6,7 @@ import pytest
 from geopandas.testing import assert_geoseries_equal
 from shapely.geometry import LineString, Point
 
-from pisa_abw.isopolygons import OsmIsopolygonCalculator
+from pisa.isopolygons import OsmIsopolygonCalculator
 
 
 @pytest.fixture
