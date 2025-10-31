@@ -18,14 +18,6 @@ utils
 
 
 
-Attributes
-----------
-
-.. autoapisummary::
-
-   utils.logger
-
-
 Functions
 ---------
 
@@ -39,8 +31,6 @@ Functions
 
 Module Contents
 ---------------
-
-.. py:data:: logger
 
 .. py:function:: disk_cache(cache_dir: str = 'cache') -> Callable
 
@@ -66,7 +56,6 @@ Module Contents
 
    - Cache files are stored as pickle files
    - Cache keys are generated using SHA-256 hash of function name and arguments
-   - Logs cache hits/misses using the logging module
    - Creates cache directory if it doesn't exist
    - Cache files are named using the hash of the function name and arguments
 

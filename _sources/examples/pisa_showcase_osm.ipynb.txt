@@ -21,11 +21,11 @@
     "import warnings\n",
     "from functools import partial\n",
     "\n",
-    "from pisa_abw.administrative_area import AdministrativeArea\n",
-    "from pisa_abw.facilities import Facilities\n",
-    "from pisa_abw.population import WorldpopPopulation\n",
-    "from pisa_abw.population_served_by_isopolygons import get_population_served_by_isopolygons\n",
-    "from pisa_abw.visualisation import (\n",
+    "from pisa.administrative_area import AdministrativeArea\n",
+    "from pisa.facilities import Facilities\n",
+    "from pisa.population import WorldpopPopulation\n",
+    "from pisa.population_served_by_isopolygons import get_population_served_by_isopolygons\n",
+    "from pisa.visualisation import (\n",
     "    plot_facilities,\n",
     "    plot_isochrones,\n",
     "    plot_population,\n",
@@ -221,7 +221,7 @@
     "- distance values: these are the distances we want to use to determine access to hospitals. In this example, we use 2000, 5000 and 10000 meters (i.e. 2, 5 and 10 km) as the distance values.\n",
     "- mode of transport: in this example, we use `driving` as the mode of transport, but it could also be `walking` or `cycling`.\n",
     "\n",
-    "Valid values for constants can be found in the script `pisa_abw.constants`"
+    "Valid values for constants can be found in the script `pisa.constants`"
    ]
   },
   {
@@ -255,7 +255,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "from pisa_abw.osm_road_network import OsmRoadNetwork\n",
+    "from pisa.osm_road_network import OsmRoadNetwork\n",
     "\n",
     "road_network = OsmRoadNetwork(\n",
     "    admin_area_boundaries=baucau,\n",
@@ -281,7 +281,7 @@
    "metadata": {},
    "outputs": [],
    "source": [
-    "from pisa_abw.isopolygons import OsmIsopolygonCalculator\n",
+    "from pisa.isopolygons import OsmIsopolygonCalculator\n",
     "\n",
     "with warnings.catch_warnings():\n",
     "    warnings.simplefilter(\"ignore\", category=UserWarning)\n",

@@ -16,8 +16,8 @@ facilities
 
    Retrieve existing facilities and generate potential facility locations:
 
-   >>> from pisa_abw.administrative_area import AdministrativeArea
-   >>> from pisa_abw.facilities import Facilities
+   >>> from pisa.administrative_area import AdministrativeArea
+   >>> from pisa.facilities import Facilities
    >>>
    >>> # Get administrative area boundaries
    >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
@@ -98,8 +98,8 @@ Module Contents
 
    .. rubric:: Examples
 
-   >>> from pisa_abw.administrative_area import AdministrativeArea
-   >>> from pisa_abw.facilities import Facilities
+   >>> from pisa.administrative_area import AdministrativeArea
+   >>> from pisa.facilities import Facilities
    >>>
    >>> # Get an administrative area for a specific country and region
    >>> admin_area = AdministrativeArea("Timor-Leste", admin_level=1)
