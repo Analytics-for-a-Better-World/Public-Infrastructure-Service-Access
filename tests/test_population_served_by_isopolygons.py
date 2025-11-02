@@ -3,7 +3,7 @@ import pandas as pd
 import pytest
 from shapely.geometry import Point, Polygon
 
-from pisa_abw.population_served_by_isopolygons import get_population_served_by_isopolygons
+from pisa.population_served_by_isopolygons import get_population_served_by_isopolygons
 
 
 @pytest.fixture
