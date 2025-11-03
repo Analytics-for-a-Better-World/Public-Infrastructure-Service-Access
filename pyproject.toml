@@ -5,7 +5,8 @@ description = "Estimate and optimize service coverage of public infrastructure f
 authors = ["EiriniK <Eirini.Kousathana@ortec.com>"]
 readme = "README.md"
 packages = [
-    {include = "pisa"}
+    {include = "pisa"},
+    {include = "optimization"}
 ]
 
 [tool.poetry.dependencies]
