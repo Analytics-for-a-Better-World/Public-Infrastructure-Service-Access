@@ -47,7 +47,7 @@ If you prefer traditional Python package management:
 4. Activate the virtual environment:
    - Windows: `venv\Scripts\activate`
    - macOS/Linux: `source venv/bin/activate`
-5. Install the package: `pip install dist/pisa_abw-2.0.1-py3-none-any.whl`
+5. Install the package: `pip install dist/pisa_abw-XXXXX-py3-none-any.whl` where `XXXXX` is the version number of the latest build.
 
 > If you need the original codebase, use the wheel file for version `0.1.0` (`pip install dist/gpbp-0.1.0-py3-none-any.whl`)
 
