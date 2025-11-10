@@ -15,138 +15,65 @@ Traceback (most recent call last):
     raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
 nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
 ------------------
-values, solutions = jg_opt.Solve(
-    household=population_count,
-    current=current,
-    potential=potential,
-    accessibility=DISTANCE_TYPE,
-    budgets=BUDGET,
-    optimize=cbc_optimize,
-    type="ID",
-)
+population_gdf = WorldpopPopulation(
+    admin_area_boundaries=baucau, iso3_country_code=timor_leste.get_iso3_country_code()
+).get_population_gdf()
+
+population_gdf.head()
 ------------------
 
------ stderr -----
-WARNING:pyomo.opt:Failed to create solver with name '_cbc_shell':
-Failed to set executable for solver cbc. File with name=D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\cbc.exe either does not exist or it is not executable. To skip this validation, call set_executable with validate=False.
-Traceback (most recent call last):
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 148, in __call__
-    opt = self._cls[_name](**kwds)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/solvers/plugins/solvers/CBCplugin.py", line 88, in __init__
-    super(CBCSHELL, self).__init__(**kwds)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/solver/shellcmd.py", line 66, in __init__
-    self.set_executable(name=executable, validate=validate)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/solver/shellcmd.py", line 115, in set_executable
-    raise ValueError(
-ValueError: Failed to set executable for solver cbc. File with name=D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\cbc.exe either does not exist or it is not executable. To skip this validation, call set_executable with validate=False.
------ stderr -----
-WARNING:pyomo.opt:Failed to create solver with name 'cbc':
-Attempting to use an unavailable solver.
-
-The SolverFactory was unable to create the solver "_cbc_shell"
-and returned an UnknownSolver object.  This error is raised at the point
-where the UnknownSolver object was used as if it were valid (by calling
-method "set_problem_format").
-
-The original solver was created with the following parameters:
-	executable: D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\cbc.exe
-	type: _cbc_shell
-	_args: ()
-	options: {}
-Traceback (most recent call last):
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 148, in __call__
-    opt = self._cls[_name](**kwds)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/solvers/plugins/solvers/CBCplugin.py", line 50, in __new__
-    opt.set_problem_format(ProblemFormat.cpxlp)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 113, in __getattr__
-    self._solver_error(attr)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py", line 116, in _solver_error
-    raise RuntimeError(
-RuntimeError: Attempting to use an unavailable solver.
-
-The SolverFactory was unable to create the solver "_cbc_shell"
-and returned an UnknownSolver object.  This error is raised at the point
-where the UnknownSolver object was used as if it were valid (by calling
-method "set_problem_format").
-
-The original solver was created with the following parameters:
-	executable: D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\cbc.exe
-	type: _cbc_shell
-	_args: ()
-	options: {}
-------------------
 
 [0;31m---------------------------------------------------------------------------[0m
-[0;31mRuntimeError[0m                              Traceback (most recent call last)
-Cell [0;32mIn[22], line 1[0m
-[0;32m----> 1[0m values, solutions [38;5;241m=[39m [43mjg_opt[49m[38;5;241;43m.[39;49m[43mSolve[49m[43m([49m
-[1;32m      2[0m [43m    [49m[43mhousehold[49m[38;5;241;43m=[39;49m[43mpopulation_count[49m[43m,[49m
-[1;32m      3[0m [43m    [49m[43mcurrent[49m[38;5;241;43m=[39;49m[43mcurrent[49m[43m,[49m
-[1;32m      4[0m [43m    [49m[43mpotential[49m[38;5;241;43m=[39;49m[43mpotential[49m[43m,[49m
-[1;32m      5[0m [43m    [49m[43maccessibility[49m[38;5;241;43m=[39;49m[43mDISTANCE_TYPE[49m[43m,[49m
-[1;32m      6[0m [43m    [49m[43mbudgets[49m[38;5;241;43m=[39;49m[43mBUDGET[49m[43m,[49m
-[1;32m      7[0m [43m    [49m[43moptimize[49m[38;5;241;43m=[39;49m[43mcbc_optimize[49m[43m,[49m
-[1;32m      8[0m [43m    [49m[38;5;28;43mtype[39;49m[38;5;241;43m=[39;49m[38;5;124;43m"[39;49m[38;5;124;43mID[39;49m[38;5;124;43m"[39;49m[43m,[49m
-[1;32m      9[0m [43m)[49m
+[0;31mHTTPError[0m                                 Traceback (most recent call last)
+Cell [0;32mIn[8], line 3[0m
+[1;32m      1[0m population_gdf [38;5;241m=[39m [43mWorldpopPopulation[49m[43m([49m
+[1;32m      2[0m [43m    [49m[43madmin_area_boundaries[49m[38;5;241;43m=[39;49m[43mbaucau[49m[43m,[49m[43m [49m[43miso3_country_code[49m[38;5;241;43m=[39;49m[43mtimor_leste[49m[38;5;241;43m.[39;49m[43mget_iso3_country_code[49m[43m([49m[43m)[49m
+[0;32m----> 3[0m [43m)[49m[38;5;241;43m.[39;49m[43mget_population_gdf[49m[43m([49m[43m)[49m
+[1;32m      5[0m population_gdf[38;5;241m.[39mhead()
 
-File [0;32m~/work/Public-Infrastructure-Service-Access/Public-Infrastructure-Service-Access/optimization/jg_opt.py:362[0m, in [0;36mSolve[0;34m(household, current, potential, accessibility, budgets, optimize, type)[0m
-[1;32m    360[0m I [38;5;241m=[39m np[38;5;241m.[39munique([38;5;28mlist[39m(IJ[38;5;241m.[39mkeys()))
-[1;32m    361[0m J [38;5;241m=[39m np[38;5;241m.[39munique(np[38;5;241m.[39mconcatenate([38;5;28mlist[39m(IJ[38;5;241m.[39mvalues())))
-[0;32m--> 362[0m optimization [38;5;241m=[39m [43moptimize[49m[43m([49m
-[1;32m    363[0m [43m    [49m[43mhousehold[49m[43m,[49m
-[1;32m    364[0m [43m    [49m[43mI[49m[43m,[49m
-[1;32m    365[0m [43m    [49m[43mJ[49m[43m,[49m
-[1;32m    366[0m [43m    [49m[43mIJ[49m[43m,[49m
-[1;32m    367[0m [43m    [49m[43m[[49m[38;5;28;43mmax[39;49m[43m([49m[43mbudgets[49m[43m)[49m[43m][49m[43m,[49m
-[1;32m    368[0m [43m    [49m[43mparsimonious[49m[38;5;241;43m=[39;49m[38;5;28;43;01mTrue[39;49;00m[43m,[49m
-[1;32m    369[0m [43m    [49m[43mmaxTimeInSeconds[49m[38;5;241;43m=[39;49m[38;5;241;43m5[39;49m[43m,[49m
-[1;32m    370[0m [43m    [49m[43mmipGap[49m[38;5;241;43m=[39;49m[38;5;241;43m1e-15[39;49m[43m,[49m
-[1;32m    371[0m [43m[49m[43m)[49m
-[1;32m    372[0m optimization[[38;5;124m"[39m[38;5;124mnof[39m[38;5;124m"[39m] [38;5;241m=[39m [[38;5;28mlen[39m(s) [38;5;28;01mfor[39;00m s [38;5;129;01min[39;00m optimization[38;5;241m.[39msolution]
-[1;32m    373[0m coverage [38;5;241m=[39m (optimization[38;5;241m.[39mvalue [38;5;241m/[39m household[38;5;241m.[39msum() [38;5;241m+[39m percent_covered)[38;5;241m.[39mto_frame()
+File [0;32m~/work/Public-Infrastructure-Service-Access/Public-Infrastructure-Service-Access/pisa/population.py:94[0m, in [0;36mPopulation.get_population_gdf[0;34m(self)[0m
+[1;32m     75[0m [38;5;28;01mdef[39;00m[38;5;250m [39m[38;5;21mget_population_gdf[39m([38;5;28mself[39m) [38;5;241m-[39m[38;5;241m>[39m GeoDataFrame:
+[1;32m     76[0m [38;5;250m    [39m[38;5;124;03m"""Get aggregated population data for the administrative area as a GeoDataFrame.[39;00m
+[1;32m     77[0m 
+[1;32m     78[0m [38;5;124;03m    This method integrates the population data retrieval workflow by:[39;00m
+[0;32m   (...)[0m
+[1;32m     92[0m [38;5;124;03m            - ``ID``: Unique identifier for each point[39;00m
+[1;32m     93[0m [38;5;124;03m    """[39;00m
+[0;32m---> 94[0m     population_df [38;5;241m=[39m [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43m_get_population_df[49m[43m([49m[43m)[49m
+[1;32m     95[0m     [38;5;28;01mreturn[39;00m [38;5;28mself[39m[38;5;241m.[39m_group_population(population_df, [38;5;28mself[39m[38;5;241m.[39mpopulation_resolution)
 
-File [0;32m~/work/Public-Infrastructure-Service-Access/Public-Infrastructure-Service-Access/optimization/jg_opt.py:126[0m, in [0;36mOpenOptimize[0;34m(w, I, J, IJ, budget_list, parsimonious, maxTimeInSeconds, mipGap, trace, solver, solver_path)[0m
-[1;32m    124[0m result[38;5;241m.[39mat[p, [38;5;124m"[39m[38;5;124mmodeling[39m[38;5;124m"[39m] [38;5;241m=[39m pc() [38;5;241m-[39m start
-[1;32m    125[0m start [38;5;241m=[39m pc()
-[0;32m--> 126[0m solver_result [38;5;241m=[39m [43msolver[49m[38;5;241;43m.[39;49m[43msolve[49m[43m([49m[43mM[49m[43m,[49m[43m [49m[43mtee[49m[38;5;241;43m=[39;49m[43mtrace[49m[43m)[49m
-[1;32m    127[0m result[38;5;241m.[39mat[p, [38;5;124m"[39m[38;5;124msolving[39m[38;5;124m"[39m] [38;5;241m=[39m pc() [38;5;241m-[39m start
-[1;32m    128[0m result[38;5;241m.[39mat[p, [38;5;124m"[39m[38;5;124mvalue[39m[38;5;124m"[39m] [38;5;241m=[39m [38;5;28mint[39m(
-[1;32m    129[0m     np[38;5;241m.[39mceil(M[38;5;241m.[39mweighted_coverage() [38;5;241m-[39m np[38;5;241m.[39mfinfo(np[38;5;241m.[39mfloat16)[38;5;241m.[39meps)
-[1;32m    130[0m )
+File [0;32m~/work/Public-Infrastructure-Service-Access/Public-Infrastructure-Service-Access/pisa/population.py:312[0m, in [0;36mWorldpopPopulation._get_population_df[0;34m(self)[0m
+[1;32m    298[0m [38;5;28;01mdef[39;00m[38;5;250m [39m[38;5;21m_get_population_df[39m([38;5;28mself[39m) [38;5;241m-[39m[38;5;241m>[39m pd[38;5;241m.[39mDataFrame:
+[1;32m    299[0m [38;5;250m    [39m[38;5;124;03m"""Download and process population data from WorldPop.[39;00m
+[1;32m    300[0m 
+[1;32m    301[0m [38;5;124;03m    Implements the abstract method from the Population class to retrieve population data specifically from WorldPop's[39;00m
+[0;32m   (...)[0m
+[1;32m    310[0m [38;5;124;03m        - population: Population count at the coordinate[39;00m
+[1;32m    311[0m [38;5;124;03m    """[39;00m
+[0;32m--> 312[0m     downloaded_data [38;5;241m=[39m [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43mdownload_population_worldpop[49m[43m([49m
+[1;32m    313[0m [43m        [49m[43miso3_country_code[49m[38;5;241;43m=[39;49m[38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43miso3_country_code[49m[43m,[49m
+[1;32m    314[0m [43m    [49m[43m)[49m
+[1;32m    316[0m     processed_data [38;5;241m=[39m [38;5;28mself[39m[38;5;241m.[39mprocess_population_worldpop(
+[1;32m    317[0m         downloaded_data,
+[1;32m    318[0m         admin_area_boundaries[38;5;241m=[39m[38;5;28mself[39m[38;5;241m.[39madmin_area_boundaries,
+[1;32m    319[0m     )
+[1;32m    321[0m     [38;5;28;01mreturn[39;00m processed_data
 
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py:99[0m, in [0;36mUnknownSolver.solve[0;34m(self, *args, **kwds)[0m
-[1;32m     97[0m [38;5;28;01mdef[39;00m[38;5;250m [39m[38;5;21msolve[39m([38;5;28mself[39m, [38;5;241m*[39margs, [38;5;241m*[39m[38;5;241m*[39mkwds):
-[1;32m     98[0m [38;5;250m    [39m[38;5;124;03m"""Perform optimization and return an SolverResults object."""[39;00m
-[0;32m---> 99[0m     [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43m_solver_error[49m[43m([49m[38;5;124;43m'[39;49m[38;5;124;43msolve[39;49m[38;5;124;43m'[39;49m[43m)[49m
+File [0;32m~/work/Public-Infrastructure-Service-Access/Public-Infrastructure-Service-Access/pisa/population.py:351[0m, in [0;36mWorldpopPopulation.download_population_worldpop[0;34m(iso3_country_code)[0m
+[1;32m    346[0m headers [38;5;241m=[39m {
+[1;32m    347[0m     [38;5;124m"[39m[38;5;124mUser-Agent[39m[38;5;124m"[39m: [38;5;124m"[39m[38;5;124mMozilla/5.0 (Windows NT 10.0; Win64; x64)[39m[38;5;124m"[39m
+[1;32m    348[0m }  [38;5;66;03m# User-Agent is required to get API response[39;00m
+[1;32m    350[0m [38;5;28;01mwith[39;00m requests[38;5;241m.[39mget(worldpop_url, headers[38;5;241m=[39mheaders) [38;5;28;01mas[39;00m response:
+[0;32m--> 351[0m     [43mresponse[49m[38;5;241;43m.[39;49m[43mraise_for_status[49m[43m([49m[43m)[49m
+[1;32m    352[0m     data [38;5;241m=[39m response[38;5;241m.[39mjson()[[38;5;124m"[39m[38;5;124mdata[39m[38;5;124m"[39m][[38;5;241m-[39m[38;5;241m1[39m]  [38;5;66;03m# Extract latest year data[39;00m
+[1;32m    354[0m [38;5;66;03m# Extract url for data for the latest year[39;00m
 
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/pyomo/opt/base/solvers.py:116[0m, in [0;36mUnknownSolver._solver_error[0;34m(self, method_name)[0m
-[1;32m    115[0m     [38;5;28;01mdef[39;00m[38;5;250m [39m[38;5;21m_solver_error[39m([38;5;28mself[39m, method_name):
-[0;32m--> 116[0m         [38;5;28;01mraise[39;00m [38;5;167;01mRuntimeError[39;00m(
-[1;32m    117[0m [38;5;250m            [39m[38;5;124;03m"""Attempting to use an unavailable solver.[39;00m
-[1;32m    118[0m 
-[1;32m    119[0m [38;5;124;03mThe SolverFactory was unable to create the solver "%s"[39;00m
-[1;32m    120[0m [38;5;124;03mand returned an UnknownSolver object.  This error is raised at the point[39;00m
-[1;32m    121[0m [38;5;124;03mwhere the UnknownSolver object was used as if it were valid (by calling[39;00m
-[1;32m    122[0m [38;5;124;03mmethod "%s").[39;00m
-[1;32m    123[0m 
-[1;32m    124[0m [38;5;124;03mThe original solver was created with the following parameters:[39;00m
-[1;32m    125[0m [38;5;124;03m\t"""[39;00m
-[1;32m    126[0m             [38;5;241m%[39m ([38;5;28mself[39m[38;5;241m.[39mtype, method_name)
-[1;32m    127[0m             [38;5;241m+[39m [38;5;124m"[39m[38;5;130;01m\n[39;00m[38;5;130;01m\t[39;00m[38;5;124m"[39m[38;5;241m.[39mjoin([38;5;124m"[39m[38;5;132;01m%s[39;00m[38;5;124m: [39m[38;5;132;01m%s[39;00m[38;5;124m"[39m [38;5;241m%[39m i [38;5;28;01mfor[39;00m i [38;5;129;01min[39;00m [38;5;28msorted[39m([38;5;28mself[39m[38;5;241m.[39m_kwds[38;5;241m.[39mitems()))
-[1;32m    128[0m             [38;5;241m+[39m [38;5;124m"[39m[38;5;130;01m\n[39;00m[38;5;130;01m\t[39;00m[38;5;124m_args: [39m[38;5;132;01m%s[39;00m[38;5;124m"[39m [38;5;241m%[39m ([38;5;28mself[39m[38;5;241m.[39m_args,)
-[1;32m    129[0m             [38;5;241m+[39m [38;5;124m"[39m[38;5;130;01m\n[39;00m[38;5;130;01m\t[39;00m[38;5;124moptions: [39m[38;5;132;01m%s[39;00m[38;5;124m"[39m [38;5;241m%[39m ([38;5;28mself[39m[38;5;241m.[39moptions,)
-[1;32m    130[0m         )
+File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/requests/models.py:1024[0m, in [0;36mResponse.raise_for_status[0;34m(self)[0m
+[1;32m   1019[0m     http_error_msg [38;5;241m=[39m (
+[1;32m   1020[0m         [38;5;124mf[39m[38;5;124m"[39m[38;5;132;01m{[39;00m[38;5;28mself[39m[38;5;241m.[39mstatus_code[38;5;132;01m}[39;00m[38;5;124m Server Error: [39m[38;5;132;01m{[39;00mreason[38;5;132;01m}[39;00m[38;5;124m for url: [39m[38;5;132;01m{[39;00m[38;5;28mself[39m[38;5;241m.[39murl[38;5;132;01m}[39;00m[38;5;124m"[39m
+[1;32m   1021[0m     )
+[1;32m   1023[0m [38;5;28;01mif[39;00m http_error_msg:
+[0;32m-> 1024[0m     [38;5;28;01mraise[39;00m HTTPError(http_error_msg, response[38;5;241m=[39m[38;5;28mself[39m)
 
-[0;31mRuntimeError[0m: Attempting to use an unavailable solver.
-
-The SolverFactory was unable to create the solver "cbc"
-and returned an UnknownSolver object.  This error is raised at the point
-where the UnknownSolver object was used as if it were valid (by calling
-method "solve").
-
-The original solver was created with the following parameters:
-	executable: D:\EiriniK\Downloads\amplbundle.mswin64\ampl.mswin64\cbc.exe
-	type: cbc
-	_args: ()
-	options: {'threads': 8, 'sec': 5.0, 'allowableGap': 1e-15}
+[0;31mHTTPError[0m: 404 Client Error: Not Found for url: https://www.worldpop.org/rest/data/pop/wpgpunadj/?iso3=tls
 
