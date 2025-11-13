@@ -1,11 +1,12 @@
 [tool.poetry]
 name = "pisa_abw"
-version = "2.0.1"
+version = "2.0.2"
 description = "Estimate and optimize service coverage of public infrastructure facilities."
 authors = ["EiriniK <Eirini.Kousathana@ortec.com>"]
 readme = "README.md"
 packages = [
-    {include = "pisa"}
+    {include = "pisa"},
+    {include = "optimization"}
 ]
 
 [tool.poetry.dependencies]
