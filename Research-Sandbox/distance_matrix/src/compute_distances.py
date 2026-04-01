@@ -1,102 +1,456 @@
-
 # Standard library imports
 from time import perf_counter as pc
+import warnings
 
 # Third-party library imports
 import numpy as np
 import pandas as pd
+import polars as pl
 from scipy.spatial import cKDTree
 
-# Suppress specific warnings from Pandana
-import warnings
 warnings.filterwarnings(
-    "ignore",
-    message="Unsigned integer: shortest path distance is trying to be calculated",
-    module="pandana.network"
+    'ignore',
+    message=r'Unsigned integer: shortest path distance is trying to be calculated.*',
+    category=UserWarning,
+    module=r'pandana\.network',
 )
 
-def compute_distances( population, all_hospitals, distance_threshold_largest, network ):
+NO_PATH_SENTINEL = 4294967.295
+EARTH_RADIUS_KM = 6367.0
+
+
+def _validate_inputs(
+    population: pd.DataFrame,
+    all_hospitals: pd.DataFrame,
+) -> None:
+    """
+    Validate that the input tables contain the expected columns and index layout.
+
+    Parameters
+    ----------
+    population
+        Population table indexed by population ID.
+    all_hospitals
+        Hospital table indexed by hospital ID.
+
+    Raises
+    ------
+    KeyError
+        If a required column is missing.
+    ValueError
+        If the index does not match the corresponding ID column.
+    """
+    required_pop_cols = {
+        'ID',
+        'xcoord',
+        'ycoord',
+        'nearest_node',
+        'pop_dist_road_estrada',
+    }
+    required_hosp_cols = {
+        'ID',
+        'Longitude',
+        'Latitude',
+        'nearest_node',
+        'hosp_dist_road_estrada',
+    }
+
+    missing_pop = required_pop_cols.difference(population.columns)
+    missing_hosp = required_hosp_cols.difference(all_hospitals.columns)
+
+    if missing_pop:
+        raise KeyError(f'Missing population columns: {sorted(missing_pop)}')
+    if missing_hosp:
+        raise KeyError(f'Missing hospital columns: {sorted(missing_hosp)}')
+
+    if not (population.index == population['ID']).all():
+        raise ValueError("population.index must match population['ID']")
+
+    if not (all_hospitals.index == all_hospitals['ID']).all():
+        raise ValueError("all_hospitals.index must match all_hospitals['ID']")
+
+
+def _dense_codes(values: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Map arbitrary identifiers to dense zero based codes.
+
+    Parameters
+    ----------
+    values
+        One dimensional array of identifiers.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        A pair `(codes, unique_values)` such that
+        `unique_values[codes] == values`.
+    """
+    unique_values, inverse = np.unique(values, return_inverse=True)
+    return inverse.astype(np.int64, copy=False), unique_values
+
+
+def _unique_node_pairs(
+    pop_nodes: np.ndarray,
+    hosp_nodes: np.ndarray,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Deduplicate aligned node pairs safely for large sparse identifiers such as
+    OSM node IDs.
+
+    Parameters
+    ----------
+    pop_nodes
+        Population nearest node IDs.
+    hosp_nodes
+        Hospital nearest node IDs.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        Unique aligned population and hospital nearest node IDs.
+    """
+    if pop_nodes.size == 0:
+        return (
+            np.empty(0, dtype=pop_nodes.dtype),
+            np.empty(0, dtype=hosp_nodes.dtype),
+        )
+
+    pop_codes, pop_unique = _dense_codes(pop_nodes)
+    hosp_codes, hosp_unique = _dense_codes(hosp_nodes)
+
+    base = np.uint64(len(hosp_unique))
+    keys = pop_codes.astype(np.uint64) * base + hosp_codes.astype(np.uint64)
+    unique_keys = np.unique(keys)
+
+    unique_pop_codes = (unique_keys // base).astype(np.int64, copy=False)
+    unique_hosp_codes = (unique_keys % base).astype(np.int64, copy=False)
+
+    unique_pop_nodes = pop_unique[unique_pop_codes]
+    unique_hosp_nodes = hosp_unique[unique_hosp_codes]
+
+    return unique_pop_nodes, unique_hosp_nodes
+
+
+def _candidate_row_pairs(
+    population: pd.DataFrame,
+    all_hospitals: pd.DataFrame,
+    distance_threshold_largest: float,
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    Compute candidate population hospital row pairs using a spatial prefilter.
+
+    Parameters
+    ----------
+    population
+        Population table.
+    all_hospitals
+        Hospital table.
+    distance_threshold_largest
+        Maximum crow flies prefilter distance in kilometers.
+
+    Returns
+    -------
+    tuple[np.ndarray, np.ndarray]
+        Arrays `(pop_indices, hosp_indices)` containing aligned candidate row
+        pairs.
+    """
     t = pc()
 
-    # assert that the frames are indexed on the IDs
-    assert ( population.index == population.ID ).all()
-    assert ( all_hospitals.index == all_hospitals.ID ).all()
+    pop_coords = population[['xcoord', 'ycoord']].to_numpy(
+        dtype=np.float64,
+        copy=False,
+    )
+    hosp_coords = all_hospitals[['Longitude', 'Latitude']].to_numpy(
+        dtype=np.float64,
+        copy=False,
+    )
 
-    # Convert population and hospital coordinates to NumPy arrays
-    pop_coords = population[['xcoord', 'ycoord']].values
-    hosp_coords = all_hospitals[['Longitude', 'Latitude']].values
-
-    # Convert degrees to radians for cKDTree (better for spherical distance calculations)
     pop_coords_rad = np.radians(pop_coords)
     hosp_coords_rad = np.radians(hosp_coords)
 
-    print( f'preparing {len(pop_coords_rad):,} x {len(hosp_coords_rad):,} for spatial nearest neighbors bounded by {distance_threshold_largest} km in {pc() - t:.2f} seconds' )
+    print(
+        f'preparing {len(pop_coords_rad):,} x {len(hosp_coords_rad):,} '
+        f'for spatial nearest neighbors bounded by {distance_threshold_largest} km '
+        f'in {pc() - t:.2f} seconds'
+    )
+
     t = pc()
 
-    # Build a KDTree for hospitals using all hospital data
     tree = cKDTree(hosp_coords_rad)
+    radius = np.radians(distance_threshold_largest / EARTH_RADIUS_KM)
+    indices = tree.query_ball_point(pop_coords_rad, r=radius)
 
-    # Query the tree to find hospitals within the given threshold for each population point
-    indices = tree.query_ball_point(pop_coords_rad, r=np.radians(distance_threshold_largest / 6367.0))  # Convert km to radians
+    lengths = np.fromiter((len(row) for row in indices), dtype=np.int64)
+    n_candidate_pairs = int(lengths.sum())
 
-    # Flatten the indices result while keeping track of original indices
-    pop_indices = np.repeat(np.arange(len(indices)), [len(n) for n in indices])  # Expand population indices
-    hosp_indices = np.concatenate(indices)  # Flatten all hospital index lists
+    pop_indices = np.repeat(np.arange(len(indices), dtype=np.int64), lengths)
+    hosp_indices = np.fromiter(
+        (h for row in indices for h in row),
+        dtype=np.int64,
+        count=n_candidate_pairs,
+    )
 
-    print( f'finding {len(hosp_indices):,} pairs of spatial nearest neighbors in {pc() - t:.2f} seconds' )
+    print(
+        f'finding {n_candidate_pairs:,} pairs of spatial nearest neighbors '
+        f'in {pc() - t:.2f} seconds'
+    )
+
+    return pop_indices, hosp_indices
+
+
+def _compute_unique_node_pair_distances(
+    population: pd.DataFrame,
+    all_hospitals: pd.DataFrame,
+    pop_indices: np.ndarray,
+    hosp_indices: np.ndarray,
+    network: object,
+) -> pl.DataFrame:
+    """
+    Compute shortest path distances for unique nearest node pairs.
+
+    Parameters
+    ----------
+    population
+        Population table.
+    all_hospitals
+        Hospital table.
+    pop_indices
+        Candidate population row indices.
+    hosp_indices
+        Candidate hospital row indices.
+    network
+        Pandana like network object exposing `shortest_path_lengths`.
+
+    Returns
+    -------
+    pl.DataFrame
+        Polars table with columns:
+        'pop_nearest_node', 'hosp_nearest_node', 'road_distance'.
+    """
     t = pc()
 
-    # Create DataFrame for mapping population and hospital IDs
-    df = pd.DataFrame({'pop_index': pop_indices, 'hosp_index': hosp_indices})
+    pop_nodes = population['nearest_node'].to_numpy(copy=False)[pop_indices]
+    hosp_nodes = all_hospitals['nearest_node'].to_numpy(copy=False)[hosp_indices]
 
-    # Map indices directly to population and hospital IDs
-    df['pop_id'] = population.iloc[df['pop_index']]['ID'].values
-    df['hosp_id'] = all_hospitals.iloc[df['hosp_index']]['ID'].values
+    unique_pop_nodes, unique_hosp_nodes = _unique_node_pairs(pop_nodes, hosp_nodes)
 
-    # Map IDs back to their nearest nodes (matching by ID, not index)
-    df['pop_nearest_node'] = population.loc[df['pop_id']]['nearest_node'].values
-    df['hosp_nearest_node'] = all_hospitals.loc[df['hosp_id']]['nearest_node'].values
-
-    # Drop duplicates to ensure unique (nearest_node_o, nearest_node_d) pairs
-    df.drop_duplicates(subset=['pop_nearest_node', 'hosp_nearest_node'], inplace=True)
-    o = df.pop_nearest_node.values
-    d = df.hosp_nearest_node.values
-
-    print( f'creating the origins and destinations in {pc() - t:.2f} seconds' )
+    print(
+        f'creating {len(unique_pop_nodes):,} unique origin destination node pairs '
+        f'in {pc() - t:.2f} seconds'
+    )
 
     t = pc()
-    sp = network.shortest_path_lengths(o,d)
-    tsp = pc()-t
+
+    road_distance = np.asarray(
+        network.shortest_path_lengths(unique_pop_nodes, unique_hosp_nodes),
+        dtype=np.float64,
+    )
+    elapsed = pc() - t
+
+    valid = road_distance < NO_PATH_SENTINEL
+
+    print(
+        f'{len(road_distance):,} shortest paths of which {valid.sum():,} exist '
+        f'found in {elapsed:.2f} seconds'
+    )
+
+    return pl.DataFrame(
+        {
+            'pop_nearest_node': unique_pop_nodes[valid],
+            'hosp_nearest_node': unique_hosp_nodes[valid],
+            'road_distance': road_distance[valid],
+        }
+    )
+
+
+def _population_polars(population: pd.DataFrame) -> pl.DataFrame:
+    """
+    Build the population side join table as a Polars DataFrame.
+
+    Parameters
+    ----------
+    population
+        Population table.
+
+    Returns
+    -------
+    pl.DataFrame
+        Polars table with columns:
+        'pop_id', 'pop_nearest_node', 'pop_to_road_dist'.
+    """
+    return pl.DataFrame(
+        {
+            'pop_id': population['ID'].to_numpy(copy=False),
+            'pop_nearest_node': population['nearest_node'].to_numpy(copy=False),
+            'pop_to_road_dist': population['pop_dist_road_estrada'].to_numpy(
+                dtype=np.float64,
+                copy=False,
+            ),
+        }
+    )
+
+
+def _hospital_polars(all_hospitals: pd.DataFrame) -> pl.DataFrame:
+    """
+    Build the hospital side join table as a Polars DataFrame.
+
+    Parameters
+    ----------
+    all_hospitals
+        Hospital table.
+
+    Returns
+    -------
+    pl.DataFrame
+        Polars table with columns:
+        'hosp_id', 'hosp_nearest_node', 'hosp_to_road_dist'.
+    """
+    return pl.DataFrame(
+        {
+            'hosp_id': all_hospitals['ID'].to_numpy(copy=False),
+            'hosp_nearest_node': all_hospitals['nearest_node'].to_numpy(copy=False),
+            'hosp_to_road_dist': all_hospitals['hosp_dist_road_estrada'].to_numpy(
+                dtype=np.float64,
+                copy=False,
+            ),
+        }
+    )
+
+
+def compute_distances_polars(
+    population: pd.DataFrame,
+    all_hospitals: pd.DataFrame,
+    distance_threshold_largest: float,
+    network: object,
+    *,
+    max_total_dist: float | None = None,
+) -> pl.DataFrame:
+    """
+    Compute sparse population to hospital distances and return a Polars DataFrame.
+
+    Parameters
+    ----------
+    population
+        DataFrame indexed by population ID, with columns:
+        'ID', 'xcoord', 'ycoord', 'nearest_node', 'pop_dist_road_estrada'.
+    all_hospitals
+        DataFrame indexed by hospital ID, with columns:
+        'ID', 'Longitude', 'Latitude', 'nearest_node', 'hosp_dist_road_estrada'.
+    distance_threshold_largest
+        Maximum crow flies distance in kilometers used to prefilter candidate
+        population hospital pairs.
+    network
+        Pandana like network object exposing `shortest_path_lengths`.
+    max_total_dist
+        Optional upper bound on total distance. If provided, only triplets with
+        `total_dist <= max_total_dist` are kept.
+
+    Returns
+    -------
+    pl.DataFrame
+        Polars table with columns:
+        'pop_id', 'hosp_id', 'hosp_nearest_node', 'pop_nearest_node',
+        'pop_to_road_dist', 'road_distance', 'hosp_to_road_dist', 'total_dist'.
+    """
+    _validate_inputs(population, all_hospitals)
+
+    pop_indices, hosp_indices = _candidate_row_pairs(
+        population=population,
+        all_hospitals=all_hospitals,
+        distance_threshold_largest=distance_threshold_largest,
+    )
+
+    dists_pl = _compute_unique_node_pair_distances(
+        population=population,
+        all_hospitals=all_hospitals,
+        pop_indices=pop_indices,
+        hosp_indices=hosp_indices,
+        network=network,
+    )
+
+    pop_pl = _population_polars(population)
+    hosp_pl = _hospital_polars(all_hospitals)
+
     t = pc()
 
-    # 4294967.295 = (2^32 − 1)/1000 is pandana's way to tell that no path exists
-    # https://github.com/UDST/pandana/issues/168 
-    dists_df = pd.DataFrame.from_records(
-        [(o, d, p) for o, d, p in zip(o, d, sp) if p < 4294967.295], 
-        columns=['pop_nearest_node', 'hosp_nearest_node', 'road_distance']
-    )
-    print( f'{len(sp):,} shortest paths of which {dists_df.shape[0]:,} exist found in {tsp:.2f} seconds' )
-
-    # Merge with population and hospital data to get IDs and distances
-    pop_df = population[['ID', 'nearest_node', 'pop_dist_road_estrada']].rename(
-        columns={'nearest_node': 'pop_nearest_node', 'ID': 'pop_id', 'pop_dist_road_estrada': 'pop_to_road_dist'}
-    )
-    hosp_df = all_hospitals[['ID', 'nearest_node', 'hosp_dist_road_estrada']].rename(
-        columns={'nearest_node': 'hosp_nearest_node', 'ID': 'hosp_id', 'hosp_dist_road_estrada': 'hosp_to_road_dist'}
+    result = (
+        dists_pl.lazy()
+        .join(pop_pl.lazy(), on='pop_nearest_node', how='inner')
+        .join(hosp_pl.lazy(), on='hosp_nearest_node', how='inner')
+        .with_columns(
+            (
+                pl.col('pop_to_road_dist')
+                + pl.col('road_distance')
+                + pl.col('hosp_to_road_dist')
+            ).alias('total_dist')
+        )
     )
 
-    # Merge to get population and hospital IDs
-    matrix_df = (
-        dists_df
-        .merge(pop_df, on='pop_nearest_node', how='inner')  # Map population IDs
-        .merge(hosp_df, on='hosp_nearest_node', how='inner')  # Map hospital IDs
+    if max_total_dist is not None:
+        result = result.filter(pl.col('total_dist') <= max_total_dist)
+
+    result = result.select(
+        [
+            'pop_id',
+            'hosp_id',
+            'hosp_nearest_node',
+            'pop_nearest_node',
+            'pop_to_road_dist',
+            'road_distance',
+            'hosp_to_road_dist',
+            'total_dist',
+        ]
+    ).collect()
+
+    print(
+        f'assembling {result.height:,} distances of interest '
+        f'in {pc() - t:.2f} seconds'
     )
 
-    # Extract relevant columns
-    matrix_df = matrix_df[['pop_id', 'hosp_id', 'pop_to_road_dist', 'road_distance', 'hosp_to_road_dist']]
+    return result
 
-    # Complement 
-    matrix_df['total_dist'] = matrix_df['pop_to_road_dist']+matrix_df['road_distance']+matrix_df['hosp_to_road_dist']
 
-    print( f'assembling {matrix_df.shape[0]:,} distances of interest in {pc() - t:.2f} seconds' )
-    return matrix_df
+def compute_distances(
+    population: pd.DataFrame,
+    all_hospitals: pd.DataFrame,
+    distance_threshold_largest: float,
+    network: object,
+    *,
+    max_total_dist: float | None = None,
+) -> pd.DataFrame:
+    """
+    Compute sparse population to hospital distances and return a pandas DataFrame.
+
+    This is a thin wrapper around `compute_distances_polars`.
+
+    Parameters
+    ----------
+    population
+        DataFrame indexed by population ID, with columns:
+        'ID', 'xcoord', 'ycoord', 'nearest_node', 'pop_dist_road_estrada'.
+    all_hospitals
+        DataFrame indexed by hospital ID, with columns:
+        'ID', 'Longitude', 'Latitude', 'nearest_node', 'hosp_dist_road_estrada'.
+    distance_threshold_largest
+        Maximum crow flies distance in kilometers used to prefilter candidate
+        population hospital pairs.
+    network
+        Pandana like network object exposing `shortest_path_lengths`.
+    max_total_dist
+        Optional upper bound on total distance. If provided, only triplets with
+        `total_dist <= max_total_dist` are kept.
+
+    Returns
+    -------
+    pd.DataFrame
+        Pandas DataFrame with columns:
+        'pop_id', 'hosp_id', 'hosp_nearest_node', 'pop_nearest_node',
+        'pop_to_road_dist', 'road_distance', 'hosp_to_road_dist', 'total_dist'.
+    """
+    return compute_distances_polars(
+        population=population,
+        all_hospitals=all_hospitals,
+        distance_threshold_largest=distance_threshold_largest,
+        network=network,
+        max_total_dist=max_total_dist,
+    ).to_pandas()
