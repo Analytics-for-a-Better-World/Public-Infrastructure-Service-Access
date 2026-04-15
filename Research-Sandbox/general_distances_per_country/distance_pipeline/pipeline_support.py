@@ -81,7 +81,7 @@ def build_context_map_path(
 
 def build_map_facilities(
     health_centers: pd.DataFrame,
-    candidate_sites_snapped: pd.DataFrame | None,
+    candidate_sites: pd.DataFrame | None,
 ) -> gpd.GeoDataFrame:
     """Build a facilities layer for plotting existing amenities and candidates."""
     if 'geometry' not in health_centers.columns:
@@ -99,16 +99,16 @@ def build_map_facilities(
     existing = ensure_xy_columns(existing)
     existing['source_type'] = 'existing'
 
-    if candidate_sites_snapped is None:
+    if candidate_sites is None:
         return existing
 
-    candidates_df = ensure_xy_columns(candidate_sites_snapped)
+    candidates_df = ensure_xy_columns(candidate_sites)
 
     if 'geometry' in candidates_df.columns:
         candidates = gpd.GeoDataFrame(
             candidates_df.copy(),
             geometry='geometry',
-            crs=getattr(candidate_sites_snapped, 'crs', existing.crs),
+            crs=getattr(candidate_sites, 'crs', existing.crs),
         )
         if candidates.crs is None:
             candidates = candidates.set_crs(existing.crs)

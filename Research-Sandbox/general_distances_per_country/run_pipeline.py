@@ -172,9 +172,12 @@ def main(country_code: str, settings: PipelineSettings) -> None:
         nodes=nodes,
     )
 
+    print(f'Candidates full: {len(candidate_sites):,}')
+    print(f'Candidates snapped: {len(candidate_sites_snapped):,}')
+
     map_facilities = build_map_facilities(
         health_centers=facilities,
-        candidate_sites_snapped=candidate_sites_snapped,
+        candidate_sites=candidate_sites,
     )
 
     context_map_path = build_context_map_path(
