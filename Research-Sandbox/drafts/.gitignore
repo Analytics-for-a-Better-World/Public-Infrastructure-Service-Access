@@ -1,0 +1,35 @@
+# Ignore data and output file types
+
+*.parquet
+*.log
+*.png
+*.pdf
+*.geojson
+*.feather
+*.gpkg
+*.html
+*.tiff
+*.tif
+*.csv
+*.db
+*.tex
+
+# Ignore any directory named data
+
+data/
+**/data/
+
+# Ignore any directory named shared_data
+
+shared_data/
+**/shared_data/
+
+# Ignore datasets directories
+
+datasets/
+**/datasets/
+
+# Ignore extracted_data directories
+
+extracted_data/
+**/extracted_data/
