@@ -2,6 +2,9 @@ from dataclasses import dataclass
 from pathlib import Path
 
 
+ConfigValue = str | int | float | Path | bool | None
+
+
 @dataclass(frozen=True, slots=True)
 class CountryConfig:
     '''Fully resolved country configuration.'''
@@ -26,6 +29,7 @@ class CountryConfig:
     candidate_exclude_water: bool = True
     candidate_include_boundary: bool = True
     candidate_max_snap_dist_m: float | None = None
+    aggregate_factor: int | None = None
 
     @property
     def BASE_DIR(self) -> Path:
@@ -101,7 +105,7 @@ class CountryConfig:
         return f'{self.country_name}, {self.plot_title_suffix}'
 
 
-DEFAULTS: dict[str, str | int | float | Path | bool | None] = {
+DEFAULTS: dict[str, ConfigValue] = {
     'base_root': Path(r'C:\local') / 'Download_Depot',
     'distance_threshold_km': 150.0,
     'geofabrik_region': 'europe',
@@ -116,14 +120,15 @@ DEFAULTS: dict[str, str | int | float | Path | bool | None] = {
     'candidate_exclude_water': True,
     'candidate_include_boundary': True,
     'candidate_max_snap_dist_m': None,
+    'aggregate_factor': None,
 }
 
 
 def build_config(
-    overrides: dict[str, str | int | float | Path | bool | None],
+    overrides: dict[str, ConfigValue],
 ) -> CountryConfig:
     '''Build a country configuration from defaults plus overrides.'''
-    merged: dict[str, str | int | float | Path | bool | None] = {**DEFAULTS, **overrides}
+    merged: dict[str, ConfigValue] = {**DEFAULTS, **overrides}
 
     required_keys: tuple[str, ...] = (
         'iso3',
@@ -135,7 +140,7 @@ def build_config(
 
     missing: list[str] = [key for key in required_keys if key not in merged]
     if missing:
-        missing_str: str = ', '.join(missing)
+        missing_str = ', '.join(missing)
         raise ValueError(f'Missing required config keys: {missing_str}')
 
     base_root = merged['base_root']
@@ -148,6 +153,10 @@ def build_config(
 
     candidate_grid_spacing_m = merged['candidate_grid_spacing_m']
     candidate_max_snap_dist_m = merged['candidate_max_snap_dist_m']
+    aggregate_factor = merged['aggregate_factor']
+
+    if aggregate_factor is not None and int(aggregate_factor) < 2:
+        raise ValueError('aggregate_factor must be >= 2 or None.')
 
     return CountryConfig(
         iso3=str(merged['iso3']),
@@ -166,10 +175,14 @@ def build_config(
             else str(merged['worldpop_adjustment'])
         ),
         worldpop_filename=(
-            None if merged['worldpop_filename'] is None else str(merged['worldpop_filename'])
+            None
+            if merged['worldpop_filename'] is None
+            else str(merged['worldpop_filename'])
         ),
         pbf_filename=(
-            None if merged['pbf_filename'] is None else str(merged['pbf_filename'])
+            None
+            if merged['pbf_filename'] is None
+            else str(merged['pbf_filename'])
         ),
         plot_title_suffix=str(merged['plot_title_suffix']),
         boundary_source=str(boundary_source),
@@ -183,4 +196,5 @@ def build_config(
             if candidate_max_snap_dist_m is None
             else float(candidate_max_snap_dist_m)
         ),
+        aggregate_factor=None if aggregate_factor is None else int(aggregate_factor),
     )

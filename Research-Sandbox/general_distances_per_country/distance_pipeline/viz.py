@@ -162,6 +162,15 @@ def classify_roads(
     return roads
 
 
+def _log_step(message: str, *, start_time: float | None = None) -> None:
+    '''Print a verbose pipeline message with optional elapsed time.'''
+    if start_time is None:
+        print(message)
+        return
+
+    print(f'{message} in {pc() - start_time:.2f} seconds')
+
+
 def plot_context_map(
     roads: gpd.GeoDataFrame,
     population_points: gpd.GeoDataFrame,
@@ -182,13 +191,23 @@ def plot_context_map(
     show: bool = True,
     verbose: bool = True,
 ) -> None:
-    '''Plot roads, population points, existing amenities, and optional candidate sites.
+    '''
+    Plot roads, population points, existing amenities, and optional candidate sites.
 
     The road network is emphasized using a strong white casing and thicker colored
     overlays. Population points are intentionally subdued so they do not overpower
     the transport structure.
     '''
     t0 = pc()
+
+    if verbose:
+        print('Starting context map plotting')
+        print(f'Road rows: {len(roads):,}')
+        print(f'Population point rows: {len(population_points):,}')
+        print(f'Health center rows: {len(health_centers):,}')
+        print(f'Output path: {output_path}')
+        print(f'DPI: {dpi}')
+        print(f'Show figure: {show}')
 
     if 'road_class' not in roads.columns:
         raise ValueError("Column 'road_class' not found in roads GeoDataFrame")
@@ -201,6 +220,12 @@ def plot_context_map(
         raise ValueError('population_points has no CRS')
     if health_centers.crs is None:
         raise ValueError('health_centers has no CRS')
+
+    if verbose:
+        print(f'Roads CRS: {roads.crs}')
+        print(f'Population CRS: {population_points.crs}')
+        print(f'Health centers CRS: {health_centers.crs}')
+        print(f'Total population represented: {population_points["population"].sum():,.0f}')
 
     if road_colors is None:
         road_colors = {
@@ -248,14 +273,33 @@ def plot_context_map(
         basemap_provider = cx.providers.CartoDB.PositronNoLabels
 
     if verbose:
+        counts = roads['road_class'].value_counts()
+
+        width = max(len(k) for k in counts.index)
+
+        print('Road class counts:')
+        for k, v in counts.items():
+            print(f'{k:<{width}}  {v:>12,}')
+
+    t_project = pc()
+    if verbose:
         print('Projecting layers to EPSG:3857')
 
     roads_3857 = roads.to_crs(epsg=3857)
-    pop_3857 = population_points.to_crs(epsg=3857)
-    health_3857 = health_centers.to_crs(epsg=3857)
-
     if verbose:
-        print(f'Projection completed in {pc() - t0:.2f} seconds')
+        _log_step('Projected roads', start_time=t_project)
+
+    t_project_pop = pc()
+    pop_3857 = population_points.to_crs(epsg=3857)
+    if verbose:
+        _log_step('Projected population points', start_time=t_project_pop)
+
+    t_project_health = pc()
+    health_3857 = health_centers.to_crs(epsg=3857)
+    if verbose:
+        _log_step('Projected health centers', start_time=t_project_health)
+        _log_step('Projection completed', start_time=t_project)
+
         describe_extent(roads, label='Roads')
         describe_extent(population_points, label='Population points')
         describe_extent(health_centers, label='Health centers')
@@ -270,13 +314,34 @@ def plot_context_map(
         existing = health_3857
         candidates = health_3857.iloc[0:0].copy()
 
-    t1 = pc()
+    if verbose:
+        print(f'Existing health facilities: {len(existing):,}')
+        print(f'Candidate sites: {len(candidates):,}')
+
+    t_figure = pc()
+    if verbose:
+        print('Creating figure')
+
     fig, ax = plt.subplots(figsize=(15, 15))
 
+    if verbose:
+        _log_step('Figure created', start_time=t_figure)
+
+    t_roads = pc()
+    if verbose:
+        print('Plotting roads')
+
     for road_class in road_order:
+        t_class = pc()
         subset = roads_3857.loc[roads_3857['road_class'] == road_class]
+
         if subset.empty:
+            if verbose:
+                print(f'  Skipping {road_class}, no rows')
             continue
+
+        if verbose:
+            print(f'  Plotting {road_class}: {len(subset):,} segments')
 
         subset.plot(
             ax=ax,
@@ -293,11 +358,27 @@ def plot_context_map(
             zorder=2,
         )
 
+        if verbose:
+            _log_step(f'  Finished {road_class}', start_time=t_class)
+
+    if verbose:
+        _log_step('Road plotting completed', start_time=t_roads)
+
+    t_population = pc()
+    if verbose:
+        print('Computing population marker sizes')
+
     pop_sizes = np.clip(
         np.sqrt(pop_3857['population'].to_numpy(dtype='float64')) * 0.35,
         0.6,
         population_max_marker_size,
     )
+
+    if verbose:
+        print(f'Population marker size min: {pop_sizes.min():.2f}')
+        print(f'Population marker size max: {pop_sizes.max():.2f}')
+        print('Plotting population points')
+
     pop_3857.plot(
         ax=ax,
         markersize=pop_sizes,
@@ -306,6 +387,13 @@ def plot_context_map(
         edgecolor='none',
         zorder=3,
     )
+
+    if verbose:
+        _log_step('Population plotting completed', start_time=t_population)
+
+    t_health = pc()
+    if verbose:
+        print('Plotting health facilities and candidate sites')
 
     if not existing.empty:
         existing.plot(
@@ -330,7 +418,9 @@ def plot_context_map(
         )
 
     if verbose:
-        print(f'Layer plotting completed in {pc() - t1:.2f} seconds')
+        _log_step('Health and candidate plotting completed', start_time=t_health)
+
+    if verbose:
         print(f'Axis extent before basemap: xlim={ax.get_xlim()}, ylim={ax.get_ylim()}')
 
         minx, miny, maxx, maxy = roads_3857.total_bounds
@@ -339,20 +429,29 @@ def plot_context_map(
         bbox = box(minx, miny, maxx, maxy)
         bbox_ll = gpd.GeoDataFrame(geometry=[bbox], crs=3857).to_crs(4326)
         min_lon, min_lat, max_lon, max_lat = bbox_ll.total_bounds
+
         print(f'Roads longitude range in plotted CRS check: {min_lon:.4f} to {max_lon:.4f}')
         print(f'Roads latitude range in plotted CRS check: {min_lat:.4f} to {max_lat:.4f}')
         print(f'Roads width from EPSG:3857 bounds: {width_km:,.1f} km')
         print(f'Roads height from EPSG:3857 bounds: {height_km:,.1f} km')
 
-    t2 = pc()
+    t_basemap = pc()
+    if verbose:
+        print(f'Adding basemap, zoom={basemap_zoom}, alpha={basemap_alpha}')
+
     cx.add_basemap(
         ax,
         source=basemap_provider,
         zoom=basemap_zoom,
         alpha=basemap_alpha,
     )
+
     if verbose:
-        print(f'Basemap added in {pc() - t2:.2f} seconds')
+        _log_step('Basemap added', start_time=t_basemap)
+
+    t_legend = pc()
+    if verbose:
+        print('Building legend')
 
     legend_handles: list[Line2D] = []
     for road_class in road_order:
@@ -381,7 +480,10 @@ def plot_context_map(
         )
     )
 
-    if 'source_type' in health_centers.columns and (health_centers['source_type'] == 'candidate').any():
+    if (
+        'source_type' in health_centers.columns
+        and (health_centers['source_type'] == 'candidate').any()
+    ):
         legend_handles.extend(
             [
                 Line2D(
@@ -429,20 +531,44 @@ def plot_context_map(
         framealpha=0.95,
     )
 
+    if verbose:
+        _log_step('Legend built', start_time=t_legend)
+
+    t_format = pc()
+    if verbose:
+        print('Formatting figure')
+
     ax.set_title(title)
     ax.set_axis_off()
     plt.tight_layout()
 
+    if verbose:
+        _log_step('Figure formatting completed', start_time=t_format)
+
     if output_path is not None:
+        t_save = pc()
+        if verbose:
+            print(f'Saving context map to {output_path}')
+
         output_path.parent.mkdir(parents=True, exist_ok=True)
         fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
+
         if verbose:
-            print(f'Saved context map to {output_path}')
+            _log_step('Figure saved', start_time=t_save)
 
     if show:
+        t_show = pc()
+        if verbose:
+            print('Showing figure, this may take time in notebooks')
+
         plt.show()
+
+        if verbose:
+            _log_step('Figure shown', start_time=t_show)
     else:
+        if verbose:
+            print('Closing figure because show=False')
         plt.close(fig)
 
     if verbose:
-        print(f'Total plotting time {pc() - t0:.2f} seconds')
+        _log_step('Total plotting completed', start_time=t0)

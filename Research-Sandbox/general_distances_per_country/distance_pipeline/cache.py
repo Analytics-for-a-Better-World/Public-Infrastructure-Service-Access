@@ -190,14 +190,17 @@ class CacheManager:
         population_threshold: float,
         sample_fraction: float,
         max_points: int | None,
+        aggregate_factor: int | None,
     ) -> Path:
         max_points_str: str = 'none' if max_points is None else str(max_points)
+        aggregate_factor_str: str = 'none' if aggregate_factor is None else str(aggregate_factor)
         return (
             self.cache_dir
             / (
                 f'{self.worldpop_stem}_population_points_'
                 f'pop_{population_threshold:g}_'
                 f'sample_{sample_fraction:g}_'
+                f'agg_{aggregate_factor_str}_'
                 f'max_{max_points_str}.pkl'
             )
         )

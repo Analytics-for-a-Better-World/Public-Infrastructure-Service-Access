@@ -6,15 +6,15 @@ import pandas as pd
 
 from countries.base import CountryConfig
 from distance_pipeline.boundaries import load_country_geometry
+from distance_pipeline.cache import CacheManager
 from distance_pipeline.candidate_sites import (
     build_regular_grid_within_polygon,
     exclude_points_on_water,
     filter_snapped_candidates_by_distance,
 )
+from distance_pipeline.settings import PipelineSettings
 from distance_pipeline.snapping import snap_points_to_nodes
 from distance_pipeline.water import load_water_bodies
-from distance_pipeline.settings import PipelineSettings
-from distance_pipeline.cache import CacheManager
 
 
 def build_candidate_sites(
@@ -60,6 +60,7 @@ def build_candidate_sites(
     if settings.verbose:
         print(f'candidate_grid_spacing_m = {candidate_grid_spacing_m}')
         print(f'candidate_max_snap_dist_m = {candidate_max_snap_dist_m}')
+        print(f'candidate_exclude_water = {cfg.candidate_exclude_water}')
 
     if candidate_grid_spacing_m is None:
         if settings.verbose:
@@ -82,16 +83,10 @@ def build_candidate_sites(
         ),
     )
 
-    water_bodies = cache.run(
-        cache_path=cache.water_bodies_path(),
-        builder=lambda: load_water_bodies(
-            cfg.PBF_PATH,
-            projected_epsg=cfg.PROJECTED_EPSG,
-            verbose=settings.verbose,
-        ),
-    )
-
     def build_candidates() -> pd.DataFrame:
+        '''
+        Build candidate locations and optionally exclude candidates on water.
+        '''
         candidates = build_regular_grid_within_polygon(
             polygon_gdf=country_boundary,
             spacing_m=candidate_grid_spacing_m,
@@ -99,14 +94,25 @@ def build_candidate_sites(
             verbose=settings.verbose,
         )
 
-        if cfg.candidate_exclude_water:
-            candidates = exclude_points_on_water(
-                candidates=candidates,
-                water_bodies=water_bodies,
-                verbose=settings.verbose,
-            )
+        if not cfg.candidate_exclude_water:
+            if settings.verbose:
+                print('Skipping water body loading because candidate_exclude_water=False.')
+            return candidates
 
-        return candidates
+        water_bodies = cache.run(
+            cache_path=cache.water_bodies_path(),
+            builder=lambda: load_water_bodies(
+                cfg.PBF_PATH,
+                projected_epsg=cfg.PROJECTED_EPSG,
+                verbose=settings.verbose,
+            ),
+        )
+
+        return exclude_points_on_water(
+            candidates=candidates,
+            water_bodies=water_bodies,
+            verbose=settings.verbose,
+        )
 
     candidate_sites = cache.run(
         cache_path=cache.candidate_sites_path(
@@ -141,7 +147,7 @@ def build_candidate_sites(
 
     if settings.verbose:
         print(f'Candidate pipeline completed in {pc() - t0:.2f} seconds')
-        print(candidate_sites.shape)
-        print(candidate_sites_snapped.shape)
+        print(f'candidate_sites shape: {candidate_sites.shape}')
+        print(f'candidate_sites_snapped shape: {candidate_sites_snapped.shape}')
 
     return candidate_sites, candidate_sites_snapped
