@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import logging
 from pathlib import Path
 from time import perf_counter as pc
 
@@ -29,11 +30,66 @@ from distance_pipeline.source_tables import (
 from distance_pipeline.viz import classify_roads, plot_context_map, to_point_geometries
 
 
+# ------------------------
+# Logging setup
+# ------------------------
+def setup_logging(log_file: str | None, verbose: bool) -> None:
+    '''Configure logging to console and optionally to file, and capture stdout/stderr.'''
+    import sys
+
+    level = logging.INFO if verbose else logging.WARNING
+
+    logger = logging.getLogger()
+    logger.setLevel(level)
+    logger.handlers.clear()
+
+    formatter = logging.Formatter(
+        fmt='%(asctime)s | %(levelname)s | %(message)s',
+        datefmt='%H:%M:%S'
+    )
+
+    # Console handler
+    ch = logging.StreamHandler()
+    ch.setFormatter(formatter)
+    ch.setLevel(level)
+    logger.addHandler(ch)
+
+    # File handler (optional)
+    if log_file:
+        Path(log_file).parent.mkdir(parents=True, exist_ok=True)
+        fh = logging.FileHandler(log_file, mode='w')
+        fh.setLevel(logging.INFO)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
+
+    # ------------------------
+    # Redirect stdout/stderr
+    # ------------------------
+    class StreamToLogger:
+        def __init__(self, logger: logging.Logger, level: int) -> None:
+            self.logger = logger
+            self.level = level
+
+        def write(self, message: str) -> None:
+            message = message.strip()
+            if message:
+                self.logger.log(self.level, message)
+
+        def flush(self) -> None:
+            pass
+
+    sys.stdout = StreamToLogger(logger, logging.INFO)
+    sys.stderr = StreamToLogger(logger, logging.WARNING)
+
+# ------------------------
+# CLI
+# ------------------------
 def build_parser() -> argparse.ArgumentParser:
     '''Build the command line argument parser.'''
     parser = argparse.ArgumentParser(
         description='Run the distance pipeline for a country configuration.'
     )
+
     parser.add_argument(
         'country_code',
         help=(
@@ -41,51 +97,73 @@ def build_parser() -> argparse.ArgumentParser:
             'timor_leste, vietnam, prt, nld, or tls.'
         ),
     )
+
+    parser.add_argument(
+        '--log-file',
+        type=str,
+        default=None,
+        help='Optional path to write logs to file.'
+    )
+
+    parser.add_argument(
+        '--build-map',
+        action='store_true',
+        help='Build and plot the context map (disabled by default).'
+    )
+
     parser.add_argument(
         '--force-recompute',
         action='store_true',
         help='Ignore caches and rebuild all cached steps.',
     )
+
     parser.add_argument(
         '--save-map',
         action='store_true',
         help='Save the context map to a file.',
     )
+
     parser.add_argument(
         '--show-map',
         action='store_true',
         help='Display the context map interactively.',
     )
+
     parser.add_argument(
         '--map-path',
         type=str,
         default=None,
         help='Optional path for the saved context map.',
     )
+
     parser.add_argument(
         '--map-dpi',
         type=int,
         default=300,
         help='DPI used when saving the context map.',
     )
+
     parser.add_argument(
         '--population-threshold',
         type=float,
         default=1.0,
         help='Minimum population threshold used for raster to points conversion.',
     )
+
     parser.add_argument(
         '--sample-fraction',
         type=float,
         default=1.0,
         help='Sampling fraction used for raster to points conversion.',
     )
+
     parser.add_argument(
         '--max-points',
         type=int,
         default=None,
         help='Maximum number of population points to keep.',
     )
+
     parser.add_argument(
         '--max-total-dist',
         type=float,
@@ -94,6 +172,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     aggregate_group = parser.add_mutually_exclusive_group()
+
     aggregate_group.add_argument(
         '--aggregate-factor',
         type=int,
@@ -103,6 +182,7 @@ def build_parser() -> argparse.ArgumentParser:
             'Overrides the country config when provided.'
         ),
     )
+
     aggregate_group.add_argument(
         '--no-aggregate',
         action='store_true',
@@ -118,32 +198,55 @@ def build_parser() -> argparse.ArgumentParser:
             'Defaults to the country config when available.'
         ),
     )
+
     parser.add_argument(
         '--candidate-max-snap-dist-m',
         type=float,
         default=None,
         help='Optional maximum node snapping distance for candidate facilities, in meters.',
     )
-    parser.add_argument('--quiet', action='store_true', help='Reduce console output.')
+
+    # NEW facility controls
+    parser.add_argument(
+        '--amenity',
+        nargs='+',
+        default=None,
+        help='Filter facilities by amenity values, for example hospital clinic.',
+    )
+
+    parser.add_argument(
+        '--no-healthcare-tag',
+        action='store_true',
+        help='Disable use of healthcare=* tag when extracting facilities.',
+    )
+
+    parser.add_argument(
+        '--quiet',
+        action='store_true',
+        help='Reduce console output.',
+    )
+
     return parser
 
-
+# ------------------------
+# Settings
+# ------------------------
 def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
     '''Build pipeline settings from parsed CLI arguments.'''
     if args.population_threshold < 0:
         raise ValueError('--population-threshold must be non negative.')
     if not 0 < args.sample_fraction <= 1:
-        raise ValueError('--sample-fraction must be in the interval (0, 1].')
+        raise ValueError('--sample-fraction must be in (0, 1].')
     if args.max_points is not None and args.max_points <= 0:
-        raise ValueError('--max-points must be positive when provided.')
+        raise ValueError('--max-points must be positive.')
     if args.max_total_dist is not None and args.max_total_dist <= 0:
-        raise ValueError('--max-total-dist must be positive when provided.')
+        raise ValueError('--max-total-dist must be positive.')
     if args.aggregate_factor is not None and args.aggregate_factor < 2:
-        raise ValueError('--aggregate-factor must be at least 2 when provided.')
+        raise ValueError('--aggregate-factor must be at least 2.')
     if args.candidate_grid_spacing_m is not None and args.candidate_grid_spacing_m <= 0:
-        raise ValueError('--candidate-grid-spacing-m must be positive when provided.')
+        raise ValueError('--candidate-grid-spacing-m must be positive.')
     if args.candidate_max_snap_dist_m is not None and args.candidate_max_snap_dist_m <= 0:
-        raise ValueError('--candidate-max-snap-dist-m must be positive when provided.')
+        raise ValueError('--candidate-max-snap-dist-m must be positive.')
     if args.map_dpi <= 0:
         raise ValueError('--map-dpi must be positive.')
 
@@ -177,20 +280,28 @@ def resolve_aggregate_factor(
     return cfg.aggregate_factor
 
 
+# ------------------------
+# MAIN
+# ------------------------
 def main(
     country_code: str,
     settings: PipelineSettings,
-    aggregate_factor: int | None = None,
-    no_aggregate: bool = False,
+    aggregate_factor: int | None,
+    no_aggregate: bool,
+    build_map: bool,
+    amenity_values: list[str] | None,
+    include_healthcare_tag: bool,
 ) -> None:
     '''Run the pipeline for a given country.'''
     t_total = pc()
     cfg: CountryConfig = load_cfg(country_code)
-    effective_aggregate_factor = resolve_aggregate_factor(
+
+    agg = resolve_aggregate_factor(
         cfg=cfg,
         aggregate_factor=aggregate_factor,
         no_aggregate=no_aggregate,
     )
+
     cache = CacheManager(
         cfg=cfg,
         force_recompute=settings.force_recompute,
@@ -198,20 +309,20 @@ def main(
     )
 
     if settings.verbose:
-        print(f'Running pipeline for {cfg.COUNTRY_NAME}')
-        print(f'Population aggregate factor: {effective_aggregate_factor}')
+        logging.info(f'Running pipeline for {cfg.COUNTRY_NAME}')
+        logging.info(f'Aggregate factor: {agg}')
+        logging.info(f'Amenity filter: {amenity_values}')
+        logging.info(f'Include healthcare tag: {include_healthcare_tag}')
 
     cfg.BASE_DIR.mkdir(parents=True, exist_ok=True)
+
     download_file(cfg.PBF_URL, cfg.PBF_PATH, overwrite=False, verbose=settings.verbose)
     download_file(cfg.WORLDPOP_URL, cfg.WORLDPOP_PATH, overwrite=False, verbose=settings.verbose)
 
-    t0 = pc()
     nodes, edges = cache.load_or_build_network_data(
-        builder=lambda: load_osm_network(cfg.PBF_PATH, verbose=settings.verbose)[1:],
+        builder=lambda: load_osm_network(cfg.PBF_PATH, verbose=settings.verbose)[1:]
     )
-    network = build_pandana_network(nodes=nodes, edges=edges)
-    if settings.verbose:
-        print(f'Prepared network objects in {pc() - t0:.2f} seconds')
+    network = build_pandana_network(nodes, edges)
 
     roads = cache.run(
         cache_path=cache.roads_path(),
@@ -223,20 +334,19 @@ def main(
             population_threshold=settings.population_threshold,
             sample_fraction=settings.sample_fraction,
             max_points=settings.max_points,
-            aggregate_factor=effective_aggregate_factor,
+            aggregate_factor=agg,
         ),
         builder=lambda: worldpop_to_points(
             cfg.WORLDPOP_PATH,
             population_threshold=settings.population_threshold,
             sample_fraction=settings.sample_fraction,
             max_points=settings.max_points,
-            aggregate_factor=effective_aggregate_factor,
+            aggregate_factor=agg,
             verbose=settings.verbose,
         ),
     )
 
-    amenity_values = None
-    include_healthcare_tag = True
+    # -------- facilities (RESTORED + EXTENDED) --------
     facilities = cache.run(
         cache_path=cache.health_facilities_path(
             amenity_values=amenity_values,
@@ -262,7 +372,10 @@ def main(
         ),
     )
 
-    candidate_grid_spacing_m = resolve_candidate_grid_spacing(cfg, settings)
+    if settings.verbose:
+        logging.info(f'Population points: {len(population_points):,}')
+        logging.info(f'Facilities: {len(facilities):,}')
+
     candidate_sites, candidate_sites_snapped = build_candidate_sites(
         cfg=cfg,
         settings=settings,
@@ -270,31 +383,24 @@ def main(
         nodes=nodes,
     )
 
-    if settings.verbose:
-        print(f'Candidates full: {len(candidate_sites):,}')
-        print(f'Candidates snapped: {len(candidate_sites_snapped):,}')
-
-    map_facilities = build_map_facilities(
-        health_centers=facilities,
-        candidate_sites=candidate_sites,
-    )
-
-    context_map_path = build_context_map_path(
-        default_path=cache.context_map_path(),
-        user_path=settings.context_map_path,
-        candidate_grid_spacing_m=candidate_grid_spacing_m,
-    )
-
-    plot_context_map(
-        roads=roads,
-        population_points=population_points,
-        health_centers=map_facilities,
-        title=cfg.PLOT_TITLE,
-        output_path=context_map_path if settings.save_context_map else None,
-        dpi=settings.context_map_dpi,
-        show=settings.show_context_map,
-        verbose=settings.verbose,
-    )
+    # -------- MAP (optional) --------
+    if build_map:
+        map_facilities = build_map_facilities(facilities, candidate_sites)
+        context_map_path = build_context_map_path(
+            cache.context_map_path(),
+            settings.context_map_path,
+            resolve_candidate_grid_spacing(cfg, settings),
+        )
+        plot_context_map(
+            roads,
+            population_points,
+            map_facilities,
+            cfg.PLOT_TITLE,
+            context_map_path if settings.save_context_map else None,
+            settings.context_map_dpi,
+            settings.show_context_map,
+            settings.verbose,
+        )
 
     population = cache.run(
         cache_path=cache.population_snapped_path(distance_col='dist_snap_target'),
@@ -306,6 +412,7 @@ def main(
             verbose=settings.verbose,
         ),
     )
+
     population = ensure_id_column(population, prefix='target')
     population = ensure_id_index_matches(population)
 
@@ -320,25 +427,20 @@ def main(
         ),
     )
 
-    sources_for_matrix = combine_existing_and_candidate_sources(
-        facilities=existing_sources,
-        candidate_sites_snapped=candidate_sites_snapped,
+    sources = combine_existing_and_candidate_sources(
+        existing_sources,
+        candidate_sites_snapped,
     )
 
-    matrix_cache_path = cache.distance_matrix_path(
-        distance_threshold_largest=cfg.DISTANCE_THRESHOLD_KM,
-        max_total_dist=settings.max_total_dist,
-    )
-    if candidate_sites is not None:
-        matrix_cache_path = matrix_cache_path.with_stem(
-            f'{matrix_cache_path.stem}_with_candidates'
-        )
-
+    t_dist = pc()
     matrix_df = cache.run(
-        cache_path=matrix_cache_path,
+        cache_path=cache.distance_matrix_path(
+            cfg.DISTANCE_THRESHOLD_KM,
+            settings.max_total_dist,
+        ),
         builder=lambda: compute_distances(
             targets=population,
-            sources=sources_for_matrix,
+            sources=sources,
             distance_threshold_largest=cfg.DISTANCE_THRESHOLD_KM,
             network=network,
             max_total_dist=settings.max_total_dist,
@@ -347,24 +449,31 @@ def main(
     )
 
     matrix_df = set_known_categories(matrix_df)
+
     print(matrix_df.head())
 
     if settings.verbose:
-        n_existing = int((sources_for_matrix['source_type'] == 'existing').sum())
-        n_candidate = int((sources_for_matrix['source_type'] == 'candidate').sum())
-        print(f'Existing sources used: {n_existing:,}')
-        print(f'Candidate sources used: {n_candidate:,}')
-        print(f'Context map path: {context_map_path}')
-        print(f'Total pipeline runtime: {pc() - t_total:.2f} seconds')
+        logging.info(f'Distance matrix size: {len(matrix_df):,}')
+        logging.info(f'Distance computation time: {pc() - t_dist:.2f}s')
+        logging.info(f'Total runtime: {pc() - t_total:.2f}s')
 
 
+# ------------------------
+# ENTRYPOINT
+# ------------------------
 if __name__ == '__main__':
     parser = build_parser()
     args = parser.parse_args()
+
+    setup_logging(args.log_file, verbose=not args.quiet)
     settings = settings_from_args(args)
+
     main(
-        country_code=args.country_code,
-        settings=settings,
-        aggregate_factor=args.aggregate_factor,
-        no_aggregate=args.no_aggregate,
+        args.country_code,
+        settings,
+        args.aggregate_factor,
+        args.no_aggregate,
+        args.build_map,
+        args.amenity,
+        not args.no_healthcare_tag,
     )
