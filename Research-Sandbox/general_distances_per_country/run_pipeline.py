@@ -29,9 +29,8 @@ from distance_pipeline.source_tables import (
 from distance_pipeline.viz import classify_roads, plot_context_map, to_point_geometries
 
 
-
 def build_parser() -> argparse.ArgumentParser:
-    """Build the command line argument parser."""
+    '''Build the command line argument parser.'''
     parser = argparse.ArgumentParser(
         description='Run the distance pipeline for a country configuration.'
     )
@@ -39,27 +38,98 @@ def build_parser() -> argparse.ArgumentParser:
         'country_code',
         help=(
             'Country config module name, for example portugal, netherlands, '
-            'timor_leste, prt, nld, or tls.'
+            'timor_leste, vietnam, prt, nld, or tls.'
         ),
     )
-    parser.add_argument('--force-recompute', action='store_true', help='Ignore caches and rebuild all cached steps.')
-    parser.add_argument('--save-map', action='store_true', help='Save the context map to a file.')
-    parser.add_argument('--show-map', action='store_true', help='Display the context map interactively.')
-    parser.add_argument('--map-path', type=str, default=None, help='Optional path for the saved context map.')
-    parser.add_argument('--map-dpi', type=int, default=300, help='DPI used when saving the context map.')
-    parser.add_argument('--population-threshold', type=float, default=1.0, help='Minimum population threshold used for raster to points conversion.')
-    parser.add_argument('--sample-fraction', type=float, default=1.0, help='Sampling fraction used for raster to points conversion.')
-    parser.add_argument('--max-points', type=int, default=None, help='Maximum number of population points to keep.')
-    parser.add_argument('--max-total-dist', type=float, default=None, help='Optional maximum total distance to retain in the output matrix.')
-    parser.add_argument('--candidate-grid-spacing-m', type=float, default=None, help='Optional grid spacing for candidate facilities, in meters. Defaults to the country config when available.')
-    parser.add_argument('--candidate-max-snap-dist-m', type=float, default=None, help='Optional maximum node snapping distance for candidate facilities, in meters.')
+    parser.add_argument(
+        '--force-recompute',
+        action='store_true',
+        help='Ignore caches and rebuild all cached steps.',
+    )
+    parser.add_argument(
+        '--save-map',
+        action='store_true',
+        help='Save the context map to a file.',
+    )
+    parser.add_argument(
+        '--show-map',
+        action='store_true',
+        help='Display the context map interactively.',
+    )
+    parser.add_argument(
+        '--map-path',
+        type=str,
+        default=None,
+        help='Optional path for the saved context map.',
+    )
+    parser.add_argument(
+        '--map-dpi',
+        type=int,
+        default=300,
+        help='DPI used when saving the context map.',
+    )
+    parser.add_argument(
+        '--population-threshold',
+        type=float,
+        default=1.0,
+        help='Minimum population threshold used for raster to points conversion.',
+    )
+    parser.add_argument(
+        '--sample-fraction',
+        type=float,
+        default=1.0,
+        help='Sampling fraction used for raster to points conversion.',
+    )
+    parser.add_argument(
+        '--max-points',
+        type=int,
+        default=None,
+        help='Maximum number of population points to keep.',
+    )
+    parser.add_argument(
+        '--max-total-dist',
+        type=float,
+        default=None,
+        help='Optional maximum total distance to retain in the output matrix.',
+    )
+
+    aggregate_group = parser.add_mutually_exclusive_group()
+    aggregate_group.add_argument(
+        '--aggregate-factor',
+        type=int,
+        default=None,
+        help=(
+            'Optional raster aggregation factor for population cells. '
+            'Overrides the country config when provided.'
+        ),
+    )
+    aggregate_group.add_argument(
+        '--no-aggregate',
+        action='store_true',
+        help='Disable population raster aggregation, even if set in the country config.',
+    )
+
+    parser.add_argument(
+        '--candidate-grid-spacing-m',
+        type=float,
+        default=None,
+        help=(
+            'Optional grid spacing for candidate facilities, in meters. '
+            'Defaults to the country config when available.'
+        ),
+    )
+    parser.add_argument(
+        '--candidate-max-snap-dist-m',
+        type=float,
+        default=None,
+        help='Optional maximum node snapping distance for candidate facilities, in meters.',
+    )
     parser.add_argument('--quiet', action='store_true', help='Reduce console output.')
     return parser
 
 
-
 def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
-    """Build pipeline settings from parsed CLI arguments."""
+    '''Build pipeline settings from parsed CLI arguments.'''
     if args.population_threshold < 0:
         raise ValueError('--population-threshold must be non negative.')
     if not 0 < args.sample_fraction <= 1:
@@ -68,6 +138,8 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         raise ValueError('--max-points must be positive when provided.')
     if args.max_total_dist is not None and args.max_total_dist <= 0:
         raise ValueError('--max-total-dist must be positive when provided.')
+    if args.aggregate_factor is not None and args.aggregate_factor < 2:
+        raise ValueError('--aggregate-factor must be at least 2 when provided.')
     if args.candidate_grid_spacing_m is not None and args.candidate_grid_spacing_m <= 0:
         raise ValueError('--candidate-grid-spacing-m must be positive when provided.')
     if args.candidate_max_snap_dist_m is not None and args.candidate_max_snap_dist_m <= 0:
@@ -91,11 +163,34 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
     )
 
 
+def resolve_aggregate_factor(
+    *,
+    cfg: CountryConfig,
+    aggregate_factor: int | None,
+    no_aggregate: bool,
+) -> int | None:
+    '''Resolve the effective population raster aggregation factor.'''
+    if no_aggregate:
+        return None
+    if aggregate_factor is not None:
+        return aggregate_factor
+    return cfg.aggregate_factor
 
-def main(country_code: str, settings: PipelineSettings) -> None:
-    """Run the pipeline for a given country."""
+
+def main(
+    country_code: str,
+    settings: PipelineSettings,
+    aggregate_factor: int | None = None,
+    no_aggregate: bool = False,
+) -> None:
+    '''Run the pipeline for a given country.'''
     t_total = pc()
     cfg: CountryConfig = load_cfg(country_code)
+    effective_aggregate_factor = resolve_aggregate_factor(
+        cfg=cfg,
+        aggregate_factor=aggregate_factor,
+        no_aggregate=no_aggregate,
+    )
     cache = CacheManager(
         cfg=cfg,
         force_recompute=settings.force_recompute,
@@ -104,6 +199,7 @@ def main(country_code: str, settings: PipelineSettings) -> None:
 
     if settings.verbose:
         print(f'Running pipeline for {cfg.COUNTRY_NAME}')
+        print(f'Population aggregate factor: {effective_aggregate_factor}')
 
     cfg.BASE_DIR.mkdir(parents=True, exist_ok=True)
     download_file(cfg.PBF_URL, cfg.PBF_PATH, overwrite=False, verbose=settings.verbose)
@@ -127,12 +223,14 @@ def main(country_code: str, settings: PipelineSettings) -> None:
             population_threshold=settings.population_threshold,
             sample_fraction=settings.sample_fraction,
             max_points=settings.max_points,
+            aggregate_factor=effective_aggregate_factor,
         ),
         builder=lambda: worldpop_to_points(
             cfg.WORLDPOP_PATH,
             population_threshold=settings.population_threshold,
             sample_fraction=settings.sample_fraction,
             max_points=settings.max_points,
+            aggregate_factor=effective_aggregate_factor,
             verbose=settings.verbose,
         ),
     )
@@ -172,8 +270,9 @@ def main(country_code: str, settings: PipelineSettings) -> None:
         nodes=nodes,
     )
 
-    print(f'Candidates full: {len(candidate_sites):,}')
-    print(f'Candidates snapped: {len(candidate_sites_snapped):,}')
+    if settings.verbose:
+        print(f'Candidates full: {len(candidate_sites):,}')
+        print(f'Candidates snapped: {len(candidate_sites_snapped):,}')
 
     map_facilities = build_map_facilities(
         health_centers=facilities,
@@ -231,7 +330,9 @@ def main(country_code: str, settings: PipelineSettings) -> None:
         max_total_dist=settings.max_total_dist,
     )
     if candidate_sites is not None:
-        matrix_cache_path = matrix_cache_path.with_stem(f'{matrix_cache_path.stem}_with_candidates')
+        matrix_cache_path = matrix_cache_path.with_stem(
+            f'{matrix_cache_path.stem}_with_candidates'
+        )
 
     matrix_df = cache.run(
         cache_path=matrix_cache_path,
@@ -261,4 +362,9 @@ if __name__ == '__main__':
     parser = build_parser()
     args = parser.parse_args()
     settings = settings_from_args(args)
-    main(args.country_code, settings)
+    main(
+        country_code=args.country_code,
+        settings=settings,
+        aggregate_factor=args.aggregate_factor,
+        no_aggregate=args.no_aggregate,
+    )

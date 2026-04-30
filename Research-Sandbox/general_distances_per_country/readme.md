@@ -1,329 +1,283 @@
-# Distance Pipeline CLI
+# Distance Pipeline
 
-This command line entry point runs the full distance pipeline for a selected country configuration.
+This project builds population points, generates candidate facility locations, and computes distance matrices using a road network.
 
-It orchestrates:
-
-- downloading required source data
-- loading and caching the OSM road network
-- converting WorldPop raster data to population points
-- extracting health facilities from OSM
-- generating candidate facility sites
-- building a context map
-- snapping sources and targets to network nodes
-- computing a source to target distance matrix
-
-The script is intended to be the main executable wrapper around the `distance_pipeline` package.
+The pipeline is designed to be modular and efficient, with caching at every stage.
 
 ---
 
-## What the pipeline does
+# Overview
 
-Given a country code such as `tls`, `prt`, or `nld`, the pipeline:
+The pipeline performs the following steps:
 
-1. loads the corresponding country configuration  
-2. downloads OSM and WorldPop input files if needed  
-3. builds or loads cached network data  
-4. classifies roads for map visualization  
-5. converts population raster cells into point targets  
-6. loads existing health facilities  
-7. converts non point facility geometries to points  
-8. builds candidate sites and snaps them to the network  
-9. produces a context map  
-10. snaps population and facilities to network nodes  
-11. computes network distances from sources to targets  
-12. stores intermediate and final outputs in cache  
+1. Load country configuration
+2. Build population points from WorldPop data
+3. Load existing facilities
+4. Generate candidate sites (grid-based)
+5. Optionally plot a context map
+6. Snap all points to the road network
+7. Combine facilities and candidates into sources
+8. Compute pairwise distances
+
+The output is a full distance matrix between population points and sources.
 
 ---
 
-## Main entry point
+# Installation
 
-```python
-main(country_code: str, settings: PipelineSettings) -> None
-````
-
-Run via:
+Install dependencies:
 
 ```bash
-python run_pipeline.py <country_code> [options]
+pip install -r requirements.txt
 ```
 
-Example:
+---
+
+# Usage
+
+Run the pipeline:
 
 ```bash
-python run_pipeline.py tls --show-map --candidate-grid-spacing-m=5000 --max-total-dist=300
+python run_pipeline.py <country> [options]
 ```
 
----
-
-## Example output map
-
-If you save a map using `--save-map`, it will look like this:
-
-![Context map](figures/east-timor-latest.osm_context_map_resolution_5000m.png)
-
----
-
-## Required package structure
-
-```text
-countries.base
-distance_pipeline.cache
-distance_pipeline.candidate_builder
-distance_pipeline.config_loader
-distance_pipeline.distance_matrix
-distance_pipeline.facilities
-distance_pipeline.io
-distance_pipeline.network
-distance_pipeline.pipeline_support
-distance_pipeline.population
-distance_pipeline.settings
-distance_pipeline.snapping
-distance_pipeline.source_tables
-distance_pipeline.viz
-```
-
----
-
-## Inputs
-
-The pipeline expects a valid country configuration resolved by:
-
-```python
-load_cfg(country_code)
-```
-
-Minimum required fields:
-
-* country name
-* base directory
-* projected CRS
-* OSM PBF URL and local path
-* WorldPop URL and local path
-* plotting title
-* distance threshold
-
----
-
-## Outputs
-
-* downloaded source files
-* cached network data
-* classified roads
-* population points
-* health facilities
-* candidate sites
-* snapped targets and sources
-* distance matrix
-* optional context map
-
----
-
-## Command line arguments
-
-### Positional
+Examples:
 
 ```bash
-python run_pipeline.py tls
+python run_pipeline.py nld
+python run_pipeline.py prt --sample-fraction 0.1 --save-map
+python run_pipeline.py tls --aggregate-factor 10
 ```
 
 ---
 
-### Key options
+# Countries
+
+Supported country identifiers:
+
+- `nld`, `netherlands`
+- `prt`, `portugal`
+- `tls`, `timor_leste`
+
+---
+
+# CLI Options
+
+## General
 
 ```bash
 --force-recompute
---save-map
---show-map
---map-path
---map-dpi
---population-threshold
---sample-fraction
---max-points
---max-total-dist
---candidate-grid-spacing-m
---candidate-max-snap-dist-m
+```
+Ignore cache and recompute all steps.
+
+```bash
 --quiet
 ```
+Reduce logging output.
 
-Example:
+---
+
+## Population
 
 ```bash
-python run_pipeline.py tls --save-map --map-dpi 400
+--population-threshold FLOAT
 ```
-
----
-
-## Pipeline flow
-
-```text
-load config
-↓
-download data
-↓
-build network
-↓
-classify roads
-↓
-population → points
-↓
-load facilities
-↓
-to points
-↓
-candidate sites
-↓
-plot map
-↓
-snap to nodes
-↓
-compute distances
-```
-
----
-
-## Caching
-
-The pipeline uses caching for:
-
-* network data
-* population points
-* facilities
-* snapped data
-* distance matrix
-
-Force recompute:
+Minimum population per pixel.
 
 ```bash
-python run_pipeline.py tls --force-recompute
+--sample-fraction FLOAT
 ```
+Randomly sample population points.
+
+```bash
+--max-points INT
+```
+Maximum number of population points.
 
 ---
 
-## Context map
+## Aggregation
 
-Generated via:
-
-```python
-plot_context_map(...)
+```bash
+--aggregate-factor INT
 ```
+Aggregate WorldPop raster cells before converting to points.
 
-Includes:
+```bash
+--no-aggregate
+```
+Disable aggregation, even if defined in the country configuration.
 
-* roads (primary layer)
-* population (light background)
-* existing facilities
-* candidate sites
+Behavior:
+- CLI overrides config
+- If not provided, uses `cfg.aggregate_factor`
+- If disabled, aggregation is not applied
+
+---
+
+## Distance computation
+
+```bash
+--max-total-dist FLOAT
+```
+Maximum allowed total distance (filters results).
+
+---
+
+## Candidate generation
+
+```bash
+--candidate-grid-spacing-m FLOAT
+```
+Spacing between candidate sites in meters.
+
+If not provided, falls back to country configuration.
+
+```bash
+--candidate-max-snap-dist-m FLOAT
+```
+Maximum snapping distance when attaching candidates to the road network.
+
+---
+
+## Map output
+
+```bash
+--save-map
+```
+Save context map.
+
+```bash
+--show-map
+```
+Display map interactively.
+
+```bash
+--map-path PATH
+```
+Custom path for saved map (overrides default cache path).
+
+```bash
+--map-dpi INT
+```
+Resolution of saved map.
+
+---
+
+# Pipeline Details
+
+## Population points
+
+Population points are generated from WorldPop rasters using:
+
+- population threshold filtering
+- optional sampling
+- optional aggregation
+
+Aggregation groups raster cells before point creation, reducing resolution and improving performance.
+
+---
+
+## Candidate sites
+
+Candidate sites are generated using a regular grid.
+
+Parameters:
+- grid spacing
+- snapping distance to road network
+
+---
+
+## Snapping
+
+All points are snapped to the nearest road network node:
+
+- population points → targets
+- facilities + candidates → sources
+
+Distances include:
+
+- point to road distance
+- road network distance
+- total distance
+
+---
+
+## Sources
+
+Sources are constructed by combining:
+
+- existing facilities
+- generated candidate sites
+
+This combined table is used in distance computation.
 
 ---
 
 ## Distance matrix
 
-Computed with:
+Distances are computed between:
 
-```python
-compute_distances(...)
-```
+- targets (population points)
+- sources (facilities + candidates)
 
-Using:
+Output includes:
 
-* snapped population targets
-* facility sources
-* network distances
+- `pop_id`
+- `source_id`
+- `pop_to_road_dist`
+- `road_distance`
+- `source_to_road_dist`
+- `total_dist`
 
----
-
-## OpenAI integration
-
-This project uses OpenAI to automatically generate country configuration modules.
-
-### Function
-
-```python
-generate_country_config_module(...)
-```
-
-### Purpose
-
-Automatically generates:
-
-* ISO codes
-* country name
-* slug
-* projected EPSG
-* WorldPop filename
+Optionally filtered using `--max-total-dist`.
 
 ---
 
-### Example output
+# Caching
 
-```json
-{
-  "iso3": "TLS",
-  "iso2": "TL",
-  "country_name": "Timor-Leste",
-  "country_slug": "timor_leste",
-  "projected_epsg": 32751,
-  "worldpop_filename": "tls_ppp_2020.tif"
-}
-```
+Each pipeline step is cached.
 
----
+Cache keys depend on parameters such as:
 
-### EPSG parsing
+- population threshold
+- sampling fraction
+- max points
+- aggregation factor
+- candidate grid spacing
+- distance thresholds
 
-```python
-parse_epsg(value)
-```
-
-Handles:
-
-* 32648
-* "32648"
-* "EPSG:32648"
+Changing any parameter triggers recomputation of affected steps.
 
 ---
 
-### Why OpenAI is used
+# Important assumptions
 
-* avoids manual CRS lookup
-* standardizes configs
-* speeds up onboarding new countries
-* reduces human error
-
----
-
-### Typical workflow
-
-```bash
-# generate config
-python -c "from your_module import generate_country_config_module; generate_country_config_module('laos', 'countries')"
-
-# run pipeline
-python run_pipeline.py laos --save-map
-```
+- All tables must contain an `ID` column
+- DataFrames are indexed by `ID`
+- IDs must be unique and consistent
 
 ---
 
-## Dependencies
+# Notes
 
-* geopandas
-* pandas
-* numpy
-* pandana
-* contextily
+- The pipeline produces a full distance matrix
+- No aggregation (e.g. nearest facility) is performed
+- Downstream analysis or optimization is expected
 
 ---
 
-## Notes
+# Dependencies
 
-OpenAI is used only for:
+Main libraries:
 
-* configuration generation
+- numpy
+- pandas
+- scipy
+- pandana
 
-Not used for:
+---
 
-* geospatial computation
-* routing
-* distance calculation
-* visualization
+# License
+
+MIT

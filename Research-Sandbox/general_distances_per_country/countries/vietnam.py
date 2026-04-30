@@ -8,7 +8,7 @@ CFG = build_config(
         'country_name': 'Vietnam',
         'country_slug': 'vietnam',
         'projected_epsg': 3405,
-        'distance_threshold_km': 300.0,
+        'distance_threshold_km': 100.0,
         'geofabrik_region': 'asia',
         'worldpop_filename': 'vnm_ppp_2020.tif',
         'plot_title_suffix': 'roads by class, population points, and health facilities',
