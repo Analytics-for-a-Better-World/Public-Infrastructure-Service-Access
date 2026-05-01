@@ -1,41 +1,34 @@
 # Distance Pipeline
 
-This project builds population points, generates candidate facility locations, and computes distance matrices using a road network.
+Build population-to-facility distance tables for a country using WorldPop population rasters, OpenStreetMap road networks, existing health facilities, and optional grid-based candidate facility sites.
 
-The pipeline is designed to be modular and efficient, with caching at every stage.
+The code is organized as a reusable pipeline plus a notebook walkthrough. Expensive stages are cached so repeated runs can reuse downloaded files, parsed networks, population points, snapped locations, and distance matrices.
 
 ---
 
 # Overview
 
-The pipeline performs the following steps:
+The pipeline performs these steps:
 
-1. Load country configuration
-2. Build population points from WorldPop data
-3. Load existing facilities
-4. Generate candidate sites (grid-based)
-5. Optionally plot a context map
-6. Snap all points to the road network
-7. Combine facilities and candidates into sources
-8. Compute pairwise distances
+1. Load a country configuration.
+2. Download or reuse the country OSM PBF and WorldPop raster.
+3. Build a driving road network from OSM.
+4. Convert WorldPop raster cells into population target points.
+5. Extract existing health-related facilities from OSM.
+6. Generate optional regular-grid candidate facility sites from the country boundary.
+7. Optionally remove candidate sites on water and filter candidates too far from the road network.
+8. Optionally build a context map.
+9. Snap population targets, existing facilities, and candidate sites to road-network nodes.
+10. Combine existing facilities and candidates into one source table.
+11. Compute a sparse target-source distance table.
 
-The output is a full distance matrix between population points and sources.
-
----
-
-# Installation
-
-Install dependencies:
-
-```bash
-pip install -r requirements.txt
-```
+The distance table is sparse: source-target pairs are first limited by a crow-fly distance threshold from the country config, then pairs without a valid network path are removed. `--max-total-dist` can apply an additional total-distance filter.
 
 ---
 
 # Usage
 
-Run the pipeline:
+Run from this directory:
 
 ```bash
 python run_pipeline.py <country> [options]
@@ -44,20 +37,28 @@ python run_pipeline.py <country> [options]
 Examples:
 
 ```bash
-python run_pipeline.py nld
+python run_pipeline.py timor_leste
+python run_pipeline.py tls --population-threshold 1 --sample-fraction 1
 python run_pipeline.py prt --sample-fraction 0.1 --save-map
-python run_pipeline.py tls --aggregate-factor 10
+python run_pipeline.py vnm --aggregate-factor 10 --amenity hospital clinic
 ```
+
+The notebook `testdrive_general_country.ipynb` mirrors the same pipeline stages with inspectable intermediate objects. Unlike the CLI, the notebook also writes selected parquet outputs at the end.
 
 ---
 
 # Countries
 
-Supported country identifiers:
+Known country identifiers include:
 
-- `nld`, `netherlands`
-- `prt`, `portugal`
-- `tls`, `timor_leste`
+- `netherlands`, `nld`, `nl`
+- `portugal`, `prt`, `pt`
+- `timor_leste`, `timor-leste`, `tls`, `tl`
+- `vietnam`, `viet_nam`, `vnm`, `vn`
+- `laos`, `lao`, `la`
+- `luxembourg`
+
+If a country module is missing, `load_cfg()` can attempt to generate one through the OpenAI helper in `distance_pipeline/use_openai.py`. Existing country configs do not need generation.
 
 ---
 
@@ -66,218 +67,215 @@ Supported country identifiers:
 ## General
 
 ```bash
+--log-file PATH
+```
+Write console logs to a file.
+
+```bash
 --force-recompute
 ```
-Ignore cache and recompute all steps.
+Ignore matching caches and rebuild cached stages.
 
 ```bash
 --quiet
 ```
-Reduce logging output.
-
----
+Reduce console output.
 
 ## Population
 
 ```bash
 --population-threshold FLOAT
 ```
-Minimum population per pixel.
+Minimum population value retained from the raster. Default: `1.0`.
 
 ```bash
 --sample-fraction FLOAT
 ```
-Randomly sample population points.
+Randomly sample retained population points. Must be in `(0, 1]`. Default: `1.0`.
 
 ```bash
 --max-points INT
 ```
-Maximum number of population points.
-
----
+Optional cap on the number of population points.
 
 ## Aggregation
 
 ```bash
 --aggregate-factor INT
 ```
-Aggregate WorldPop raster cells before converting to points.
+Aggregate raster cells by summing non-overlapping square blocks before converting them to points. Overrides the country config.
 
 ```bash
 --no-aggregate
 ```
-Disable aggregation, even if defined in the country configuration.
+Disable raster aggregation, even if the country config defines one.
 
-Behavior:
-- CLI overrides config
-- If not provided, uses `cfg.aggregate_factor`
-- If disabled, aggregation is not applied
+Resolution order:
 
----
+1. `--no-aggregate` disables aggregation.
+2. `--aggregate-factor` overrides the config.
+3. Otherwise the pipeline uses `cfg.aggregate_factor`.
 
-## Distance computation
+## Facilities
 
 ```bash
---max-total-dist FLOAT
+--amenity hospital clinic doctors
 ```
-Maximum allowed total distance (filters results).
+Restrict OSM facility extraction to specific `amenity=*` values. If omitted, the pipeline uses the default health-related amenity list from `load_health_facilities()`.
 
----
+```bash
+--no-healthcare-tag
+```
+Disable the broad `healthcare=*` OSM tag filter and use only the selected/default amenity values.
 
-## Candidate generation
+## Candidate Generation
 
 ```bash
 --candidate-grid-spacing-m FLOAT
 ```
-Spacing between candidate sites in meters.
-
-If not provided, falls back to country configuration.
+Grid spacing for candidate facility sites in meters. If omitted, the country config value is used. If both are `None`, candidate generation is disabled.
 
 ```bash
 --candidate-max-snap-dist-m FLOAT
 ```
-Maximum snapping distance when attaching candidates to the road network.
+Maximum allowed snapping distance from a candidate site to the road network, in meters. If omitted, the country config value is used.
 
----
+Country configs can also control whether candidates on water are excluded and whether boundary points are included.
 
-## Map output
+## Distance Computation
+
+```bash
+--max-total-dist FLOAT
+```
+Keep only rows whose `total_dist` is less than or equal to this value, in meters.
+
+## Map Output
+
+```bash
+--build-map
+```
+Build the context map stage. By itself this renders and closes the figure unless paired with `--save-map` or `--show-map`.
 
 ```bash
 --save-map
 ```
-Save context map.
+Save the context map. This now triggers map building automatically.
 
 ```bash
 --show-map
 ```
-Display map interactively.
+Display the context map interactively. This now triggers map building automatically.
 
 ```bash
 --map-path PATH
 ```
-Custom path for saved map (overrides default cache path).
+Custom output path for the saved map.
 
 ```bash
 --map-dpi INT
 ```
-Resolution of saved map.
+Resolution for saved maps. Default: `300`.
 
 ---
 
-# Pipeline Details
+# Outputs
 
-## Population points
+The CLI currently computes the pipeline, writes caches, and prints the head of the distance matrix. The notebook additionally writes parquet files under:
 
-Population points are generated from WorldPop rasters using:
+```text
+<cfg.BASE_DIR>/outputs/
+```
 
-- population threshold filtering
-- optional sampling
-- optional aggregation
+Notebook output files:
 
-Aggregation groups raster cells before point creation, reducing resolution and improving performance.
+- `population_<run_tag>.parquet`
+- `existing_sources_<run_tag>.parquet`
+- `distance_matrix_<run_tag>.parquet`
 
----
+The distance matrix columns are:
 
-## Candidate sites
-
-Candidate sites are generated using a regular grid.
-
-Parameters:
-- grid spacing
-- snapping distance to road network
-
----
-
-## Snapping
-
-All points are snapped to the nearest road network node:
-
-- population points → targets
-- facilities + candidates → sources
-
-Distances include:
-
-- point to road distance
-- road network distance
-- total distance
-
----
-
-## Sources
-
-Sources are constructed by combining:
-
-- existing facilities
-- generated candidate sites
-
-This combined table is used in distance computation.
-
----
-
-## Distance matrix
-
-Distances are computed between:
-
-- targets (population points)
-- sources (facilities + candidates)
-
-Output includes:
-
-- `pop_id`
+- `target_id`
 - `source_id`
-- `pop_to_road_dist`
+- `source_nearest_node`
+- `target_nearest_node`
+- `target_to_road_dist`
 - `road_distance`
 - `source_to_road_dist`
 - `total_dist`
 
-Optionally filtered using `--max-total-dist`.
+All distance values are in meters.
 
 ---
 
 # Caching
 
-Each pipeline step is cached.
+Caches are written under:
 
-Cache keys depend on parameters such as:
+```text
+<cfg.BASE_DIR>/cache/
+```
+
+Cache keys include the runtime inputs that affect each stage:
 
 - population threshold
-- sampling fraction
-- max points
+- sample fraction
+- maximum population points
 - aggregation factor
+- facility amenity filters
+- healthcare-tag mode
 - candidate grid spacing
-- distance thresholds
+- candidate snap-distance filter
+- candidate presence
+- distance threshold
+- maximum total distance
+- projected EPSG code where relevant
 
-Changing any parameter triggers recomputation of affected steps.
-
----
-
-# Important assumptions
-
-- All tables must contain an `ID` column
-- DataFrames are indexed by `ID`
-- IDs must be unique and consistent
+Use `--force-recompute` when you want to rebuild even if a matching cache exists.
 
 ---
 
-# Notes
+# Data Model
 
-- The pipeline produces a full distance matrix
-- No aggregation (e.g. nearest facility) is performed
-- Downstream analysis or optimization is expected
+Targets are population points. Sources are existing health facilities plus optional candidate facility sites.
+
+Important assumptions:
+
+- Tables carry an `ID` column.
+- Tables used for distance computation are indexed by `ID`.
+- IDs are unique and consistent with the index.
+- Snapped target rows contain `nearest_node` and `dist_snap_target`.
+- Snapped source rows contain `nearest_node` and `dist_snap_source`.
 
 ---
 
 # Dependencies
 
-Main libraries:
+There is currently no pinned environment file in this folder. The main libraries used by the pipeline include:
 
-- numpy
-- pandas
-- scipy
-- pandana
+- `geopandas`
+- `matplotlib`
+- `numpy`
+- `pandas`
+- `pandana`
+- `polars`
+- `pyrosm`
+- `rasterio`
+- `scipy`
+- `shapely`
+- `contextily`
+
+For reproducible runs, add a `requirements.txt`, `pyproject.toml`, or environment file before using this pipeline on a fresh machine.
 
 ---
 
 # License
 
-MIT
+```text
+   .-.
+  (MIT)
+   '-'
+```
+
+This project is documented as MIT licensed. The MIT license is a permissive license: you may use, copy, modify, merge, publish, distribute, sublicense, and sell copies of the software, provided the copyright notice and license text are included with substantial portions of the software.
+
+If this folder is distributed independently, include a full `LICENSE` file next to this README.

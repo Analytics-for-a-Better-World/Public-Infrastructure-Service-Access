@@ -387,7 +387,7 @@ def main(
     candidate_max_snap_dist_m = resolve_candidate_max_snap_dist(cfg, settings)
 
     # -------- MAP (optional) --------
-    if build_map:
+    if build_map or settings.save_context_map or settings.show_context_map:
         map_facilities = build_map_facilities(facilities, candidate_sites)
         context_map_path = build_context_map_path(
             cache.context_map_path(),
