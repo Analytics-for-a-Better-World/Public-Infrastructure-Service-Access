@@ -78,6 +78,51 @@ def build_context_map_path(
     return base_path.with_name(f'{base_path.stem}_{suffix}{base_path.suffix}')
 
 
+def format_output_value(value: float | int | None) -> str:
+    """Format a value for output filenames."""
+    if value is None:
+        return 'none'
+    return f'{value:g}'
+
+
+def format_amenity_suffix(amenity_values: list[str] | None) -> str:
+    """Format amenity filters for output filenames."""
+    if amenity_values is None:
+        return 'all'
+    return '-'.join(sorted(amenity_values))
+
+
+def build_output_run_tag(
+    *,
+    settings: PipelineSettings,
+    aggregate_factor: int | None,
+    amenity_values: list[str] | None,
+    include_healthcare_tag: bool,
+    candidate_grid_spacing_m: float | None,
+    candidate_max_snap_dist_m: float | None,
+    has_candidates: bool,
+) -> str:
+    """Build a filename-safe tag describing the pipeline output settings."""
+    healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
+    candidate_part = (
+        f"candidates_spacing_{format_output_value(candidate_grid_spacing_m)}_"
+        f"maxsnap_{format_output_value(candidate_max_snap_dist_m)}"
+        if has_candidates
+        else 'no_candidates'
+    )
+
+    return (
+        f"pop_{settings.population_threshold:g}_"
+        f"sample_{settings.sample_fraction:g}_"
+        f"max_{format_output_value(settings.max_points)}_"
+        f"agg_{format_output_value(aggregate_factor)}_"
+        f"maxdist_{format_output_value(settings.max_total_dist)}_"
+        f"{healthcare_part}_"
+        f"amenity_{format_amenity_suffix(amenity_values)}_"
+        f"{candidate_part}"
+    )
+
+
 
 def build_map_facilities(
     health_centers: pd.DataFrame,

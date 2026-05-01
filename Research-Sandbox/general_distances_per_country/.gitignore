@@ -8,7 +8,9 @@ logs/
 # Generated results
 # ------------------------
 results/
+outputs/
 *.csv
+*.parquet
 *.png
 *.pdf
 *.tex

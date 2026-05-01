@@ -43,7 +43,7 @@ python run_pipeline.py prt --sample-fraction 0.1 --save-map
 python run_pipeline.py vnm --aggregate-factor 10 --amenity hospital clinic
 ```
 
-The notebook `testdrive_general_country.ipynb` mirrors the same pipeline stages with inspectable intermediate objects. Unlike the CLI, the notebook also writes selected parquet outputs at the end.
+The notebook `testdrive_general_country.ipynb` mirrors the same pipeline stages with inspectable intermediate objects. Both the CLI and notebook write parquet outputs using the same run-tag helper.
 
 ---
 
@@ -180,17 +180,19 @@ Resolution for saved maps. Default: `300`.
 
 # Outputs
 
-The CLI currently computes the pipeline, writes caches, and prints the head of the distance matrix. The notebook additionally writes parquet files under:
+The CLI and notebook write parquet outputs under:
 
 ```text
 <cfg.BASE_DIR>/outputs/
 ```
 
-Notebook output files:
+Output files:
 
 - `population_<run_tag>.parquet`
 - `existing_sources_<run_tag>.parquet`
 - `distance_matrix_<run_tag>.parquet`
+
+The run tag records the population settings, aggregation factor, facility filters, candidate settings, and distance filter so different runs do not overwrite each other.
 
 The distance matrix columns are:
 
@@ -258,6 +260,7 @@ There is currently no pinned environment file in this folder. The main libraries
 - `pandas`
 - `pandana`
 - `polars`
+- `pyarrow`
 - `pyrosm`
 - `rasterio`
 - `scipy`

@@ -16,6 +16,7 @@ from distance_pipeline.network import build_pandana_network, load_osm_network
 from distance_pipeline.pipeline_support import (
     build_context_map_path,
     build_map_facilities,
+    build_output_run_tag,
     resolve_candidate_grid_spacing,
     resolve_candidate_max_snap_dist,
 )
@@ -440,6 +441,11 @@ def main(
         ),
     )
 
+    existing_sources = existing_sources.copy()
+    existing_sources['source_type'] = 'existing'
+    existing_sources = ensure_id_column(existing_sources, prefix='existing')
+    existing_sources = ensure_id_index_matches(existing_sources)
+
     sources = combine_existing_and_candidate_sources(
         existing_sources,
         candidate_sites_snapped,
@@ -472,9 +478,32 @@ def main(
 
     matrix_df = set_known_categories(matrix_df)
 
+    output_dir = cfg.BASE_DIR / 'outputs'
+    output_dir.mkdir(parents=True, exist_ok=True)
+    run_tag = build_output_run_tag(
+        settings=settings,
+        aggregate_factor=agg,
+        amenity_values=amenity_values,
+        include_healthcare_tag=include_healthcare_tag,
+        candidate_grid_spacing_m=candidate_grid_spacing_m,
+        candidate_max_snap_dist_m=candidate_max_snap_dist_m,
+        has_candidates=candidate_sites_snapped is not None,
+    )
+
+    population_path = output_dir / f'population_{run_tag}.parquet'
+    existing_sources_path = output_dir / f'existing_sources_{run_tag}.parquet'
+    matrix_path = output_dir / f'distance_matrix_{run_tag}.parquet'
+
+    population.to_parquet(population_path, index=False)
+    existing_sources.to_parquet(existing_sources_path, index=False)
+    matrix_df.to_parquet(matrix_path, index=False)
+
     print(matrix_df.head())
 
     if settings.verbose:
+        logging.info(f'Wrote population output: {population_path}')
+        logging.info(f'Wrote existing sources output: {existing_sources_path}')
+        logging.info(f'Wrote distance matrix output: {matrix_path}')
         logging.info(f'Distance matrix size: {len(matrix_df):,}')
         logging.info(f'Distance computation time: {pc() - t_dist:.2f}s')
         logging.info(f'Total runtime: {pc() - t_total:.2f}s')
