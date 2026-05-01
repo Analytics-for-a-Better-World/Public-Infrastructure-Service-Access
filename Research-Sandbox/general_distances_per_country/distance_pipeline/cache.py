@@ -6,6 +6,27 @@ from time import perf_counter as pc
 from countries.base import CountryConfig
 
 
+def _none_or_number(value: float | int | None, suffix: str = '') -> str:
+    """Format an optional numeric cache-key component."""
+    if value is None:
+        return 'none'
+    return f'{value:g}{suffix}'
+
+
+def _none_or_int(value: int | None) -> str:
+    """Format an optional integer cache-key component."""
+    if value is None:
+        return 'none'
+    return str(value)
+
+
+def _amenity_part(amenity_values: list[str] | None) -> str:
+    """Format amenity filters for cache-key filenames."""
+    if amenity_values is None:
+        return 'all'
+    return '_'.join(sorted(amenity_values))
+
+
 def _load_pickle[T](cache_path: Path) -> T:
     """Load a pickled object from disk."""
     with cache_path.open('rb') as file:
@@ -163,7 +184,7 @@ class CacheManager:
         amenity_values: list[str] | None = None,
         include_healthcare_tag: bool = True,
     ) -> Path:
-        amenity_part = 'all' if amenity_values is None else '_'.join(sorted(amenity_values))
+        amenity_part = _amenity_part(amenity_values)
         healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
         return (
             self.cache_dir
@@ -175,7 +196,7 @@ class CacheManager:
         amenity_values: list[str] | None = None,
         include_healthcare_tag: bool = True,
     ) -> Path:
-        amenity_part = 'all' if amenity_values is None else '_'.join(sorted(amenity_values))
+        amenity_part = _amenity_part(amenity_values)
         healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
         return (
             self.cache_dir
@@ -206,19 +227,57 @@ class CacheManager:
         )
 
     def population_snapped_path(self, distance_col: str) -> Path:
+        return self.population_snapped_path_for(
+            distance_col=distance_col,
+            population_threshold=None,
+            sample_fraction=None,
+            max_points=None,
+            aggregate_factor=None,
+        )
+
+    def population_snapped_path_for(
+        self,
+        distance_col: str,
+        population_threshold: float | None,
+        sample_fraction: float | None,
+        max_points: int | None,
+        aggregate_factor: int | None,
+    ) -> Path:
+        population_part = (
+            f'pop_{_none_or_number(population_threshold)}_'
+            f'sample_{_none_or_number(sample_fraction)}_'
+            f'agg_{_none_or_int(aggregate_factor)}_'
+            f'max_{_none_or_int(max_points)}'
+        )
         return (
             self.cache_dir
             / (
                 f'{self.worldpop_stem}_population_snapped_'
-                f'{distance_col}_epsg_{self.cfg.PROJECTED_EPSG}.pkl'
+                f'{population_part}_{distance_col}_'
+                f'epsg_{self.cfg.PROJECTED_EPSG}.pkl'
             )
         )
 
     def hospitals_snapped_path(self, distance_col: str) -> Path:
+        return self.hospitals_snapped_path_for(
+            distance_col=distance_col,
+            amenity_values=None,
+            include_healthcare_tag=True,
+        )
+
+    def hospitals_snapped_path_for(
+        self,
+        distance_col: str,
+        amenity_values: list[str] | None,
+        include_healthcare_tag: bool,
+    ) -> Path:
+        amenity_part = _amenity_part(amenity_values)
+        healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
         return (
             self.cache_dir
             / (
                 f'{self.pbf_stem}_hospitals_snapped_'
+                f'{healthcare_part}_{amenity_part}_'
                 f'{distance_col}_epsg_{self.cfg.PROJECTED_EPSG}.pkl'
             )
         )
@@ -228,13 +287,59 @@ class CacheManager:
         distance_threshold_largest: float,
         max_total_dist: float | None = None,
     ) -> Path:
-        max_total_dist_str = 'none' if max_total_dist is None else f'{max_total_dist:g}m'
+        return self.distance_matrix_path_for(
+            distance_threshold_largest=distance_threshold_largest,
+            max_total_dist=max_total_dist,
+            population_threshold=None,
+            sample_fraction=None,
+            max_points=None,
+            aggregate_factor=None,
+            amenity_values=None,
+            include_healthcare_tag=True,
+            candidate_grid_spacing_m=None,
+            candidate_max_snap_dist_m=None,
+            has_candidates=False,
+        )
+
+    def distance_matrix_path_for(
+        self,
+        distance_threshold_largest: float,
+        max_total_dist: float | None = None,
+        population_threshold: float | None = None,
+        sample_fraction: float | None = None,
+        max_points: int | None = None,
+        aggregate_factor: int | None = None,
+        amenity_values: list[str] | None = None,
+        include_healthcare_tag: bool = True,
+        candidate_grid_spacing_m: float | None = None,
+        candidate_max_snap_dist_m: float | None = None,
+        has_candidates: bool = False,
+    ) -> Path:
+        max_total_dist_str = _none_or_number(max_total_dist, 'm')
+        population_part = (
+            f'pop_{_none_or_number(population_threshold)}_'
+            f'sample_{_none_or_number(sample_fraction)}_'
+            f'agg_{_none_or_int(aggregate_factor)}_'
+            f'max_{_none_or_int(max_points)}'
+        )
+        amenity_part = _amenity_part(amenity_values)
+        healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
+        candidate_part = (
+            'candidates_'
+            f'spacing_{_none_or_number(candidate_grid_spacing_m, "m")}_'
+            f'max_snap_{_none_or_number(candidate_max_snap_dist_m, "m")}'
+            if has_candidates
+            else 'no_candidates'
+        )
         return (
             self.cache_dir
             / (
                 f'{self.pbf_stem}_distance_matrix_'
                 f'threshold_{distance_threshold_largest:g}km_'
-                f'max_total_{max_total_dist_str}.pkl'
+                f'max_total_{max_total_dist_str}_'
+                f'{population_part}_'
+                f'{healthcare_part}_{amenity_part}_'
+                f'{candidate_part}.pkl'
             )
         )
 

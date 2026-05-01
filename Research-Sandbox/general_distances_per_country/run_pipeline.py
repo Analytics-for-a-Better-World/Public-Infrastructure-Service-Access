@@ -17,6 +17,7 @@ from distance_pipeline.pipeline_support import (
     build_context_map_path,
     build_map_facilities,
     resolve_candidate_grid_spacing,
+    resolve_candidate_max_snap_dist,
 )
 from distance_pipeline.population import worldpop_to_points
 from distance_pipeline.settings import PipelineSettings
@@ -382,6 +383,8 @@ def main(
         cache=cache,
         nodes=nodes,
     )
+    candidate_grid_spacing_m = resolve_candidate_grid_spacing(cfg, settings)
+    candidate_max_snap_dist_m = resolve_candidate_max_snap_dist(cfg, settings)
 
     # -------- MAP (optional) --------
     if build_map:
@@ -403,7 +406,13 @@ def main(
         )
 
     population = cache.run(
-        cache_path=cache.population_snapped_path(distance_col='dist_snap_target'),
+        cache_path=cache.population_snapped_path_for(
+            distance_col='dist_snap_target',
+            population_threshold=settings.population_threshold,
+            sample_fraction=settings.sample_fraction,
+            max_points=settings.max_points,
+            aggregate_factor=agg,
+        ),
         builder=lambda: snap_points_to_nodes(
             population_points,
             nodes,
@@ -417,7 +426,11 @@ def main(
     population = ensure_id_index_matches(population)
 
     existing_sources = cache.run(
-        cache_path=cache.hospitals_snapped_path(distance_col='dist_snap_source'),
+        cache_path=cache.hospitals_snapped_path_for(
+            distance_col='dist_snap_source',
+            amenity_values=amenity_values,
+            include_healthcare_tag=include_healthcare_tag,
+        ),
         builder=lambda: snap_points_to_nodes(
             facilities,
             nodes,
@@ -434,9 +447,18 @@ def main(
 
     t_dist = pc()
     matrix_df = cache.run(
-        cache_path=cache.distance_matrix_path(
-            cfg.DISTANCE_THRESHOLD_KM,
-            settings.max_total_dist,
+        cache_path=cache.distance_matrix_path_for(
+            distance_threshold_largest=cfg.DISTANCE_THRESHOLD_KM,
+            max_total_dist=settings.max_total_dist,
+            population_threshold=settings.population_threshold,
+            sample_fraction=settings.sample_fraction,
+            max_points=settings.max_points,
+            aggregate_factor=agg,
+            amenity_values=amenity_values,
+            include_healthcare_tag=include_healthcare_tag,
+            candidate_grid_spacing_m=candidate_grid_spacing_m,
+            candidate_max_snap_dist_m=candidate_max_snap_dist_m,
+            has_candidates=candidate_sites_snapped is not None,
         ),
         builder=lambda: compute_distances(
             targets=population,
