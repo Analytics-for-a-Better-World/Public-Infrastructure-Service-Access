@@ -12,6 +12,7 @@ from distance_pipeline.config_loader import load_cfg
 from distance_pipeline.distance_matrix import compute_distances
 from distance_pipeline.facilities import load_health_facilities
 from distance_pipeline.io import download_file
+from distance_pipeline.manifest import build_run_manifest, write_run_manifest
 from distance_pipeline.network import build_pandana_network, load_osm_network
 from distance_pipeline.pipeline_support import (
     build_context_map_path,
@@ -493,10 +494,30 @@ def main(
     population_path = output_dir / f'population_{run_tag}.parquet'
     existing_sources_path = output_dir / f'existing_sources_{run_tag}.parquet'
     matrix_path = output_dir / f'distance_matrix_{run_tag}.parquet'
+    manifest_path = output_dir / f'run_manifest_{run_tag}.json'
 
     population.to_parquet(population_path, index=False)
     existing_sources.to_parquet(existing_sources_path, index=False)
     matrix_df.to_parquet(matrix_path, index=False)
+    write_run_manifest(
+        build_run_manifest(
+            cfg=cfg,
+            settings=settings,
+            aggregate_factor=agg,
+            amenity_values=amenity_values,
+            include_healthcare_tag=include_healthcare_tag,
+            candidate_grid_spacing_m=candidate_grid_spacing_m,
+            candidate_max_snap_dist_m=candidate_max_snap_dist_m,
+            has_candidates=candidate_sites_snapped is not None,
+            output_paths={
+                'population': population_path,
+                'existing_sources': existing_sources_path,
+                'distance_matrix': matrix_path,
+            },
+            repo_dir=Path(__file__).resolve().parent,
+        ),
+        manifest_path,
+    )
 
     print(matrix_df.head())
 
@@ -504,6 +525,7 @@ def main(
         logging.info(f'Wrote population output: {population_path}')
         logging.info(f'Wrote existing sources output: {existing_sources_path}')
         logging.info(f'Wrote distance matrix output: {matrix_path}')
+        logging.info(f'Wrote run manifest: {manifest_path}')
         logging.info(f'Distance matrix size: {len(matrix_df):,}')
         logging.info(f'Distance computation time: {pc() - t_dist:.2f}s')
         logging.info(f'Total runtime: {pc() - t_total:.2f}s')

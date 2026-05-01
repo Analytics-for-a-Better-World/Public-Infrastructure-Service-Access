@@ -191,8 +191,21 @@ Output files:
 - `population_<run_tag>.parquet`
 - `existing_sources_<run_tag>.parquet`
 - `distance_matrix_<run_tag>.parquet`
+- `run_manifest_<run_tag>.json`
 
 The run tag records the population settings, aggregation factor, facility filters, candidate settings, and distance filter so different runs do not overwrite each other.
+
+The run manifest is the reproducibility record for a run. It stores:
+
+- source URLs for the OSM PBF and WorldPop raster
+- resolved country configuration values
+- runtime settings and resolved parameters
+- local input and output paths
+- file sizes and modification timestamps
+- SHA256 checksums for the input and output files
+- the current pipeline git commit when available
+
+This matters because Geofabrik `*-latest.osm.pbf` extracts are moving snapshots of OpenStreetMap. A run on a fresh machine may download different OSM road and facility data than an earlier run. WorldPop inputs are more explicitly versioned by year and filename, but the manifest still records the exact local file bytes used for the run.
 
 The distance matrix columns are:
 

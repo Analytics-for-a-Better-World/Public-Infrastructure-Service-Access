@@ -10,6 +10,7 @@ logs/
 results/
 outputs/
 *.csv
+run_manifest_*.json
 *.parquet
 *.png
 *.pdf
