@@ -494,7 +494,7 @@ def main(
     population_path = output_dir / f'population_{run_tag}.parquet'
     existing_sources_path = output_dir / f'existing_sources_{run_tag}.parquet'
     matrix_path = output_dir / f'distance_matrix_{run_tag}.parquet'
-    manifest_path = output_dir / f'run_manifest_{run_tag}.json'
+    manifest_path = output_dir / f'run_manifest_{run_tag}.yaml'
 
     population.to_parquet(population_path, index=False)
     existing_sources.to_parquet(existing_sources_path, index=False)

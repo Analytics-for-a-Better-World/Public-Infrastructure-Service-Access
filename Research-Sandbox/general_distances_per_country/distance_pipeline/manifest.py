@@ -3,10 +3,11 @@ from __future__ import annotations
 from dataclasses import asdict
 from datetime import UTC, datetime
 import hashlib
-import json
 from pathlib import Path
 import subprocess
 from typing import Any
+
+import yaml
 
 from countries.base import CountryConfig
 from distance_pipeline.settings import PipelineSettings
@@ -142,11 +143,16 @@ def write_run_manifest(
     manifest: dict[str, Any],
     manifest_path: str | Path,
 ) -> Path:
-    """Write a manifest as indented JSON."""
+    """Write a manifest as YAML."""
     path = Path(manifest_path)
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
-        json.dumps(manifest, indent=2, sort_keys=True, default=str),
+        yaml.safe_dump(
+            manifest,
+            sort_keys=True,
+            allow_unicode=False,
+            default_flow_style=False,
+        ),
         encoding='utf-8',
     )
     return path

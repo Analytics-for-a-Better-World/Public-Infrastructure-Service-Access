@@ -191,7 +191,7 @@ Output files:
 - `population_<run_tag>.parquet`
 - `existing_sources_<run_tag>.parquet`
 - `distance_matrix_<run_tag>.parquet`
-- `run_manifest_<run_tag>.json`
+- `run_manifest_<run_tag>.yaml`
 
 The run tag records the population settings, aggregation factor, facility filters, candidate settings, and distance filter so different runs do not overwrite each other.
 
@@ -274,6 +274,7 @@ There is currently no pinned environment file in this folder. The main libraries
 - `pandana`
 - `polars`
 - `pyarrow`
+- `pyyaml`
 - `pyrosm`
 - `rasterio`
 - `scipy`
