@@ -1,5 +1,6 @@
 from pathlib import Path
 from time import perf_counter as pc
+from typing import Any
 
 import contextily as cx
 import geopandas as gpd
@@ -597,3 +598,320 @@ def plot_context_map(
 
     if verbose:
         _log_step('Total plotting completed', start_time=t0)
+
+
+def selected_sources_from_model(model: Any, tol: float = 0.5) -> list[Any]:
+    '''Return selected source IDs from a solved binary location model.'''
+    selected: list[Any] = []
+
+    for source_id in model.J:
+        value = getattr(model.x[source_id], 'value', None)
+        if value is not None and value > tol:
+            selected.append(source_id)
+
+    return selected
+
+
+def read_point_layer(
+    path: str | Path,
+    x_candidates: tuple[str, ...] = ('longitude', 'Longitude', 'xcoord', 'lon'),
+    y_candidates: tuple[str, ...] = ('latitude', 'Latitude', 'ycoord', 'lat'),
+    crs: str = 'EPSG:4326',
+) -> gpd.GeoDataFrame:
+    '''Read a point layer from GeoParquet or plain Parquet.'''
+    try:
+        return gpd.read_parquet(path)
+    except ValueError as error:
+        if 'Missing geo metadata' not in str(error):
+            raise
+
+    data = pd.read_parquet(path)
+
+    x_col = next((col for col in x_candidates if col in data.columns), None)
+    y_col = next((col for col in y_candidates if col in data.columns), None)
+
+    if x_col is None or y_col is None:
+        raise ValueError(
+            'Could not infer coordinate columns. '
+            f'Available columns are: {list(data.columns)}'
+        )
+
+    return gpd.GeoDataFrame(
+        data,
+        geometry=gpd.points_from_xy(data[x_col], data[y_col]),
+        crs=crs,
+    )
+
+
+def build_solution_layers(
+    model: Any,
+    matrix_path: str | Path,
+    population_path: str | Path,
+    sources_path: str | Path,
+    max_cover_dist_m: float,
+    target_col: str = 'target_id',
+    source_col: str = 'source_id',
+    distance_col: str = 'total_dist',
+    population_id_col: str = 'ID',
+    source_id_col: str = 'ID',
+) -> dict[str, Any]:
+    '''Build GeoDataFrame layers for plotting a maximum-covering solution.'''
+    selected_sources = selected_sources_from_model(model)
+
+    matrix = pd.read_parquet(matrix_path)
+    population = read_point_layer(population_path)
+    sources = read_point_layer(sources_path)
+
+    covered_pairs = matrix.loc[
+        (matrix[source_col].isin(selected_sources))
+        & (matrix[distance_col] <= max_cover_dist_m),
+        [target_col, source_col, distance_col],
+    ].copy()
+
+    assignment = (
+        covered_pairs
+        .sort_values(distance_col)
+        .drop_duplicates(target_col, keep='first')
+    )
+
+    covered_target_ids = set(assignment[target_col])
+
+    population = population.copy()
+    population['covered'] = population[population_id_col].isin(covered_target_ids)
+
+    covered_population = population.loc[population['covered']].copy()
+
+    opened_sources = sources.loc[
+        sources[source_id_col].isin(selected_sources)
+    ].copy()
+
+    assignment = assignment.rename(
+        columns={
+            target_col: population_id_col,
+            source_col: 'assigned_source_id',
+        }
+    )
+
+    covered_population = covered_population.merge(
+        assignment[[population_id_col, 'assigned_source_id', distance_col]],
+        on=population_id_col,
+        how='left',
+    )
+
+    return {
+        'selected_source_ids': selected_sources,
+        'population': population,
+        'covered_population': covered_population,
+        'opened_sources': opened_sources,
+        'assignment': assignment,
+    }
+
+
+def plot_max_cover_solution(
+    solution_layers: dict[str, Any],
+    title: str | None = 'Maximum covering solution',
+    roads: gpd.GeoDataFrame | None = None,
+    figsize: tuple[float, float] = (10, 10),
+    output_path: str | Path | None = None,
+    dpi: int = 300,
+    legend_loc: str = 'upper center',
+    legend_bbox_to_anchor: tuple[float, float] | None = (0.5, -0.06),
+    legend_title: str | None = None,
+    legend_ncol: int = 3,
+    add_basemap: bool = True,
+    basemap_source: object | None = None,
+    basemap_alpha: float = 0.85,
+    uncovered_marker_size: float = 5.0,
+    covered_marker_size: float = 5.0,
+    opened_marker_size: float = 120,
+    show_facility_callouts: bool = True,
+    source_id_col: str = 'ID',
+    population_col: str = 'population',
+    callout_fontsize: float = 9.0,
+) -> tuple[plt.Figure, plt.Axes]:
+    '''Plot uncovered points, covered points, and opened sources.'''
+    if basemap_source is None:
+        basemap_source = cx.providers.CartoDB.Positron
+
+    display_crs = 'EPSG:3857'
+    population = solution_layers['population'].to_crs(display_crs)
+    covered_population = solution_layers['covered_population'].to_crs(display_crs)
+    opened_sources = solution_layers['opened_sources'].to_crs(display_crs)
+
+    fig, ax = plt.subplots(figsize=figsize)
+
+    if roads is not None:
+        roads.to_crs(display_crs).plot(
+            ax=ax,
+            color='lightgray',
+            linewidth=0.3,
+            alpha=0.6,
+        )
+
+    population.loc[~population['covered']].plot(
+        ax=ax,
+        color='#BDBDBD',
+        markersize=uncovered_marker_size,
+        alpha=0.70,
+    )
+
+    if not covered_population.empty:
+        covered_population.plot(
+            ax=ax,
+            color='#2CA25F',
+            markersize=covered_marker_size,
+            alpha=0.90,
+        )
+
+    if not opened_sources.empty:
+        opened_sources.plot(
+            ax=ax,
+            color='#D62728',
+            edgecolor='black',
+            markersize=opened_marker_size,
+            marker='*',
+            linewidth=0.9,
+            zorder=7,
+        )
+
+    if add_basemap:
+        cx.add_basemap(
+            ax,
+            source=basemap_source,
+            crs=display_crs,
+            alpha=basemap_alpha,
+        )
+
+    if (
+        show_facility_callouts
+        and not opened_sources.empty
+        and not covered_population.empty
+        and source_id_col in opened_sources.columns
+        and 'assigned_source_id' in covered_population.columns
+        and population_col in covered_population.columns
+        and population_col in population.columns
+    ):
+        served_by_source = (
+            covered_population
+            .assign(_source_key=lambda df: df['assigned_source_id'].astype(str))
+            .groupby('_source_key')[population_col]
+            .sum()
+        )
+        total_population = population[population_col].sum()
+
+        if total_population > 0:
+            center = opened_sources.unary_union.centroid
+            fallback_offsets = [
+                (34, 34),
+                (34, -34),
+                (-34, 34),
+                (-34, -34),
+                (50, 8),
+                (-50, 8),
+            ]
+
+            for idx, (_, row) in enumerate(opened_sources.iterrows()):
+                source_key = str(row[source_id_col])
+                served_population = served_by_source.get(source_key, 0.0)
+
+                if served_population <= 0:
+                    continue
+
+                point = row.geometry
+                label = f'{served_population / total_population:.1%}'
+
+                dx = point.x - center.x
+                dy = point.y - center.y
+                norm = float(np.hypot(dx, dy))
+                if norm > 0:
+                    offset = (int(42 * dx / norm), int(42 * dy / norm))
+                    if abs(offset[0]) < 16:
+                        offset = (16 if offset[0] >= 0 else -16, offset[1])
+                    if abs(offset[1]) < 12:
+                        offset = (offset[0], 12 if offset[1] >= 0 else -12)
+                else:
+                    offset = fallback_offsets[idx % len(fallback_offsets)]
+
+                ax.annotate(
+                    label,
+                    xy=(point.x, point.y),
+                    xytext=offset,
+                    textcoords='offset points',
+                    fontsize=callout_fontsize,
+                    ha='left' if offset[0] >= 0 else 'right',
+                    va='bottom' if offset[1] >= 0 else 'top',
+                    color='black',
+                    bbox={
+                        'boxstyle': 'round,pad=0.2',
+                        'facecolor': 'white',
+                        'edgecolor': 'black',
+                        'alpha': 0.95,
+                        'linewidth': 0.7,
+                    },
+                    arrowprops={
+                        'arrowstyle': '-',
+                        'color': 'black',
+                        'linewidth': 0.7,
+                    },
+                    zorder=8,
+                )
+
+    if title:
+        ax.set_title(title)
+
+    ax.set_axis_off()
+    legend_handles = [
+        Line2D(
+            [0],
+            [0],
+            marker='o',
+            color='none',
+            markerfacecolor='#BDBDBD',
+            markeredgecolor='#BDBDBD',
+            markersize=7,
+            linestyle='None',
+            label='Uncovered population points',
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker='o',
+            color='none',
+            markerfacecolor='#2CA25F',
+            markeredgecolor='#2CA25F',
+            markersize=7,
+            linestyle='None',
+            label='Covered population points',
+        ),
+        Line2D(
+            [0],
+            [0],
+            marker='*',
+            color='black',
+            markerfacecolor='#D62728',
+            markeredgecolor='black',
+            markersize=11,
+            linestyle='None',
+            label='Opened facilities (percentage of total population served)',
+        ),
+    ]
+    legend_kwargs = {
+        'handles': legend_handles,
+        'loc': legend_loc,
+        'frameon': False,
+        'title': legend_title,
+        'ncol': legend_ncol,
+    }
+
+    if legend_bbox_to_anchor is not None:
+        legend_kwargs['bbox_to_anchor'] = legend_bbox_to_anchor
+
+    ax.legend(**legend_kwargs)
+    fig.subplots_adjust(bottom=0.14)
+
+    if output_path is not None:
+        path = Path(output_path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(path, dpi=dpi, bbox_inches='tight')
+
+    return fig, ax
