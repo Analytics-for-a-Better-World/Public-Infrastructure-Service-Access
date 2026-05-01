@@ -331,7 +331,7 @@ def build_country_config_module_text(
     payload: dict[str, object],
     *,
     distance_threshold_km: float = 300.0,
-    plot_title_suffix: str = 'roads by class, population points, and health facilities',
+    plot_title_suffix: str = 'roads by class, population points, and service facilities',
     candidate_grid_spacing_m: float = 5000.0,
     candidate_max_snap_dist_m: float = 5000.0,
 ) -> str:
@@ -408,7 +408,7 @@ def generate_country_config_module(
     model: str = 'gpt-5.4',
     overwrite: bool = False,
     distance_threshold_km: float = 300.0,
-    plot_title_suffix: str = 'roads by class, population points, and health facilities',
+    plot_title_suffix: str = 'roads by class, population points, and service facilities',
     candidate_grid_spacing_m: float = 5000.0,
     candidate_max_snap_dist_m: float = 5000.0,
 ) -> Path:

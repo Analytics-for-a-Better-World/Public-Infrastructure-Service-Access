@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 import hashlib
 from pathlib import Path
 import subprocess
@@ -13,11 +13,37 @@ from countries.base import CountryConfig
 from distance_pipeline.settings import PipelineSettings
 
 
+def make_yaml_safe(value: Any) -> Any:
+    """Convert nested values to objects that PyYAML safe_dump can represent."""
+    if isinstance(value, Path):
+        return value.as_posix()
+
+    if isinstance(value, datetime | date):
+        return value.isoformat()
+
+    if isinstance(value, dict):
+        return {
+            str(key): make_yaml_safe(item)
+            for key, item in value.items()
+        }
+
+    if isinstance(value, list | tuple | set):
+        return [make_yaml_safe(item) for item in value]
+
+    if hasattr(value, 'item'):
+        try:
+            return value.item()
+        except ValueError:
+            pass
+
+    return value
+
+
 def file_metadata(path: str | Path) -> dict[str, Any]:
     """Return reproducibility metadata for a local input or output file."""
     file_path = Path(path)
     metadata: dict[str, Any] = {
-        'path': str(file_path),
+        'path': file_path.as_posix(),
         'exists': file_path.exists(),
     }
 
@@ -72,8 +98,8 @@ def country_config_metadata(cfg: CountryConfig) -> dict[str, Any]:
         'country_name': cfg.country_name,
         'country_slug': cfg.country_slug,
         'projected_epsg': cfg.projected_epsg,
-        'base_root': str(cfg.base_root),
-        'base_dir': str(cfg.BASE_DIR),
+        'base_root': Path(cfg.base_root).as_posix(),
+        'base_dir': Path(cfg.BASE_DIR).as_posix(),
         'distance_threshold_km': cfg.distance_threshold_km,
         'geofabrik_region': cfg.geofabrik_region,
         'worldpop_year': cfg.worldpop_year,
@@ -98,14 +124,13 @@ def build_run_manifest(
     settings: PipelineSettings,
     aggregate_factor: int | None,
     amenity_values: list[str] | None,
-    include_healthcare_tag: bool,
     candidate_grid_spacing_m: float | None,
     candidate_max_snap_dist_m: float | None,
     has_candidates: bool,
     output_paths: dict[str, str | Path],
     repo_dir: str | Path,
 ) -> dict[str, Any]:
-    """Build a JSON-serializable manifest for a pipeline run."""
+    """Build a YAML-serializable manifest for a pipeline run."""
     input_files: dict[str, dict[str, Any]] = {
         'osm_pbf': {
             'url': cfg.PBF_URL,
@@ -117,7 +142,7 @@ def build_run_manifest(
         },
     }
 
-    return {
+    manifest: dict[str, Any] = {
         'schema_version': 1,
         'created_utc': datetime.now(UTC).isoformat(),
         'pipeline_git_commit': current_git_commit(repo_dir),
@@ -126,7 +151,6 @@ def build_run_manifest(
         'resolved_parameters': {
             'aggregate_factor': aggregate_factor,
             'amenity_values': amenity_values,
-            'include_healthcare_tag': include_healthcare_tag,
             'candidate_grid_spacing_m': candidate_grid_spacing_m,
             'candidate_max_snap_dist_m': candidate_max_snap_dist_m,
             'has_candidates': has_candidates,
@@ -138,6 +162,8 @@ def build_run_manifest(
         },
     }
 
+    return make_yaml_safe(manifest)
+
 
 def write_run_manifest(
     manifest: dict[str, Any],
@@ -146,13 +172,15 @@ def write_run_manifest(
     """Write a manifest as YAML."""
     path = Path(manifest_path)
     path.parent.mkdir(parents=True, exist_ok=True)
+
     path.write_text(
         yaml.safe_dump(
-            manifest,
+            make_yaml_safe(manifest),
             sort_keys=True,
             allow_unicode=False,
             default_flow_style=False,
         ),
         encoding='utf-8',
     )
+
     return path

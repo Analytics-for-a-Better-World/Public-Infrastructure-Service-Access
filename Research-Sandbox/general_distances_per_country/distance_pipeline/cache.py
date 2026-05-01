@@ -179,31 +179,42 @@ class CacheManager:
     def roads_path(self) -> Path:
         return self.cache_dir / f'{self.pbf_stem}_roads.pkl'
 
+    def facilities_path(
+        self,
+        amenity_values: list[str] | None = None,
+    ) -> Path:
+        amenity_part = _amenity_part(amenity_values)
+        return self.cache_dir / f'{self.pbf_stem}_facilities_{amenity_part}.pkl'
+
     def health_facilities_path(
         self,
         amenity_values: list[str] | None = None,
-        include_healthcare_tag: bool = True,
+        include_healthcare_tag: bool | None = None,
+    ) -> Path:
+        return self.facilities_path(
+            amenity_values=amenity_values,
+        )
+
+    def facility_points_path(
+        self,
+        amenity_values: list[str] | None = None,
     ) -> Path:
         amenity_part = _amenity_part(amenity_values)
-        healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
         return (
             self.cache_dir
-            / f'{self.pbf_stem}_health_facilities_{healthcare_part}_{amenity_part}.pkl'
+            / (
+                f'{self.pbf_stem}_facility_points_{amenity_part}_'
+                f'epsg_{self.cfg.PROJECTED_EPSG}.pkl'
+            )
         )
 
     def health_facilities_points_path(
         self,
         amenity_values: list[str] | None = None,
-        include_healthcare_tag: bool = True,
+        include_healthcare_tag: bool | None = None,
     ) -> Path:
-        amenity_part = _amenity_part(amenity_values)
-        healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
-        return (
-            self.cache_dir
-            / (
-                f'{self.pbf_stem}_health_facilities_points_{healthcare_part}_{amenity_part}_'
-                f'epsg_{self.cfg.PROJECTED_EPSG}.pkl'
-            )
+        return self.facility_points_path(
+            amenity_values=amenity_values,
         )
 
     def population_points_path(
@@ -258,28 +269,39 @@ class CacheManager:
             )
         )
 
-    def hospitals_snapped_path(self, distance_col: str) -> Path:
-        return self.hospitals_snapped_path_for(
+    def sources_snapped_path(self, distance_col: str) -> Path:
+        return self.sources_snapped_path_for(
             distance_col=distance_col,
             amenity_values=None,
-            include_healthcare_tag=True,
         )
+
+    def sources_snapped_path_for(
+        self,
+        distance_col: str,
+        amenity_values: list[str] | None,
+    ) -> Path:
+        amenity_part = _amenity_part(amenity_values)
+        return (
+            self.cache_dir
+            / (
+                f'{self.pbf_stem}_sources_snapped_'
+                f'{amenity_part}_'
+                f'{distance_col}_epsg_{self.cfg.PROJECTED_EPSG}.pkl'
+            )
+        )
+
+    def hospitals_snapped_path(self, distance_col: str) -> Path:
+        return self.sources_snapped_path(distance_col=distance_col)
 
     def hospitals_snapped_path_for(
         self,
         distance_col: str,
         amenity_values: list[str] | None,
-        include_healthcare_tag: bool,
+        include_healthcare_tag: bool | None = None,
     ) -> Path:
-        amenity_part = _amenity_part(amenity_values)
-        healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
-        return (
-            self.cache_dir
-            / (
-                f'{self.pbf_stem}_hospitals_snapped_'
-                f'{healthcare_part}_{amenity_part}_'
-                f'{distance_col}_epsg_{self.cfg.PROJECTED_EPSG}.pkl'
-            )
+        return self.sources_snapped_path_for(
+            distance_col=distance_col,
+            amenity_values=amenity_values,
         )
 
     def distance_matrix_path(
@@ -295,7 +317,6 @@ class CacheManager:
             max_points=None,
             aggregate_factor=None,
             amenity_values=None,
-            include_healthcare_tag=True,
             candidate_grid_spacing_m=None,
             candidate_max_snap_dist_m=None,
             has_candidates=False,
@@ -310,10 +331,10 @@ class CacheManager:
         max_points: int | None = None,
         aggregate_factor: int | None = None,
         amenity_values: list[str] | None = None,
-        include_healthcare_tag: bool = True,
         candidate_grid_spacing_m: float | None = None,
         candidate_max_snap_dist_m: float | None = None,
         has_candidates: bool = False,
+        include_healthcare_tag: bool | None = None,
     ) -> Path:
         max_total_dist_str = _none_or_number(max_total_dist, 'm')
         population_part = (
@@ -323,7 +344,6 @@ class CacheManager:
             f'max_{_none_or_int(max_points)}'
         )
         amenity_part = _amenity_part(amenity_values)
-        healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
         candidate_part = (
             'candidates_'
             f'spacing_{_none_or_number(candidate_grid_spacing_m, "m")}_'
@@ -338,7 +358,7 @@ class CacheManager:
                 f'threshold_{distance_threshold_largest:g}km_'
                 f'max_total_{max_total_dist_str}_'
                 f'{population_part}_'
-                f'{healthcare_part}_{amenity_part}_'
+                f'{amenity_part}_'
                 f'{candidate_part}.pkl'
             )
         )

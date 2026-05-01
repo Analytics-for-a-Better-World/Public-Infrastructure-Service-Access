@@ -23,7 +23,7 @@ class CountryConfig:
     worldpop_adjustment: str | None = 'UNadj'
     worldpop_filename: str | None = None
     pbf_filename: str | None = None
-    plot_title_suffix: str = 'roads, population, and health facilities'
+    plot_title_suffix: str = 'roads, population, and service facilities'
     boundary_source: str = 'natural_earth'
     candidate_grid_spacing_m: float | None = None
     candidate_exclude_water: bool = True
@@ -114,7 +114,7 @@ DEFAULTS: dict[str, ConfigValue] = {
     'worldpop_adjustment': 'UNadj',
     'worldpop_filename': None,
     'pbf_filename': None,
-    'plot_title_suffix': 'roads, population, and health facilities',
+    'plot_title_suffix': 'roads, population, and service facilities',
     'boundary_source': 'natural_earth',
     'candidate_grid_spacing_m': None,
     'candidate_exclude_water': True,

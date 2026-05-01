@@ -97,13 +97,11 @@ def build_output_run_tag(
     settings: PipelineSettings,
     aggregate_factor: int | None,
     amenity_values: list[str] | None,
-    include_healthcare_tag: bool,
     candidate_grid_spacing_m: float | None,
     candidate_max_snap_dist_m: float | None,
     has_candidates: bool,
 ) -> str:
     """Build a filename-safe tag describing the pipeline output settings."""
-    healthcare_part = 'with_healthcare' if include_healthcare_tag else 'amenity_only'
     candidate_part = (
         f"candidates_spacing_{format_output_value(candidate_grid_spacing_m)}_"
         f"maxsnap_{format_output_value(candidate_max_snap_dist_m)}"
@@ -117,7 +115,6 @@ def build_output_run_tag(
         f"max_{format_output_value(settings.max_points)}_"
         f"agg_{format_output_value(aggregate_factor)}_"
         f"maxdist_{format_output_value(settings.max_total_dist)}_"
-        f"{healthcare_part}_"
         f"amenity_{format_amenity_suffix(amenity_values)}_"
         f"{candidate_part}"
     )
@@ -125,21 +122,21 @@ def build_output_run_tag(
 
 
 def build_map_facilities(
-    health_centers: pd.DataFrame,
+    facilities: pd.DataFrame,
     candidate_sites: pd.DataFrame | None,
 ) -> gpd.GeoDataFrame:
     """Build a facilities layer for plotting existing amenities and candidates."""
-    if 'geometry' not in health_centers.columns:
-        raise ValueError('health_centers must contain a geometry column')
+    if 'geometry' not in facilities.columns:
+        raise ValueError('facilities must contain a geometry column')
 
     existing = gpd.GeoDataFrame(
-        health_centers.copy(),
+        facilities.copy(),
         geometry='geometry',
-        crs=getattr(health_centers, 'crs', None),
+        crs=getattr(facilities, 'crs', None),
     )
 
     if existing.crs is None:
-        raise ValueError('health_centers has no CRS')
+        raise ValueError('facilities has no CRS')
 
     existing = ensure_xy_columns(existing)
     existing['source_type'] = 'existing'

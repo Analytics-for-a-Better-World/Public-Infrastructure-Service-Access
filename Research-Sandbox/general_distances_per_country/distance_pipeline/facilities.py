@@ -9,40 +9,40 @@ import numpy as np
 from pyrosm import OSM
 
 
-def load_health_facilities(
+DEFAULT_AMENITY_VALUES: list[str] = [
+    'hospital',
+    'clinic',
+    'doctors',
+    'dentist',
+    'pharmacy',
+    'health_post',
+    'nursing_home',
+    'social_facility',
+]
+
+
+def load_facilities(
     pbf_path: str,
     amenity_values: list[str] | None = None,
-    include_healthcare_tag: bool = True,
     verbose: bool = True,
 ) -> gpd.GeoDataFrame:
-    '''Extract health related facilities from OSM.'''
+    '''Extract facilities from OSM using amenity values.'''
 
     t0 = pc()
 
     if amenity_values is None:
-        amenity_values = [
-            'hospital',
-            'clinic',
-            'doctors',
-            'dentist',
-            'pharmacy',
-            'health_post',
-            'nursing_home',
-            'social_facility',
-        ]
+        amenity_values = DEFAULT_AMENITY_VALUES
 
     osm = OSM(str(pbf_path))
 
     custom_filter: dict[str, list[str] | bool] = {
         'amenity': amenity_values,
     }
-    if include_healthcare_tag:
-        custom_filter['healthcare'] = True
 
     gdf = osm.get_pois(custom_filter=custom_filter)
 
     if gdf is None or len(gdf) == 0:
-        raise ValueError('No health related OSM POIs found')
+        raise ValueError('No matching OSM POIs found')
 
     gdf = gdf.copy()
 
@@ -65,8 +65,22 @@ def load_health_facilities(
 
     if verbose:
         print(
-            f'Loaded health facilities in {pc() - t0:.2f} seconds, '
+            f'Loaded facilities in {pc() - t0:.2f} seconds, '
             f'{len(gdf):,} features'
         )
 
     return gdf
+
+
+def load_health_facilities(
+    pbf_path: str,
+    amenity_values: list[str] | None = None,
+    include_healthcare_tag: bool = True,
+    verbose: bool = True,
+) -> gpd.GeoDataFrame:
+    '''Backward-compatible alias for the generic facility loader.'''
+    return load_facilities(
+        pbf_path=pbf_path,
+        amenity_values=amenity_values,
+        verbose=verbose,
+    )

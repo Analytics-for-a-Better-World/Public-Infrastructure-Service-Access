@@ -10,7 +10,7 @@ from distance_pipeline.cache import CacheManager
 from distance_pipeline.candidate_builder import build_candidate_sites
 from distance_pipeline.config_loader import load_cfg
 from distance_pipeline.distance_matrix import compute_distances
-from distance_pipeline.facilities import load_health_facilities
+from distance_pipeline.facilities import load_facilities
 from distance_pipeline.io import download_file
 from distance_pipeline.manifest import build_run_manifest, write_run_manifest
 from distance_pipeline.network import build_pandana_network, load_osm_network
@@ -209,18 +209,11 @@ def build_parser() -> argparse.ArgumentParser:
         help='Optional maximum node snapping distance for candidate facilities, in meters.',
     )
 
-    # NEW facility controls
     parser.add_argument(
         '--amenity',
         nargs='+',
         default=None,
         help='Filter facilities by amenity values, for example hospital clinic.',
-    )
-
-    parser.add_argument(
-        '--no-healthcare-tag',
-        action='store_true',
-        help='Disable use of healthcare=* tag when extracting facilities.',
     )
 
     parser.add_argument(
@@ -293,7 +286,6 @@ def main(
     no_aggregate: bool,
     build_map: bool,
     amenity_values: list[str] | None,
-    include_healthcare_tag: bool,
 ) -> None:
     '''Run the pipeline for a given country.'''
     t_total = pc()
@@ -315,7 +307,6 @@ def main(
         logging.info(f'Running pipeline for {cfg.COUNTRY_NAME}')
         logging.info(f'Aggregate factor: {agg}')
         logging.info(f'Amenity filter: {amenity_values}')
-        logging.info(f'Include healthcare tag: {include_healthcare_tag}')
 
     cfg.BASE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -351,22 +342,19 @@ def main(
 
     # -------- facilities (RESTORED + EXTENDED) --------
     facilities = cache.run(
-        cache_path=cache.health_facilities_path(
+        cache_path=cache.facilities_path(
             amenity_values=amenity_values,
-            include_healthcare_tag=include_healthcare_tag,
         ),
-        builder=lambda: load_health_facilities(
+        builder=lambda: load_facilities(
             cfg.PBF_PATH,
             amenity_values=amenity_values,
-            include_healthcare_tag=include_healthcare_tag,
             verbose=settings.verbose,
         ),
     )
 
     facilities = cache.run(
-        cache_path=cache.health_facilities_points_path(
+        cache_path=cache.facility_points_path(
             amenity_values=amenity_values,
-            include_healthcare_tag=include_healthcare_tag,
         ),
         builder=lambda: to_point_geometries(
             facilities,
@@ -428,10 +416,9 @@ def main(
     population = ensure_id_index_matches(population)
 
     existing_sources = cache.run(
-        cache_path=cache.hospitals_snapped_path_for(
+        cache_path=cache.sources_snapped_path_for(
             distance_col='dist_snap_source',
             amenity_values=amenity_values,
-            include_healthcare_tag=include_healthcare_tag,
         ),
         builder=lambda: snap_points_to_nodes(
             facilities,
@@ -462,7 +449,6 @@ def main(
             max_points=settings.max_points,
             aggregate_factor=agg,
             amenity_values=amenity_values,
-            include_healthcare_tag=include_healthcare_tag,
             candidate_grid_spacing_m=candidate_grid_spacing_m,
             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
             has_candidates=candidate_sites_snapped is not None,
@@ -485,7 +471,6 @@ def main(
         settings=settings,
         aggregate_factor=agg,
         amenity_values=amenity_values,
-        include_healthcare_tag=include_healthcare_tag,
         candidate_grid_spacing_m=candidate_grid_spacing_m,
         candidate_max_snap_dist_m=candidate_max_snap_dist_m,
         has_candidates=candidate_sites_snapped is not None,
@@ -505,7 +490,6 @@ def main(
             settings=settings,
             aggregate_factor=agg,
             amenity_values=amenity_values,
-            include_healthcare_tag=include_healthcare_tag,
             candidate_grid_spacing_m=candidate_grid_spacing_m,
             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
             has_candidates=candidate_sites_snapped is not None,
@@ -548,5 +532,4 @@ if __name__ == '__main__':
         args.no_aggregate,
         args.build_map,
         args.amenity,
-        not args.no_healthcare_tag,
     )

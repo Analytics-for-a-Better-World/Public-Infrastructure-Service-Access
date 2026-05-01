@@ -1,6 +1,6 @@
 # Distance Pipeline
 
-Build population-to-facility distance tables for a country using WorldPop population rasters, OpenStreetMap road networks, existing health facilities, and optional grid-based candidate facility sites.
+Build population-to-facility distance tables for a country using WorldPop population rasters, OpenStreetMap road networks, existing facilities, and optional grid-based candidate facility sites.
 
 The code is organized as a reusable pipeline plus a notebook walkthrough. Expensive stages are cached so repeated runs can reuse downloaded files, parsed networks, population points, snapped locations, and distance matrices.
 
@@ -14,7 +14,7 @@ The pipeline performs these steps:
 2. Download or reuse the country OSM PBF and WorldPop raster.
 3. Build a driving road network from OSM.
 4. Convert WorldPop raster cells into population target points.
-5. Extract existing health-related facilities from OSM.
+5. Extract existing default facilities from OSM.
 6. Generate optional regular-grid candidate facility sites from the country boundary.
 7. Optionally remove candidate sites on water and filter candidates too far from the road network.
 8. Optionally build a context map.
@@ -41,6 +41,7 @@ python run_pipeline.py timor_leste
 python run_pipeline.py tls --population-threshold 1 --sample-fraction 1
 python run_pipeline.py prt --sample-fraction 0.1 --save-map
 python run_pipeline.py vnm --aggregate-factor 10 --amenity hospital clinic
+python run_pipeline.py timor_leste --amenity school
 ```
 
 The notebook `testdrive_general_country.ipynb` mirrors the same pipeline stages with inspectable intermediate objects. Both the CLI and notebook write parquet outputs using the same run-tag helper.
@@ -121,12 +122,7 @@ Resolution order:
 ```bash
 --amenity hospital clinic doctors
 ```
-Restrict OSM facility extraction to specific `amenity=*` values. If omitted, the pipeline uses the default health-related amenity list from `load_health_facilities()`.
-
-```bash
---no-healthcare-tag
-```
-Disable the broad `healthcare=*` OSM tag filter and use only the selected/default amenity values.
+Restrict OSM facility extraction to specific `amenity=*` values. If omitted, the pipeline uses the default amenity list from `load_facilities()`. The current defaults are health-oriented, but the loader itself is service-agnostic.
 
 ## Candidate Generation
 
@@ -237,7 +233,6 @@ Cache keys include the runtime inputs that affect each stage:
 - maximum population points
 - aggregation factor
 - facility amenity filters
-- healthcare-tag mode
 - candidate grid spacing
 - candidate snap-distance filter
 - candidate presence
@@ -251,7 +246,7 @@ Use `--force-recompute` when you want to rebuild even if a matching cache exists
 
 # Data Model
 
-Targets are population points. Sources are existing health facilities plus optional candidate facility sites.
+Targets are population points. Sources are existing facilities plus optional candidate facility sites.
 
 Important assumptions:
 

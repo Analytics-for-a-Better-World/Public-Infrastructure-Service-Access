@@ -11,7 +11,7 @@ CFG = build_config(
         'distance_threshold_km': 100.0,
         'geofabrik_region': 'asia',
         'worldpop_filename': 'vnm_ppp_2020.tif',
-        'plot_title_suffix': 'roads by class, population points, and health facilities',
+        'plot_title_suffix': 'roads by class, population points, and service facilities',
         'candidate_grid_spacing_m': 10000.0,
         'candidate_max_snap_dist_m': 5000.0,
         'candidate_exclude_water': False,

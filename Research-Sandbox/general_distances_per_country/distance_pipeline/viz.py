@@ -174,8 +174,12 @@ def _log_step(message: str, *, start_time: float | None = None) -> None:
 def plot_context_map(
     roads: gpd.GeoDataFrame,
     population_points: gpd.GeoDataFrame,
-    health_centers: gpd.GeoDataFrame,
-    title: str,
+    facilities: gpd.GeoDataFrame,
+    title: str | None = None,
+    legend_loc: str = 'lower left',
+    legend_bbox_to_anchor: tuple[float, float] | None = None,
+    legend_title: str | None = 'Layers',
+    show_legend: bool = True,
     road_colors: dict[str, str] | None = None,
     road_widths: dict[str, float] | None = None,
     road_order: list[str] | None = None,
@@ -184,7 +188,7 @@ def plot_context_map(
     basemap_alpha: float = 0.28,
     population_max_marker_size: float = 7.0,
     population_alpha: float = 0.035,
-    health_marker_size: float = 24.0,
+    facility_marker_size: float = 24.0,
     candidate_marker_size: float | None = None,
     output_path: Path | None = None,
     dpi: int = 300,
@@ -197,6 +201,21 @@ def plot_context_map(
     The road network is emphasized using a strong white casing and thicker colored
     overlays. Population points are intentionally subdued so they do not overpower
     the transport structure.
+
+    Parameters
+    ----------
+    title
+        Optional map title. If None or empty, no title is shown.
+    legend_loc
+        Matplotlib legend location, for example 'lower left', 'upper right',
+        'center left', or 'best'.
+    legend_bbox_to_anchor
+        Optional anchor for precise legend placement, for example (1.02, 0.5)
+        with legend_loc='center left' to place the legend outside the plot.
+    legend_title
+        Optional legend title. Use None for no legend title.
+    show_legend
+        Whether to show the legend.
     '''
     t0 = pc()
 
@@ -204,7 +223,7 @@ def plot_context_map(
         print('Starting context map plotting')
         print(f'Road rows: {len(roads):,}')
         print(f'Population point rows: {len(population_points):,}')
-        print(f'Health center rows: {len(health_centers):,}')
+        print(f'Facility rows: {len(facilities):,}')
         print(f'Output path: {output_path}')
         print(f'DPI: {dpi}')
         print(f'Show figure: {show}')
@@ -218,13 +237,13 @@ def plot_context_map(
         raise ValueError('roads has no CRS')
     if population_points.crs is None:
         raise ValueError('population_points has no CRS')
-    if health_centers.crs is None:
-        raise ValueError('health_centers has no CRS')
+    if facilities.crs is None:
+        raise ValueError('facilities has no CRS')
 
     if verbose:
         print(f'Roads CRS: {roads.crs}')
         print(f'Population CRS: {population_points.crs}')
-        print(f'Health centers CRS: {health_centers.crs}')
+        print(f'Facilities CRS: {facilities.crs}')
         print(f'Total population represented: {population_points["population"].sum():,.0f}')
 
     if road_colors is None:
@@ -294,28 +313,28 @@ def plot_context_map(
     if verbose:
         _log_step('Projected population points', start_time=t_project_pop)
 
-    t_project_health = pc()
-    health_3857 = health_centers.to_crs(epsg=3857)
+    t_project_facilities = pc()
+    facilities_3857 = facilities.to_crs(epsg=3857)
     if verbose:
-        _log_step('Projected health centers', start_time=t_project_health)
+        _log_step('Projected facilities', start_time=t_project_facilities)
         _log_step('Projection completed', start_time=t_project)
 
         describe_extent(roads, label='Roads')
         describe_extent(population_points, label='Population points')
-        describe_extent(health_centers, label='Health centers')
+        describe_extent(facilities, label='Facilities')
 
     if candidate_marker_size is None:
-        candidate_marker_size = health_marker_size * 0.80
+        candidate_marker_size = facility_marker_size * 0.80
 
-    if 'source_type' in health_3857.columns:
-        existing = health_3857.loc[health_3857['source_type'] != 'candidate']
-        candidates = health_3857.loc[health_3857['source_type'] == 'candidate']
+    if 'source_type' in facilities_3857.columns:
+        existing = facilities_3857.loc[facilities_3857['source_type'] != 'candidate']
+        candidates = facilities_3857.loc[facilities_3857['source_type'] == 'candidate']
     else:
-        existing = health_3857
-        candidates = health_3857.iloc[0:0].copy()
+        existing = facilities_3857
+        candidates = facilities_3857.iloc[0:0].copy()
 
     if verbose:
-        print(f'Existing health facilities: {len(existing):,}')
+        print(f'Existing facilities: {len(existing):,}')
         print(f'Candidate sites: {len(candidates):,}')
 
     t_figure = pc()
@@ -391,14 +410,14 @@ def plot_context_map(
     if verbose:
         _log_step('Population plotting completed', start_time=t_population)
 
-    t_health = pc()
+    t_facilities = pc()
     if verbose:
-        print('Plotting health facilities and candidate sites')
+        print('Plotting facilities and candidate sites')
 
     if not existing.empty:
         existing.plot(
             ax=ax,
-            markersize=health_marker_size,
+            markersize=facility_marker_size,
             marker='^',
             alpha=0.95,
             color='magenta',
@@ -418,7 +437,7 @@ def plot_context_map(
         )
 
     if verbose:
-        _log_step('Health and candidate plotting completed', start_time=t_health)
+        _log_step('Facility and candidate plotting completed', start_time=t_facilities)
 
     if verbose:
         print(f'Axis extent before basemap: xlim={ax.get_xlim()}, ylim={ax.get_ylim()}')
@@ -481,8 +500,8 @@ def plot_context_map(
     )
 
     if (
-        'source_type' in health_centers.columns
-        and (health_centers['source_type'] == 'candidate').any()
+        'source_type' in facilities.columns
+        and (facilities['source_type'] == 'candidate').any()
     ):
         legend_handles.extend(
             [
@@ -518,18 +537,24 @@ def plot_context_map(
                 markerfacecolor='magenta',
                 markersize=8,
                 linestyle='None',
-                label='Health facilities',
+                label='Facilities',
             )
         )
 
-    ax.legend(
-        handles=legend_handles,
-        title='Layers',
-        loc='lower left',
-        frameon=True,
-        facecolor='white',
-        framealpha=0.95,
-    )
+    if show_legend:
+        legend_kwargs = {
+            'handles': legend_handles,
+            'title': legend_title,
+            'loc': legend_loc,
+            'frameon': True,
+            'facecolor': 'white',
+            'framealpha': 0.95,
+        }
+
+        if legend_bbox_to_anchor is not None:
+            legend_kwargs['bbox_to_anchor'] = legend_bbox_to_anchor
+
+        ax.legend(**legend_kwargs)
 
     if verbose:
         _log_step('Legend built', start_time=t_legend)
