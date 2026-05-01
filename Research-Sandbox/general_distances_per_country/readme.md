@@ -270,11 +270,7 @@ For reproducible runs, add a `requirements.txt`, `pyproject.toml`, or environmen
 
 # License
 
-```text
-   .-.
-  (MIT)
-   '-'
-```
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
 
 This project is documented as MIT licensed. The MIT license is a permissive license: you may use, copy, modify, merge, publish, distribute, sublicense, and sell copies of the software, provided the copyright notice and license text are included with substantial portions of the software.
 
