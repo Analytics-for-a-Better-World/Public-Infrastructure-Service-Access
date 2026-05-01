@@ -3,8 +3,6 @@ from __future__ import annotations
 import importlib
 from pathlib import Path
 
-from distance_pipeline.use_openai import generate_country_config_module
-
 
 _ALIAS_MAP: dict[str, str] = {
     'netherlands': 'netherlands',
@@ -48,6 +46,8 @@ def load_cfg(country_code: str) -> object:
         module = importlib.import_module(f'countries.{module_name}')
         return module.CFG
     except ModuleNotFoundError:
+        from distance_pipeline.use_openai import generate_country_config_module
+
         try:
             generated_path = generate_country_config_module(
                 country_code=country_code,
