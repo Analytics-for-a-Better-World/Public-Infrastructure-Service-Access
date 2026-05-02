@@ -9,7 +9,7 @@ from countries.base import CountryConfig
 from distance_pipeline.cache import CacheManager
 from distance_pipeline.candidate_builder import build_candidate_sites
 from distance_pipeline.config_loader import load_cfg
-from distance_pipeline.distance_matrix import compute_distances
+from distance_pipeline.distance_matrix import compute_distances_polars
 from distance_pipeline.facilities import load_facilities
 from distance_pipeline.io import download_file
 from distance_pipeline.manifest import build_run_manifest, write_run_manifest
@@ -31,6 +31,11 @@ from distance_pipeline.source_tables import (
     set_known_categories,
 )
 from distance_pipeline.viz import classify_roads, plot_context_map, to_point_geometries
+
+try:
+    import polars as pl
+except ImportError:  # pragma: no cover - polars is a required runtime dependency
+    pl = None
 
 
 # ------------------------
@@ -453,7 +458,7 @@ def main(
             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
             has_candidates=candidate_sites_snapped is not None,
         ),
-        builder=lambda: compute_distances(
+        builder=lambda: compute_distances_polars(
             targets=population,
             sources=sources,
             distance_threshold_largest=cfg.DISTANCE_THRESHOLD_KM,
@@ -463,7 +468,8 @@ def main(
         ),
     )
 
-    matrix_df = set_known_categories(matrix_df)
+    if pl is None or not isinstance(matrix_df, pl.DataFrame):
+        matrix_df = set_known_categories(matrix_df)
 
     output_dir = cfg.BASE_DIR / 'outputs'
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -485,7 +491,10 @@ def main(
     population.to_parquet(population_path, index=False)
     existing_sources.to_parquet(existing_sources_path, index=False)
     sources.to_parquet(sources_path, index=False)
-    matrix_df.to_parquet(matrix_path, index=False)
+    if pl is not None and isinstance(matrix_df, pl.DataFrame):
+        matrix_df.write_parquet(matrix_path)
+    else:
+        matrix_df.to_parquet(matrix_path, index=False)
     write_run_manifest(
         build_run_manifest(
             cfg=cfg,
@@ -506,7 +515,10 @@ def main(
         manifest_path,
     )
 
-    print(matrix_df.head())
+    if pl is not None and isinstance(matrix_df, pl.DataFrame):
+        print(matrix_df.head().to_pandas().to_string(index=False))
+    else:
+        print(matrix_df.head())
 
     if settings.verbose:
         logging.info(f'Wrote population output: {population_path}')

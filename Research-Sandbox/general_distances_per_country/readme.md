@@ -192,6 +192,8 @@ Output files:
 
 `existing_sources_<run_tag>.parquet` contains only the OSM amenities selected by the amenity filter. `sources_<run_tag>.parquet` contains the full source layer used by the matrix, including existing amenities and generated candidate sites when candidates are enabled. Use `sources_<run_tag>.parquet` for optimization plots or any model whose selected source IDs may include candidates.
 
+Large distance matrices are built with Polars in the CLI and written directly to parquet. This avoids converting very large matrices to pandas before writing, which can require several additional gigabytes of memory.
+
 The run tag records the population settings, aggregation factor, facility filters, candidate settings, and distance filter so different runs do not overwrite each other.
 
 The run manifest is the reproducibility record for a run. It stores:
@@ -280,6 +282,18 @@ There is currently no pinned environment file in this folder. The main libraries
 - `contextily`
 
 For reproducible runs, add a `requirements.txt`, `pyproject.toml`, or environment file before using this pipeline on a fresh machine.
+
+---
+
+# Optimization Example
+
+Vietnam health-service candidate additions can be solved from a completed pipeline run with:
+
+```bash
+python solve_vietnam_health_max_cover.py
+```
+
+The script reads the Vietnam `population_*`, `sources_*`, and `distance_matrix_*` parquet outputs, filters the matrix to the 1 km coverage threshold lazily, fixes existing health amenities open, and uses `Research-Sandbox/approximated_tradeoff/src/mc_solvers.py` to choose 100 additional candidate sites with Gurobi.
 
 ---
 
