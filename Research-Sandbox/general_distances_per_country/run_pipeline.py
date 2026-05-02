@@ -385,14 +385,14 @@ def main(
             resolve_candidate_grid_spacing(cfg, settings),
         )
         plot_context_map(
-            roads,
-            population_points,
-            map_facilities,
-            cfg.PLOT_TITLE,
-            context_map_path if settings.save_context_map else None,
-            settings.context_map_dpi,
-            settings.show_context_map,
-            settings.verbose,
+            roads=roads,
+            population_points=population_points,
+            facilities=map_facilities,
+            title=cfg.PLOT_TITLE,
+            output_path=context_map_path if settings.save_context_map else None,
+            dpi=settings.context_map_dpi,
+            show=settings.show_context_map,
+            verbose=settings.verbose,
         )
 
     population = cache.run(
@@ -478,11 +478,13 @@ def main(
 
     population_path = output_dir / f'population_{run_tag}.parquet'
     existing_sources_path = output_dir / f'existing_sources_{run_tag}.parquet'
+    sources_path = output_dir / f'sources_{run_tag}.parquet'
     matrix_path = output_dir / f'distance_matrix_{run_tag}.parquet'
     manifest_path = output_dir / f'run_manifest_{run_tag}.yaml'
 
     population.to_parquet(population_path, index=False)
     existing_sources.to_parquet(existing_sources_path, index=False)
+    sources.to_parquet(sources_path, index=False)
     matrix_df.to_parquet(matrix_path, index=False)
     write_run_manifest(
         build_run_manifest(
@@ -496,6 +498,7 @@ def main(
             output_paths={
                 'population': population_path,
                 'existing_sources': existing_sources_path,
+                'sources': sources_path,
                 'distance_matrix': matrix_path,
             },
             repo_dir=Path(__file__).resolve().parent,
@@ -508,6 +511,7 @@ def main(
     if settings.verbose:
         logging.info(f'Wrote population output: {population_path}')
         logging.info(f'Wrote existing sources output: {existing_sources_path}')
+        logging.info(f'Wrote sources output: {sources_path}')
         logging.info(f'Wrote distance matrix output: {matrix_path}')
         logging.info(f'Wrote run manifest: {manifest_path}')
         logging.info(f'Distance matrix size: {len(matrix_df):,}')

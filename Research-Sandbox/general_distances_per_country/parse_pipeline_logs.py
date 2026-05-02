@@ -12,6 +12,18 @@ PATTERNS = {
     'aggregate_factor': re.compile(r'Aggregate factor: (?P<value>.+)$'),
     'amenity_filter': re.compile(r'Amenity filter: (?P<value>.+)$'),
     'include_healthcare_tag': re.compile(r'Include healthcare tag: (?P<value>.+)$'),
+    'population_before_aggregation': re.compile(
+        r'Total population before aggregation: (?P<value>[\d,]+)'
+    ),
+    'population_after_aggregation': re.compile(
+        r'Total population after aggregation: (?P<value>[\d,]+)'
+    ),
+    'population_aggregation_difference': re.compile(
+        r'Difference \(after - before\): (?P<value>-?[\d,.]+)'
+    ),
+    'population_retained': re.compile(
+        r'Total population retained: (?P<value>[\d,]+)'
+    ),
     'population_points': re.compile(r'Population points: (?P<value>[\d,]+)'),
     'facilities': re.compile(r'Facilities: (?P<value>[\d,]+)'),
     'sources_total': re.compile(r'Sources total: (?P<value>[\d,]+)'),
@@ -84,6 +96,16 @@ def parse_log(path: Path) -> dict[str, object]:
                 metrics['include_healthcare_tag'] = groups['value']
 
             elif key in {
+                'population_before_aggregation',
+                'population_after_aggregation',
+                'population_retained',
+            }:
+                metrics[key] = parse_int(groups['value'])
+
+            elif key == 'population_aggregation_difference':
+                metrics[key] = float(groups['value'].replace(',', ''))
+
+            elif key in {
                 'population_points',
                 'facilities',
                 'sources_total',
@@ -144,6 +166,19 @@ def parse_logs(log_dir: Path) -> pd.DataFrame:
     if {'valid_shortest_paths', 'shortest_paths'}.issubset(df.columns):
         df['valid_path_share'] = df['valid_shortest_paths'] / df['shortest_paths']
 
+    if {'shortest_paths', 'shortest_paths_time_s'}.issubset(df.columns):
+        df['pandana_paths_per_second'] = (
+            df['shortest_paths'] / df['shortest_paths_time_s']
+        )
+        df['pandana_ms_per_path'] = (
+            1000 * df['shortest_paths_time_s'] / df['shortest_paths']
+        )
+
+    if {'population_retained', 'population_before_aggregation'}.issubset(df.columns):
+        df['population_retained_share'] = (
+            df['population_retained'] / df['population_before_aggregation']
+        )
+
     return df
 
 
@@ -166,10 +201,12 @@ def write_performance_table(df: pd.DataFrame, output_path: Path) -> None:
     table = pd.DataFrame({
         'Run': df['run'],
         'Population': df.get('targets', df.get('population_points')).map(format_int),
+        'Retained headcount': df.get('population_retained').map(format_int),
         'Sources': df.get('sources', df.get('sources_total')).map(format_int),
         'Spatial pairs': df.get('spatial_pairs').map(format_int),
         'Unique node pairs': df.get('unique_node_pairs').map(format_int),
         'Valid paths': df.get('valid_shortest_paths').map(format_int),
+        'Pandana ms/path': df.get('pandana_ms_per_path').map(lambda value: format_float(value, 4)),
         'Distances': df.get('distance_matrix_size').map(format_int),
         'Runtime (s)': df.get('total_runtime_s').map(format_float),
     })
@@ -177,7 +214,7 @@ def write_performance_table(df: pd.DataFrame, output_path: Path) -> None:
     latex = table.to_latex(
         index=False,
         escape=False,
-        column_format='lrrrrrrr',
+        column_format='lrrrrrrrrr',
         caption='Performance summary for pipeline runs.',
         label='tab:performance_summary',
     )
@@ -191,6 +228,7 @@ def write_runtime_breakdown_table(df: pd.DataFrame, output_path: Path) -> None:
         'Spatial query (s)': df.get('spatial_pairs_time_s').map(format_float),
         'Node pair reduction (s)': df.get('unique_node_pairs_time_s').map(format_float),
         'Shortest paths (s)': df.get('shortest_paths_time_s').map(format_float),
+        'Pandana M paths/s': df.get('pandana_paths_per_second').map(lambda value: format_float(float(value) / 1_000_000, 2)),
         'Assembly (s)': df.get('assembly_time_s').map(format_float),
         'Distance stage (s)': df.get('distance_computation_time_s').map(format_float),
         'Total (s)': df.get('total_runtime_s').map(format_float),
@@ -199,7 +237,7 @@ def write_runtime_breakdown_table(df: pd.DataFrame, output_path: Path) -> None:
     latex = table.to_latex(
         index=False,
         escape=False,
-        column_format='lrrrrrr',
+        column_format='lrrrrrrr',
         caption='Runtime breakdown for distance matrix construction.',
         label='tab:runtime_breakdown',
     )

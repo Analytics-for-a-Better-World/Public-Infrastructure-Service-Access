@@ -649,6 +649,7 @@ def build_solution_layers(
     population_path: str | Path,
     sources_path: str | Path,
     max_cover_dist_m: float,
+    matrix: pd.DataFrame | None = None,
     target_col: str = 'target_id',
     source_col: str = 'source_id',
     distance_col: str = 'total_dist',
@@ -658,7 +659,11 @@ def build_solution_layers(
     '''Build GeoDataFrame layers for plotting a maximum-covering solution.'''
     selected_sources = selected_sources_from_model(model)
 
-    matrix = pd.read_parquet(matrix_path)
+    if matrix is None:
+        matrix = pd.read_parquet(
+            matrix_path,
+            columns=[target_col, source_col, distance_col],
+        )
     population = read_point_layer(population_path)
     sources = read_point_layer(sources_path)
 

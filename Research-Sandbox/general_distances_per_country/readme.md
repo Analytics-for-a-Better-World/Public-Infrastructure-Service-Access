@@ -186,8 +186,11 @@ Output files:
 
 - `population_<run_tag>.parquet`
 - `existing_sources_<run_tag>.parquet`
+- `sources_<run_tag>.parquet`
 - `distance_matrix_<run_tag>.parquet`
 - `run_manifest_<run_tag>.yaml`
+
+`existing_sources_<run_tag>.parquet` contains only the OSM amenities selected by the amenity filter. `sources_<run_tag>.parquet` contains the full source layer used by the matrix, including existing amenities and generated candidate sites when candidates are enabled. Use `sources_<run_tag>.parquet` for optimization plots or any model whose selected source IDs may include candidates.
 
 The run tag records the population settings, aggregation factor, facility filters, candidate settings, and distance filter so different runs do not overwrite each other.
 
