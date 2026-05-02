@@ -198,13 +198,15 @@ class CacheManager:
     def facility_points_path(
         self,
         amenity_values: list[str] | None = None,
+        deduplicate_amenities: bool = True,
     ) -> Path:
         amenity_part = _amenity_part(amenity_values)
+        dedup_part = 'dedup_v1' if deduplicate_amenities else 'raw'
         return (
             self.cache_dir
             / (
                 f'{self.pbf_stem}_facility_points_{amenity_part}_'
-                f'epsg_{self.cfg.PROJECTED_EPSG}.pkl'
+                f'epsg_{self.cfg.PROJECTED_EPSG}_{dedup_part}.pkl'
             )
         )
 
@@ -215,6 +217,7 @@ class CacheManager:
     ) -> Path:
         return self.facility_points_path(
             amenity_values=amenity_values,
+            deduplicate_amenities=True,
         )
 
     def population_points_path(

@@ -124,6 +124,11 @@ Resolution order:
 ```
 Restrict OSM facility extraction to specific `amenity=*` values. If omitted, the pipeline uses the default amenity list from `load_facilities()`. The current defaults are health-oriented, but the loader itself is service-agnostic.
 
+```bash
+--deduplicate-amenities true
+```
+OSM amenities are deduplicated by default after non-point geometries are converted to representative points. Set `--deduplicate-amenities false` to keep the raw OSM amenity features for auditing or sensitivity analysis. When a nearby point/node and polygon/centroid have the same normalized name and amenity, the point/node feature is kept because it is usually the more intentional routing location. Unnamed amenities are deduplicated more conservatively by amenity and a small projected spatial cell.
+
 
 ## Custom source and destination tables
 

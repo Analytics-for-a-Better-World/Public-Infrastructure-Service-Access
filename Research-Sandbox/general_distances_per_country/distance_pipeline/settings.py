@@ -12,6 +12,7 @@ class PipelineSettings:
     max_total_dist: float | None = None
     candidate_grid_spacing_m: float | None = None
     candidate_max_snap_dist_m: float | None = None
+    deduplicate_amenities: bool = True
     force_recompute: bool = False
     verbose: bool = True
     save_context_map: bool = False

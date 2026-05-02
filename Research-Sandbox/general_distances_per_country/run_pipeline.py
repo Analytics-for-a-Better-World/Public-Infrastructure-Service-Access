@@ -10,7 +10,7 @@ from distance_pipeline.cache import CacheManager
 from distance_pipeline.candidate_builder import build_candidate_sites
 from distance_pipeline.config_loader import load_cfg
 from distance_pipeline.distance_matrix import compute_distances_polars
-from distance_pipeline.facilities import load_facilities
+from distance_pipeline.facilities import deduplicate_osm_amenities, load_facilities
 from distance_pipeline.io import download_file
 from distance_pipeline.manifest import build_run_manifest, write_run_manifest
 from distance_pipeline.network import build_pandana_network, load_osm_network
@@ -222,6 +222,16 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--deduplicate-amenities',
+        choices=('true', 'false'),
+        default='true',
+        help=(
+            'Whether to deduplicate nearby OSM amenity point/polygon duplicates. '
+            'Defaults to true.'
+        ),
+    )
+
+    parser.add_argument(
         '--quiet',
         action='store_true',
         help='Reduce console output.',
@@ -258,6 +268,7 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         max_total_dist=args.max_total_dist,
         candidate_grid_spacing_m=args.candidate_grid_spacing_m,
         candidate_max_snap_dist_m=args.candidate_max_snap_dist_m,
+        deduplicate_amenities=args.deduplicate_amenities == 'true',
         force_recompute=args.force_recompute,
         verbose=not args.quiet,
         save_context_map=args.save_map,
@@ -360,11 +371,24 @@ def main(
     facilities = cache.run(
         cache_path=cache.facility_points_path(
             amenity_values=amenity_values,
+            deduplicate_amenities=settings.deduplicate_amenities,
         ),
-        builder=lambda: to_point_geometries(
-            facilities,
-            projected_epsg=cfg.PROJECTED_EPSG,
-            verbose=settings.verbose,
+        builder=lambda: (
+            deduplicate_osm_amenities(
+                to_point_geometries(
+                    facilities,
+                    projected_epsg=cfg.PROJECTED_EPSG,
+                    verbose=settings.verbose,
+                ),
+                projected_epsg=cfg.PROJECTED_EPSG,
+                verbose=settings.verbose,
+            )
+            if settings.deduplicate_amenities
+            else to_point_geometries(
+                facilities,
+                projected_epsg=cfg.PROJECTED_EPSG,
+                verbose=settings.verbose,
+            )
         ),
     )
 
