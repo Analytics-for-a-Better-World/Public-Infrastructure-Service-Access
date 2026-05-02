@@ -79,7 +79,7 @@ def build_solver_inputs(
     coverage = (
         pl.scan_parquet(matrix_path)
         .filter(pl.col('total_dist') <= threshold_m)
-        .select(['target_id', 'source_id'])
+        .select(['target_id', 'source_id', 'total_dist'])
         .unique()
         .collect()
         .to_pandas()
@@ -92,12 +92,17 @@ def build_solver_inputs(
     ].copy()
     coverage['i'] = coverage['target_id'].map(target_pos).astype(np.int64)
     coverage['j'] = coverage['source_id'].map(source_pos).astype(np.int64)
-
-    all_facs = {
-        int(j): group['i'].to_numpy(dtype=np.int64)
-        for j, group in coverage.groupby('j', sort=False)
-    }
     existing_j = [source_pos[source_id] for source_id in existing_source_ids]
+
+    add_mc_solver_path()
+    from data_utilities import build_mapping
+
+    all_facs = build_mapping(
+        coverage,
+        threshold=threshold_m,
+        key_col='j',
+        value_col='i',
+    )
 
     covered_existing: set[int] = set()
     for j in existing_j:
@@ -108,7 +113,6 @@ def build_solver_inputs(
         float(weights[list(covered_existing)].sum()) if covered_existing else 0.0
     )
 
-    add_mc_solver_path()
     from mc_solvers import CreateIndexMapping
 
     mapping = CreateIndexMapping(all_facs, target_ids)
