@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pandas as pd
 
 from distance_pipeline.pipeline_support import ensure_xy_columns
@@ -149,3 +151,126 @@ def combine_existing_and_candidate_sources(
     combined = ensure_id_index_matches(combined)
     combined = set_known_categories(combined)
     return combined
+
+
+
+def load_custom_points_table(path: str | Path) -> pd.DataFrame:
+    """Load a user-provided point table from CSV, Excel, parquet, or GeoJSON."""
+    path = Path(path)
+    suffix = path.suffix.lower()
+
+    if suffix in {'.xlsx', '.xls'}:
+        result = pd.read_excel(path)
+    elif suffix == '.parquet':
+        result = pd.read_parquet(path)
+    elif suffix in {'.geojson', '.gpkg', '.shp'}:
+        import geopandas as gpd
+
+        result = gpd.read_file(path)
+    else:
+        result = pd.read_csv(path)
+
+    return normalize_custom_points(result, prefix=path.stem)
+
+
+
+def normalize_custom_points(df: pd.DataFrame, prefix: str = 'custom') -> pd.DataFrame:
+    """Normalize a user-provided point table to the pipeline point schema.
+
+    Accepted coordinate column names are ``Longitude``/``Latitude``, ``lon``/``lat``,
+    ``lng``/``lat``, or ``x``/``y``. If a geometry column with point geometries is
+    present, coordinates are derived from geometry. Missing weights are filled with 1.
+    """
+    result = df.copy()
+
+    rename_pairs = [
+        ('longitude', 'Longitude'),
+        ('lon', 'Longitude'),
+        ('lng', 'Longitude'),
+        ('x', 'Longitude'),
+        ('latitude', 'Latitude'),
+        ('lat', 'Latitude'),
+        ('y', 'Latitude'),
+    ]
+    lower_to_actual = {str(col).lower(): col for col in result.columns}
+    for lower, target in rename_pairs:
+        actual = lower_to_actual.get(lower)
+        if actual is not None and target not in result.columns:
+            result = result.rename(columns={actual: target})
+
+    result = ensure_xy_columns(result)
+    result = ensure_id_column(result, prefix=prefix)
+
+    if 'population' not in result.columns:
+        for candidate in ('demand', 'weight', 'headcount'):
+            if candidate in result.columns:
+                result['population'] = result[candidate]
+                break
+    if 'population' not in result.columns:
+        result['population'] = 1.0
+
+    return result
+
+
+
+def prepare_points_as_sources(
+    points: pd.DataFrame,
+    *,
+    source_type: str,
+    id_prefix: str,
+) -> pd.DataFrame:
+    """Normalize any snapped point table to the source schema."""
+    result = ensure_xy_columns(points).copy()
+    result = ensure_id_column(result, prefix=id_prefix)
+
+    if 'nearest_node' not in result.columns:
+        raise KeyError("source points must contain 'nearest_node'")
+    if 'dist_snap_source' not in result.columns:
+        if 'dist_snap_target' in result.columns:
+            result['dist_snap_source'] = result['dist_snap_target']
+        else:
+            raise KeyError("source points must contain 'dist_snap_source'")
+
+    result['source_type'] = source_type
+    keep_cols = [
+        'ID',
+        'Longitude',
+        'Latitude',
+        'nearest_node',
+        'dist_snap_source',
+        'source_type',
+    ]
+    if 'geometry' in result.columns:
+        keep_cols.append('geometry')
+    for optional in ('name', 'amenity', 'address', 'population'):
+        if optional in result.columns and optional not in keep_cols:
+            keep_cols.append(optional)
+
+    result = result[keep_cols].copy()
+    result = ensure_id_index_matches(result)
+    return set_known_categories(result)
+
+
+
+def prepare_points_as_targets(
+    points: pd.DataFrame,
+    *,
+    id_prefix: str,
+) -> pd.DataFrame:
+    """Normalize any snapped point table to the target schema."""
+    result = ensure_xy_columns(points).copy()
+    result = ensure_id_column(result, prefix=id_prefix)
+
+    if 'nearest_node' not in result.columns:
+        raise KeyError("target points must contain 'nearest_node'")
+    if 'dist_snap_target' not in result.columns:
+        if 'dist_snap_source' in result.columns:
+            result['dist_snap_target'] = result['dist_snap_source']
+        else:
+            raise KeyError("target points must contain 'dist_snap_target'")
+
+    if 'population' not in result.columns:
+        result['population'] = 1.0
+
+    result = ensure_id_index_matches(result)
+    return result

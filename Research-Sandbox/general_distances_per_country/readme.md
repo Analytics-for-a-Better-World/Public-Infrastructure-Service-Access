@@ -124,6 +124,18 @@ Resolution order:
 ```
 Restrict OSM facility extraction to specific `amenity=*` values. If omitted, the pipeline uses the default amenity list from `load_facilities()`. The current defaults are health-oriented, but the loader itself is service-agnostic.
 
+
+## Custom source and destination tables
+
+The pipeline is being generalized so matrix sources and destinations can come from more than the default population-to-facility setup. The intended layer vocabulary is:
+
+- `population`: gridded WorldPop-derived points, normally used as demand targets
+- `amenities`: OSM features selected by `--amenity`
+- `candidates`: generated regular-grid candidate sites
+- `custom`: a user-provided table with coordinates
+
+Custom point tables may be CSV, Excel, parquet, or GeoJSON. They should contain an `ID` column when stable identifiers matter and either `Longitude`/`Latitude`, `lon`/`lat`, `lng`/`lat`, `x`/`y`, or point geometry. Optional `population`, `demand`, `weight`, or `headcount` columns are used as demand weights; otherwise a unit weight is assumed. This supports use cases such as routing between two amenity sets, a supplied spreadsheet of facilities, or a matrix where the same supplied points are both sources and destinations.
+
 ## Candidate Generation
 
 ```bash
@@ -265,7 +277,9 @@ Important assumptions:
 
 # Dependencies
 
-There is currently no pinned environment file in this folder. The main libraries used by the pipeline include:
+There is currently no pinned environment file in this folder. Use a NumPy 1.x environment for now: Pandana ships compiled extension modules that were built against the NumPy 1.x C API, and importing those wheels under NumPy 2 can fail with binary-compatibility errors. In practice, install `numpy<2` before installing Pandana unless you are using a Pandana build that explicitly supports NumPy 2.
+
+The main libraries used by the pipeline include:
 
 - `geopandas`
 - `matplotlib`
