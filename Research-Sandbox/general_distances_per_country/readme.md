@@ -141,6 +141,22 @@ The pipeline is being generalized so matrix sources and destinations can come fr
 
 Custom point tables may be CSV, Excel, parquet, or GeoJSON. They should contain an `ID` column when stable identifiers matter and either `Longitude`/`Latitude`, `lon`/`lat`, `lng`/`lat`, `x`/`y`, or point geometry. Optional `population`, `demand`, `weight`, or `headcount` columns are used as demand weights; otherwise a unit weight is assumed. This supports use cases such as routing between two amenity sets, a supplied spreadsheet of facilities, or a matrix where the same supplied points are both sources and destinations.
 
+## Routing utilities
+
+`distance_pipeline.routing` contains the first reusable routing helpers for experiments beyond coverage matrices:
+
+- `add_edge_speeds()` annotates pyrosm OSM road edges with speed and travel-time columns, using parseable `maxspeed` tags when available and highway-class defaults otherwise.
+- `build_networkx_graph()` builds a directed NetworkX graph from the loaded OSM nodes and edges, for route reconstruction and plotting.
+- `route_between_nodes()` reconstructs a shortest route between two snapped network nodes under a selected edge weight such as `length` or `travel_time_s`.
+- `symmetric_tsp_via_gurobi_sparse()` adapts the MO-book lazy-subtour Gurobi TSP formulation to sparse edge-cost dictionaries, so capped distance matrices do not need to be expanded to dense all-pairs arrays.
+- `directed_tsp_via_gurobi_sparse()` solves the corresponding directed sparse TSP on ordered arcs from the matrix, with one incoming and one outgoing arc per stop and lazy directed subtour cuts.
+
+The initial Netherlands routing driver builds an institution-to-institution matrix for OSM `amenity=university` and `amenity=college`, capped at 100 km, solves both sparse undirected and directed TSP variants with Gurobi when the retained graph supports a tour, and writes the stops, matrix, tours, summary, and route geometries. The undirected TSP uses symmetric road distances. The directed TSP uses ordered road-distance arcs and exports both directed shortest-distance and directed fastest-route geometries, where fastest routes use speed estimates derived from OSM `maxspeed` tags or highway-class defaults.
+
+```bash
+python routing_experiments.py netherlands --max-total-dist 100000
+```
+
 ## Candidate Generation
 
 ```bash
@@ -288,6 +304,7 @@ The main libraries used by the pipeline include:
 
 - `geopandas`
 - `matplotlib`
+- `networkx`
 - `numpy`
 - `pandas`
 - `pandana`
@@ -299,6 +316,8 @@ The main libraries used by the pipeline include:
 - `scipy`
 - `shapely`
 - `contextily`
+
+Routing experiments additionally use `networkx` for route reconstruction and `gurobipy` for the sparse TSP models.
 
 For reproducible runs, add a `requirements.txt`, `pyproject.toml`, or environment file before using this pipeline on a fresh machine.
 
