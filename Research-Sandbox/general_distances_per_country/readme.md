@@ -42,6 +42,7 @@ python run_pipeline.py tls --population-threshold 1 --sample-fraction 1
 python run_pipeline.py prt --sample-fraction 0.1 --save-map
 python run_pipeline.py vnm --aggregate-factor 10 --amenity hospital clinic
 python run_pipeline.py timor_leste --amenity school
+py run_pipeline.py vietnam --source-layer table --source-table "C:\Users\joaqu\OneDrive - UvA\Bureaublad\stroke-facs-100-en.xlsx" --source-lon-column Longitude --source-lat-column Latitude --source-id-column ID --max-total-dist 150000 --aggregate-factor 10 --save-map
 ```
 
 The notebook `testdrive_general_country.ipynb` mirrors the same pipeline stages with inspectable intermediate objects. Both the CLI and notebook write parquet outputs using the same run-tag helper.
@@ -139,7 +140,7 @@ The pipeline is being generalized so matrix sources and destinations can come fr
 - `candidates`: generated regular-grid candidate sites
 - `custom`: a user-provided table with coordinates
 
-Custom point tables may be CSV, Excel, parquet, or GeoJSON. They should contain an `ID` column when stable identifiers matter and either `Longitude`/`Latitude`, `lon`/`lat`, `lng`/`lat`, `x`/`y`, or point geometry. Optional `population`, `demand`, `weight`, or `headcount` columns are used as demand weights; otherwise a unit weight is assumed. This supports use cases such as routing between two amenity sets, a supplied spreadsheet of facilities, or a matrix where the same supplied points are both sources and destinations.
+Custom point tables may be CSV, Excel, parquet, or GeoJSON. They should contain an `ID` column when stable identifiers matter and either `Longitude`/`Latitude`, `lon`/`lat`, `lng`/`lat`, `x`/`y`, or point geometry. Explicit coordinate columns can be supplied with `--source-lon-column`, `--source-lat-column`, and `--source-id-column`. Optional `population`, `demand`, `weight`, or `headcount` columns are used as demand weights; otherwise a unit weight is assumed. At the CLI, `--source-layer table --source-table <path>` uses the supplied table as the source layer and WorldPop-derived population points as destinations. Candidate-grid sources are disabled for table-source runs so the matrix reflects the provided sources only. This supports use cases such as a supplied spreadsheet of facilities or a later matrix where supplied points and amenity sets are mixed.
 
 ## Routing utilities
 

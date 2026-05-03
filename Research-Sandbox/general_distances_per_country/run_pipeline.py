@@ -28,6 +28,8 @@ from distance_pipeline.source_tables import (
     combine_existing_and_candidate_sources,
     ensure_id_column,
     ensure_id_index_matches,
+    load_custom_points_table,
+    prepare_points_as_sources,
     set_known_categories,
 )
 from distance_pipeline.viz import classify_roads, plot_context_map, to_point_geometries
@@ -222,6 +224,44 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--source-layer',
+        choices=('amenity', 'table'),
+        default='amenity',
+        help=(
+            'Layer used as matrix sources. Use amenity for OSM amenities '
+            'or table for a user-provided point table.'
+        ),
+    )
+
+    parser.add_argument(
+        '--source-table',
+        type=str,
+        default=None,
+        help='CSV, Excel, parquet, or GIS point table used when --source-layer table.',
+    )
+
+    parser.add_argument(
+        '--source-lon-column',
+        type=str,
+        default=None,
+        help='Longitude column in --source-table. Auto-detected when omitted.',
+    )
+
+    parser.add_argument(
+        '--source-lat-column',
+        type=str,
+        default=None,
+        help='Latitude column in --source-table. Auto-detected when omitted.',
+    )
+
+    parser.add_argument(
+        '--source-id-column',
+        type=str,
+        default=None,
+        help='Optional stable ID column in --source-table.',
+    )
+
+    parser.add_argument(
         '--deduplicate-amenities',
         choices=('true', 'false'),
         default='true',
@@ -260,6 +300,8 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         raise ValueError('--candidate-max-snap-dist-m must be positive.')
     if args.map_dpi <= 0:
         raise ValueError('--map-dpi must be positive.')
+    if args.source_layer == 'table' and args.source_table is None:
+        raise ValueError('--source-table is required when --source-layer table.')
 
     return PipelineSettings(
         population_threshold=args.population_threshold,
@@ -302,6 +344,11 @@ def main(
     no_aggregate: bool,
     build_map: bool,
     amenity_values: list[str] | None,
+    source_layer: str,
+    source_table: str | None,
+    source_lon_column: str | None,
+    source_lat_column: str | None,
+    source_id_column: str | None,
 ) -> None:
     '''Run the pipeline for a given country.'''
     t_total = pc()
@@ -319,9 +366,21 @@ def main(
         verbose=settings.verbose,
     )
 
+    if source_layer == 'table':
+        source_table_path = Path(source_table)
+        source_descriptor = ''.join(
+            char.lower() if char.isalnum() else '_'
+            for char in source_table_path.stem
+        ).strip('_')
+        source_cache_values = [f'table_{source_descriptor or "custom"}']
+    else:
+        source_table_path = None
+        source_cache_values = amenity_values
+
     if settings.verbose:
         logging.info(f'Running pipeline for {cfg.COUNTRY_NAME}')
         logging.info(f'Aggregate factor: {agg}')
+        logging.info(f'Source layer: {source_layer}')
         logging.info(f'Amenity filter: {amenity_values}')
 
     cfg.BASE_DIR.mkdir(parents=True, exist_ok=True)
@@ -356,54 +415,73 @@ def main(
         ),
     )
 
-    # -------- facilities (RESTORED + EXTENDED) --------
-    facilities = cache.run(
-        cache_path=cache.facilities_path(
-            amenity_values=amenity_values,
-        ),
-        builder=lambda: load_facilities(
-            cfg.PBF_PATH,
-            amenity_values=amenity_values,
+    # -------- sources --------
+    if source_layer == 'table':
+        facilities = load_custom_points_table(
+            source_table_path,
+            lon_column=source_lon_column,
+            lat_column=source_lat_column,
+            id_column=source_id_column,
+        )
+        facilities = to_point_geometries(
+            facilities,
+            projected_epsg=cfg.PROJECTED_EPSG,
             verbose=settings.verbose,
-        ),
-    )
+        )
+    else:
+        facilities = cache.run(
+            cache_path=cache.facilities_path(
+                amenity_values=amenity_values,
+            ),
+            builder=lambda: load_facilities(
+                cfg.PBF_PATH,
+                amenity_values=amenity_values,
+                verbose=settings.verbose,
+            ),
+        )
 
-    facilities = cache.run(
-        cache_path=cache.facility_points_path(
-            amenity_values=amenity_values,
-            deduplicate_amenities=settings.deduplicate_amenities,
-        ),
-        builder=lambda: (
-            deduplicate_osm_amenities(
-                to_point_geometries(
+        facilities = cache.run(
+            cache_path=cache.facility_points_path(
+                amenity_values=amenity_values,
+                deduplicate_amenities=settings.deduplicate_amenities,
+            ),
+            builder=lambda: (
+                deduplicate_osm_amenities(
+                    to_point_geometries(
+                        facilities,
+                        projected_epsg=cfg.PROJECTED_EPSG,
+                        verbose=settings.verbose,
+                    ),
+                    projected_epsg=cfg.PROJECTED_EPSG,
+                    verbose=settings.verbose,
+                )
+                if settings.deduplicate_amenities
+                else to_point_geometries(
                     facilities,
                     projected_epsg=cfg.PROJECTED_EPSG,
                     verbose=settings.verbose,
-                ),
-                projected_epsg=cfg.PROJECTED_EPSG,
-                verbose=settings.verbose,
-            )
-            if settings.deduplicate_amenities
-            else to_point_geometries(
-                facilities,
-                projected_epsg=cfg.PROJECTED_EPSG,
-                verbose=settings.verbose,
-            )
-        ),
-    )
+                )
+            ),
+        )
 
     if settings.verbose:
         logging.info(f'Population points: {len(population_points):,}')
         logging.info(f'Facilities: {len(facilities):,}')
 
-    candidate_sites, candidate_sites_snapped = build_candidate_sites(
-        cfg=cfg,
-        settings=settings,
-        cache=cache,
-        nodes=nodes,
-    )
-    candidate_grid_spacing_m = resolve_candidate_grid_spacing(cfg, settings)
-    candidate_max_snap_dist_m = resolve_candidate_max_snap_dist(cfg, settings)
+    if source_layer == 'table':
+        candidate_sites = None
+        candidate_sites_snapped = None
+        candidate_grid_spacing_m = None
+        candidate_max_snap_dist_m = None
+    else:
+        candidate_sites, candidate_sites_snapped = build_candidate_sites(
+            cfg=cfg,
+            settings=settings,
+            cache=cache,
+            nodes=nodes,
+        )
+        candidate_grid_spacing_m = resolve_candidate_grid_spacing(cfg, settings)
+        candidate_max_snap_dist_m = resolve_candidate_max_snap_dist(cfg, settings)
 
     # -------- MAP (optional) --------
     if build_map or settings.save_context_map or settings.show_context_map:
@@ -447,7 +525,7 @@ def main(
     existing_sources = cache.run(
         cache_path=cache.sources_snapped_path_for(
             distance_col='dist_snap_source',
-            amenity_values=amenity_values,
+            amenity_values=source_cache_values,
         ),
         builder=lambda: snap_points_to_nodes(
             facilities,
@@ -458,10 +536,17 @@ def main(
         ),
     )
 
-    existing_sources = existing_sources.copy()
-    existing_sources['source_type'] = 'existing'
-    existing_sources = ensure_id_column(existing_sources, prefix='existing')
-    existing_sources = ensure_id_index_matches(existing_sources)
+    if source_layer == 'table':
+        existing_sources = prepare_points_as_sources(
+            existing_sources,
+            source_type='existing',
+            id_prefix='source',
+        )
+    else:
+        existing_sources = existing_sources.copy()
+        existing_sources['source_type'] = 'existing'
+        existing_sources = ensure_id_column(existing_sources, prefix='existing')
+        existing_sources = ensure_id_index_matches(existing_sources)
 
     sources = combine_existing_and_candidate_sources(
         existing_sources,
@@ -477,7 +562,7 @@ def main(
             sample_fraction=settings.sample_fraction,
             max_points=settings.max_points,
             aggregate_factor=agg,
-            amenity_values=amenity_values,
+            amenity_values=source_cache_values,
             candidate_grid_spacing_m=candidate_grid_spacing_m,
             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
             has_candidates=candidate_sites_snapped is not None,
@@ -500,7 +585,7 @@ def main(
     run_tag = build_output_run_tag(
         settings=settings,
         aggregate_factor=agg,
-        amenity_values=amenity_values,
+        amenity_values=source_cache_values,
         candidate_grid_spacing_m=candidate_grid_spacing_m,
         candidate_max_snap_dist_m=candidate_max_snap_dist_m,
         has_candidates=candidate_sites_snapped is not None,
@@ -524,7 +609,7 @@ def main(
             cfg=cfg,
             settings=settings,
             aggregate_factor=agg,
-            amenity_values=amenity_values,
+            amenity_values=source_cache_values,
             candidate_grid_spacing_m=candidate_grid_spacing_m,
             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
             has_candidates=candidate_sites_snapped is not None,
@@ -572,4 +657,9 @@ if __name__ == '__main__':
         args.no_aggregate,
         args.build_map,
         args.amenity,
+        args.source_layer,
+        args.source_table,
+        args.source_lon_column,
+        args.source_lat_column,
+        args.source_id_column,
     )

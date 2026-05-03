@@ -154,7 +154,13 @@ def combine_existing_and_candidate_sources(
 
 
 
-def load_custom_points_table(path: str | Path) -> pd.DataFrame:
+def load_custom_points_table(
+    path: str | Path,
+    *,
+    lon_column: str | None = None,
+    lat_column: str | None = None,
+    id_column: str | None = None,
+) -> pd.DataFrame:
     """Load a user-provided point table from CSV, Excel, parquet, or GeoJSON."""
     path = Path(path)
     suffix = path.suffix.lower()
@@ -170,11 +176,24 @@ def load_custom_points_table(path: str | Path) -> pd.DataFrame:
     else:
         result = pd.read_csv(path)
 
-    return normalize_custom_points(result, prefix=path.stem)
+    return normalize_custom_points(
+        result,
+        prefix=path.stem,
+        lon_column=lon_column,
+        lat_column=lat_column,
+        id_column=id_column,
+    )
 
 
 
-def normalize_custom_points(df: pd.DataFrame, prefix: str = 'custom') -> pd.DataFrame:
+def normalize_custom_points(
+    df: pd.DataFrame,
+    prefix: str = 'custom',
+    *,
+    lon_column: str | None = None,
+    lat_column: str | None = None,
+    id_column: str | None = None,
+) -> pd.DataFrame:
     """Normalize a user-provided point table to the pipeline point schema.
 
     Accepted coordinate column names are ``Longitude``/``Latitude``, ``lon``/``lat``,
@@ -182,6 +201,19 @@ def normalize_custom_points(df: pd.DataFrame, prefix: str = 'custom') -> pd.Data
     present, coordinates are derived from geometry. Missing weights are filled with 1.
     """
     result = df.copy()
+
+    explicit_columns = {
+        lon_column: 'Longitude',
+        lat_column: 'Latitude',
+        id_column: 'ID',
+    }
+    for source, target in explicit_columns.items():
+        if source is None:
+            continue
+        if source not in result.columns:
+            raise KeyError(f"Column '{source}' was requested but is not present.")
+        if source != target:
+            result = result.rename(columns={source: target})
 
     rename_pairs = [
         ('longitude', 'Longitude'),
