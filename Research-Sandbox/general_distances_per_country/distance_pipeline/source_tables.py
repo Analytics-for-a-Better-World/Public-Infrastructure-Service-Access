@@ -241,7 +241,23 @@ def normalize_custom_points(
     if 'population' not in result.columns:
         result['population'] = 1.0
 
-    return result
+    import geopandas as gpd
+
+    if 'geometry' in result.columns:
+        gdf = gpd.GeoDataFrame(
+            result,
+            geometry='geometry',
+            crs=getattr(df, 'crs', None),
+        )
+        if gdf.crs is None:
+            gdf = gdf.set_crs(epsg=4326)
+        return gdf
+
+    return gpd.GeoDataFrame(
+        result,
+        geometry=gpd.points_from_xy(result['Longitude'], result['Latitude']),
+        crs='EPSG:4326',
+    )
 
 
 
