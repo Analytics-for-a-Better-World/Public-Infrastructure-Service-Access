@@ -93,6 +93,150 @@ def to_point_geometries(
     return result
 
 
+def plot_tsp_routes(
+    routes: gpd.GeoDataFrame | dict[str, gpd.GeoDataFrame],
+    stops: gpd.GeoDataFrame,
+    *,
+    title: str | None = None,
+    output_path: Path | None = None,
+    route_colors: dict[str, str] | None = None,
+    route_widths: dict[str, float] | None = None,
+    stop_marker_size: float = 26.0,
+    stop_color: str = '#111827',
+    stop_edge_color: str = 'white',
+    basemap_provider: object | None = None,
+    basemap_zoom: int | str = 'auto',
+    basemap_alpha: float = 0.72,
+    legend_loc: str = 'center left',
+    legend_bbox_to_anchor: tuple[float, float] | None = (1.02, 0.5),
+    dpi: int = 300,
+    show: bool = True,
+    verbose: bool = True,
+) -> None:
+    """Plot one or more TSP route layers over a contextily basemap."""
+    t0 = pc()
+
+    if isinstance(routes, gpd.GeoDataFrame):
+        route_layers = {'TSP route': routes}
+    else:
+        route_layers = dict(routes)
+
+    if not route_layers:
+        raise ValueError('At least one route layer is required')
+    if stops.empty:
+        raise ValueError('stops is empty')
+    if stops.crs is None:
+        raise ValueError('stops has no CRS')
+
+    for label, layer in route_layers.items():
+        if layer.empty:
+            raise ValueError(f'Route layer {label!r} is empty')
+        if layer.crs is None:
+            raise ValueError(f'Route layer {label!r} has no CRS')
+
+    if route_colors is None:
+        route_colors = {
+            'Undirected shortest': '#2563eb',
+            'Directed shortest': '#dc2626',
+            'Directed fastest': '#16a34a',
+            'Conservative fastest': '#f97316',
+            'TSP route': '#2563eb',
+        }
+    if route_widths is None:
+        route_widths = {
+            'Undirected shortest': 2.0,
+            'Directed shortest': 2.0,
+            'Directed fastest': 1.8,
+            'Conservative fastest': 1.8,
+            'TSP route': 2.0,
+        }
+    if basemap_provider is None:
+        basemap_provider = cx.providers.CartoDB.Positron
+
+    route_3857 = {
+        label: layer.to_crs(epsg=3857)
+        for label, layer in route_layers.items()
+    }
+    stops_3857 = stops.to_crs(epsg=3857)
+
+    combined = pd.concat(
+        [layer.geometry.to_frame(name='geometry') for layer in route_3857.values()]
+        + [stops_3857.geometry.to_frame(name='geometry')],
+        ignore_index=True,
+    )
+    extent = gpd.GeoDataFrame(combined, geometry='geometry', crs='EPSG:3857')
+    minx, miny, maxx, maxy = extent.total_bounds
+    padx = max((maxx - minx) * 0.08, 1000.0)
+    pady = max((maxy - miny) * 0.08, 1000.0)
+
+    fig, ax = plt.subplots(figsize=(11.5, 7.0))
+    ax.set_xlim(minx - padx, maxx + padx)
+    ax.set_ylim(miny - pady, maxy + pady)
+
+    cx.add_basemap(
+        ax,
+        source=basemap_provider,
+        zoom=basemap_zoom,
+        alpha=basemap_alpha,
+        crs='EPSG:3857',
+    )
+
+    handles: list[Line2D] = []
+    for label, layer in route_3857.items():
+        color = route_colors.get(label, '#2563eb')
+        width = route_widths.get(label, 2.0)
+        layer.plot(ax=ax, color='white', linewidth=width + 2.2, alpha=0.85, zorder=3)
+        layer.plot(ax=ax, color=color, linewidth=width, alpha=0.92, zorder=4)
+        handles.append(Line2D([0], [0], color=color, lw=width + 0.8, label=label))
+
+    stops_3857.plot(
+        ax=ax,
+        color=stop_color,
+        edgecolor=stop_edge_color,
+        linewidth=0.6,
+        markersize=stop_marker_size,
+        zorder=5,
+        label='Stops',
+    )
+    handles.append(
+        Line2D(
+            [0],
+            [0],
+            marker='o',
+            color='none',
+            markerfacecolor=stop_color,
+            markeredgecolor=stop_edge_color,
+            markersize=7,
+            label='Stops',
+        )
+    )
+
+    if title:
+        ax.set_title(title, fontsize=15, pad=10)
+    ax.set_axis_off()
+    ax.legend(
+        handles=handles,
+        loc=legend_loc,
+        bbox_to_anchor=legend_bbox_to_anchor,
+        frameon=True,
+        facecolor='white',
+        edgecolor='#d1d5db',
+    )
+
+    fig.tight_layout()
+    if output_path is not None:
+        output_path = Path(output_path)
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        fig.savefig(output_path, dpi=dpi, bbox_inches='tight')
+    if show:
+        plt.show()
+    else:
+        plt.close(fig)
+
+    if verbose:
+        print(f'Plotted TSP route map in {pc() - t0:.2f} seconds')
+
+
 def classify_roads(
     edges: gpd.GeoDataFrame,
     verbose: bool = True,
