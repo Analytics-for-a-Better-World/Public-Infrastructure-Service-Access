@@ -22,6 +22,22 @@ _ALIAS_MAP: dict[str, str] = {
     'laos': 'laos',
     'lao': 'laos',
     'la': 'laos',
+    'monaco': 'monaco',
+    'mco': 'monaco',
+    'mc': 'monaco',
+    'nauru': 'nauru',
+    'nru': 'nauru',
+    'nr': 'nauru',
+    'tuvalu': 'tuvalu',
+    'tuv': 'tuvalu',
+    'tv': 'tuvalu',
+    'liechtenstein': 'liechtenstein',
+    'lie': 'liechtenstein',
+    'li': 'liechtenstein',
+    'marshall_islands': 'marshall_islands',
+    'marshall': 'marshall_islands',
+    'mhl': 'marshall_islands',
+    'mh': 'marshall_islands',
 }
 
 

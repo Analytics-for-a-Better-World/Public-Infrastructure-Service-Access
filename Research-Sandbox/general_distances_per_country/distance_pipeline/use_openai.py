@@ -19,6 +19,7 @@ VALID_GEOFABRIK_REGIONS: set[str] = {
 
 WORLDPOP_FILENAME_PATTERN = re.compile(r'^[a-z]{3}_ppp_2020\.tif$')
 COUNTRY_SLUG_PATTERN = re.compile(r'^[a-z][a-z0-9_]*$')
+PBF_FILENAME_PATTERN = re.compile(r'^[a-z][a-z0-9-]*-latest\.osm\.pbf$')
 EPSG_PATTERN = re.compile(r'(\d{4,6})')
 
 
@@ -148,6 +149,34 @@ def validate_worldpop_filename(value: object, iso3: str) -> str:
             f'worldpop_filename {filename!r} does not match iso3 {iso3!r}.'
         )
 
+    return filename
+
+
+def validate_pbf_filename(value: object) -> str:
+    '''
+    Validate a Geofabrik PBF filename.
+
+    Parameters
+    ----------
+    value
+        Raw filename value returned by the model.
+
+    Returns
+    -------
+    str
+        Validated Geofabrik PBF filename.
+
+    Raises
+    ------
+    ValueError
+        If the filename does not look like a Geofabrik latest extract.
+    '''
+    filename = str(value).strip().lower()
+    if not PBF_FILENAME_PATTERN.fullmatch(filename):
+        raise ValueError(
+            f'Unexpected pbf_filename {value!r}. '
+            "Expected format like 'timor-leste-latest.osm.pbf'."
+        )
     return filename
 
 
@@ -298,6 +327,7 @@ def validate_payload(payload: dict[str, object]) -> dict[str, object]:
         'projected_epsg',
         'geofabrik_region',
         'worldpop_filename',
+        'pbf_filename',
     }
 
     missing_keys = sorted(required_keys - payload.keys())
@@ -315,6 +345,7 @@ def validate_payload(payload: dict[str, object]) -> dict[str, object]:
     projected_epsg = parse_epsg(payload['projected_epsg'])
     geofabrik_region = parse_geofabrik_region(payload['geofabrik_region'])
     worldpop_filename = validate_worldpop_filename(payload['worldpop_filename'], iso3)
+    pbf_filename = validate_pbf_filename(payload['pbf_filename'])
 
     return {
         'iso3': iso3,
@@ -324,6 +355,7 @@ def validate_payload(payload: dict[str, object]) -> dict[str, object]:
         'projected_epsg': projected_epsg,
         'geofabrik_region': geofabrik_region,
         'worldpop_filename': worldpop_filename,
+        'pbf_filename': pbf_filename,
     }
 
 
@@ -376,6 +408,7 @@ def build_country_config_module_text(
     projected_epsg = int(payload['projected_epsg'])
     geofabrik_region = str(payload['geofabrik_region'])
     worldpop_filename = str(payload['worldpop_filename'])
+    pbf_filename = str(payload['pbf_filename'])
     plot_title_suffix = str(plot_title_suffix).strip()
 
     if not plot_title_suffix:
@@ -393,6 +426,7 @@ def build_country_config_module_text(
         f"        'distance_threshold_km': {distance_threshold_km},\n"
         f"        'geofabrik_region': {geofabrik_region!r},\n"
         f"        'worldpop_filename': {worldpop_filename!r},\n"
+        f"        'pbf_filename': {pbf_filename!r},\n"
         f"        'plot_title_suffix': {plot_title_suffix!r},\n"
         f"        'candidate_grid_spacing_m': {candidate_grid_spacing_m},\n"
         f"        'candidate_max_snap_dist_m': {candidate_max_snap_dist_m},\n"
@@ -461,6 +495,7 @@ Return exactly these keys:
 - projected_epsg
 - geofabrik_region
 - worldpop_filename
+- pbf_filename
 
 Rules:
 - country_slug must be a lowercase python slug with underscores
@@ -468,6 +503,7 @@ Rules:
 - geofabrik_region must be exactly one of:
   africa, asia, australia-oceania, central-america, europe, north-america, south-america
 - worldpop_filename must look like iso3 lowercase plus _ppp_2020.tif
+- pbf_filename must be the exact Geofabrik latest extract filename, for example timor-leste-latest.osm.pbf
 - do not include markdown
 - do not include explanations
 '''
