@@ -103,6 +103,27 @@ py -B run_full_mip_experiment.py `
   --enforce-subject-exam-order --symmetry 2
 ```
 
+Two experimental strengthening mechanisms can also be activated in
+`run_full_mip_experiment.py`. The callback heuristic inspects incumbent
+solutions during the MILP solve, tries deterministic same-day morning/afternoon
+slot swaps, validates each candidate, and injects an improving schedule with
+Gurobi's `cbSetSolution`. Dense-cluster cuts select high-overlap exam clusters,
+solve each cluster as a small sub-MIP, and add a valid lower-bound inequality
+for that cluster's contribution to the full objective.
+
+```powershell
+py -B run_full_mip_experiment.py `
+  --start clean_runs_20260508\full_lns_nb34_guarded_6x120.csv `
+  --output clean_runs_20260508\full_mip_callback_dense_5min_timetable.csv `
+  --progress-output clean_runs_20260508\full_mip_callback_dense_5min_progress.csv `
+  --log-output clean_runs_20260508\full_mip_callback_dense_5min.log `
+  --plot-output clean_runs_20260508\full_mip_callback_dense_5min_bounds.png `
+  --nb-days 34 --time-limit 300 --objective-mode formal `
+  --enforce-subject-exam-order --symmetry 2 --mip-focus 3 --cuts 2 `
+  --callback-slot-swap-heuristic `
+  --dense-cluster-cuts 1 --dense-cluster-size 8 --dense-cluster-time-limit 10
+```
+
 ```powershell
 py -B run_toy_antony_verbatim.py `
   --output clean_runs_20260508\toy_antony_verbatim_mip.csv `
@@ -123,6 +144,9 @@ py -B summarize_clean_runs.py
 - Reusable toy baseline: objective 25,190 proved in 1,245.53 seconds.
 - Best clean full-instance guarded LNS timetable: objective 15,855,200.
 - Best clean full-MILP lower-bound plateau in short proof runs: about 10,740,292.
+- Callback and dense-cluster experiments did not improve the best 5-minute
+  incumbent or final bound, but the dense-cluster cut lifted the raw root
+  relaxation from about 0.94 million to 4.62 million before Gurobi's own cuts.
 
 The toy optimum differs from Antony Furlong's reported thesis value of 25,910.
 With the currently available CSV files and Gurobi 13.0.2, both the verbatim

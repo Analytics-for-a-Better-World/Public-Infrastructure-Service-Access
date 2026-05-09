@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import time
 from pathlib import Path
+from typing import Any
 
 import matplotlib.pyplot as plt
 from matplotlib.ticker import FuncFormatter
@@ -13,6 +14,7 @@ from src.anthony_model import (
     build_anthony_mip_model,
     load_default_data,
     mip_objective_value,
+    placement_from_timetable,
     timetable_from_solution,
 )
 from src.full_heuristic import validate_full_solution
@@ -37,6 +39,13 @@ def main() -> None:
     parser.add_argument("--mip-focus", type=int, default=None)
     parser.add_argument("--cuts", type=int, default=None)
     parser.add_argument("--presolve", type=int, default=None)
+    parser.add_argument("--callback-slot-swap-heuristic", action="store_true")
+    parser.add_argument("--callback-heuristic-min-interval", type=float, default=60.0)
+    parser.add_argument("--callback-heuristic-max-swaps", type=int, default=4)
+    parser.add_argument("--dense-cluster-cuts", type=int, default=0)
+    parser.add_argument("--dense-cluster-size", type=int, default=12)
+    parser.add_argument("--dense-cluster-time-limit", type=float, default=60.0)
+    parser.add_argument("--dense-cluster-summary", type=Path, default=None)
     args = parser.parse_args()
 
     exams, days, pairs = load_default_data(args.data_dir)
@@ -65,6 +74,23 @@ def main() -> None:
         output_flag=1,
         model_name="full_seeded_mip",
     )
+    dense_cut_rows: list[dict[str, Any]] = []
+    if args.dense_cluster_cuts:
+        dense_cut_rows = _add_dense_cluster_cuts(
+            built=built,
+            exams=exams,
+            days=days,
+            pairs=pairs,
+            nb_days=args.nb_days,
+            count=args.dense_cluster_cuts,
+            size=args.dense_cluster_size,
+            subproblem_time_limit=args.dense_cluster_time_limit,
+            objective_mode=args.objective_mode,
+            enforce_subject_exam_order=args.enforce_subject_exam_order,
+        )
+        if args.dense_cluster_summary is not None:
+            pd.DataFrame(dense_cut_rows).to_csv(args.dense_cluster_summary, index=False)
+
     if args.enforce_subject_exam_order:
         start = _repair_subject_exam_order(start, built.data)
 
@@ -92,6 +118,12 @@ def main() -> None:
         built.model.setParam("Presolve", args.presolve)
 
     progress: list[dict[str, float]] = []
+    heuristic_stats = {
+        "attempts": 0,
+        "accepted": 0,
+        "best_injected": float("inf"),
+        "last_time": -float("inf"),
+    }
 
     def callback(model, where):
         import gurobipy as gp
@@ -112,6 +144,31 @@ def main() -> None:
                     "gap": gap,
                 }
             )
+        elif args.callback_slot_swap_heuristic and where == gp.GRB.Callback.MIPSOL:
+            runtime = float(model.cbGet(gp.GRB.Callback.RUNTIME))
+            if runtime - heuristic_stats["last_time"] < args.callback_heuristic_min_interval:
+                return
+            heuristic_stats["last_time"] = runtime
+            heuristic_stats["attempts"] += 1
+            incumbent = _timetable_from_callback_solution(built=built, model=model)
+            if incumbent is None:
+                return
+            try:
+                candidate, candidate_objective, start_objective_cb = _slot_swap_improvement(
+                    incumbent,
+                    built.data,
+                    objective_mode=args.objective_mode,
+                    max_swaps=args.callback_heuristic_max_swaps,
+                )
+            except Exception:
+                return
+            if candidate_objective + 1e-6 >= start_objective_cb:
+                return
+            if candidate_objective + 1e-6 >= heuristic_stats["best_injected"]:
+                return
+            _inject_timetable_solution(built=built, model=model, timetable=candidate)
+            heuristic_stats["best_injected"] = candidate_objective
+            heuristic_stats["accepted"] += 1
 
     t0 = time.perf_counter()
     built.model.optimize(callback)
@@ -133,10 +190,202 @@ def main() -> None:
     print("MILP incumbent:", objective)
     print("MILP best bound:", float(built.model.ObjBound) if built.model.SolCount else None)
     print("MILP gap:", float(built.model.MIPGap) if built.model.SolCount else None)
+    if args.callback_slot_swap_heuristic:
+        print("Callback heuristic attempts:", heuristic_stats["attempts"])
+        print("Callback heuristic accepted:", heuristic_stats["accepted"])
+        print("Callback heuristic best injected:", heuristic_stats["best_injected"])
+    if dense_cut_rows:
+        print("Dense cluster cuts:", len(dense_cut_rows))
+        print(pd.DataFrame(dense_cut_rows).to_string(index=False))
     print(f"Saved timetable to {args.output}")
     print(f"Saved progress to {args.progress_output}")
     print(f"Saved log to {args.log_output}")
     print(f"Saved bound plot to {args.plot_output}")
+
+
+def _add_dense_cluster_cuts(
+    *,
+    built: Any,
+    exams: pd.DataFrame,
+    days: pd.DataFrame,
+    pairs: pd.DataFrame,
+    nb_days: int,
+    count: int,
+    size: int,
+    subproblem_time_limit: float,
+    objective_mode: str,
+    enforce_subject_exam_order: bool,
+) -> list[dict[str, Any]]:
+    import gurobipy as gp
+
+    clusters = _select_dense_clusters(built.data.pairs, count=count, size=size)
+    rows: list[dict[str, Any]] = []
+    for cluster_index, cluster in enumerate(clusters, start=1):
+        sub_exams = exams.copy()
+        if "Full Name" not in sub_exams.columns and "FULL_NAME" in sub_exams.columns:
+            sub_exams = sub_exams.rename(columns={"FULL_NAME": "Full Name"})
+        sub_exams = sub_exams[sub_exams["Full Name"].astype(str).str.strip().isin(cluster)].copy()
+        sub_pairs = pairs.copy()
+        if sub_pairs.columns[0] not in cluster:
+            sub_pairs = sub_pairs.set_index(sub_pairs.columns[0])
+        sub_pairs.index = sub_pairs.index.astype(str).str.strip()
+        sub_pairs.columns = sub_pairs.columns.astype(str).str.strip()
+        sub_pairs = sub_pairs.loc[cluster, cluster].reset_index()
+
+        sub_built = build_anthony_mip_model(
+            exams=sub_exams,
+            days=days,
+            pairs=sub_pairs,
+            nb_days=nb_days,
+            max_clashes=None,
+            max_afternoon_minutes=180,
+            max_daily_minutes=385,
+            forbid_weekends=True,
+            forbid_may_first=True,
+            forbid_language_fridays=True,
+            force_sbs_start=False,
+            consecutive_subject_exams=True,
+            consecutive_usable_subject_exams=False,
+            first_half_subjects={"BUSINESS MANAGEMENT", "HISTORY", "ENGLISH A LAL"},
+            recode_math_paper_three=True,
+            enforce_subject_exam_order=enforce_subject_exam_order,
+            objective_mode=objective_mode,
+            output_flag=0,
+            model_name=f"dense_cluster_lb_{cluster_index}",
+        )
+        sub_built.model.setParam("TimeLimit", subproblem_time_limit)
+        sub_built.model.optimize()
+        lower_bound = max(0.0, float(sub_built.model.ObjBound))
+        lhs = gp.LinExpr()
+        model_order = {exam: idx for idx, exam in enumerate(built.data.exam_names)}
+        ordered_cluster = sorted(cluster, key=model_order.__getitem__)
+        for pos, exam_i in enumerate(ordered_cluster):
+            for exam_j in ordered_cluster[pos + 1 :]:
+                cij = float(built.data.pairs.loc[exam_i, exam_j])
+                if cij == 0:
+                    continue
+                for category, weight in {
+                    "a": 64,
+                    "b": 32,
+                    "c": 16,
+                    "d": 8,
+                    "e": 4,
+                    "f": 2,
+                    "g": 1,
+                }.items():
+                    lhs.addTerms(cij * float(weight), built.y[(exam_i, exam_j, category)])
+        if lower_bound > 1e-6:
+            built.model.addConstr(lhs >= lower_bound - 1e-6, name=f"dense_cluster_lb[{cluster_index}]")
+        rows.append(
+            {
+                "cluster": cluster_index,
+                "size": len(cluster),
+                "lower_bound": lower_bound,
+                "sub_status": int(sub_built.model.Status),
+                "sub_gap": float(sub_built.model.MIPGap) if sub_built.model.SolCount else None,
+                "exams": ";".join(cluster),
+            }
+        )
+    built.model.update()
+    return rows
+
+
+def _select_dense_clusters(pairs: pd.DataFrame, *, count: int, size: int) -> list[list[str]]:
+    matrix = pairs.copy().apply(pd.to_numeric, errors="raise")
+    remaining = set(matrix.index.astype(str))
+    clusters: list[list[str]] = []
+    total_scores = matrix.sum(axis=1).sort_values(ascending=False)
+    for seed in total_scores.index:
+        seed = str(seed)
+        if seed not in remaining:
+            continue
+        cluster = [seed]
+        remaining.remove(seed)
+        while len(cluster) < size and remaining:
+            next_exam = max(
+                remaining,
+                key=lambda exam: float(matrix.loc[exam, cluster].sum()),
+            )
+            cluster.append(next_exam)
+            remaining.remove(next_exam)
+        clusters.append(cluster)
+        if len(clusters) >= count:
+            break
+    return clusters
+
+
+def _timetable_from_callback_solution(*, built: Any, model: Any) -> pd.DataFrame | None:
+    import gurobipy as gp
+
+    records: list[dict[str, Any]] = []
+    day_lookup = built.data.days.set_index("Date")["DOW"].to_dict()
+    for (exam, slot, date), var in built.x.items():
+        value = model.cbGetSolution(var)
+        if value > 0.5:
+            records.append(
+                {
+                    "Day_of_Week": day_lookup.get(date),
+                    "Date": date,
+                    "Slot": slot,
+                    "Exam_Name": exam,
+                }
+            )
+    if len(records) != len(built.data.exam_names):
+        return None
+    return (
+        pd.DataFrame.from_records(records)
+        .sort_values(["Date", "Slot", "Exam_Name"])
+        .reset_index(drop=True)
+    )
+
+
+def _slot_swap_improvement(
+    timetable: pd.DataFrame,
+    data: Any,
+    *,
+    objective_mode: str,
+    max_swaps: int,
+) -> tuple[pd.DataFrame, float, float]:
+    current = _normalize_timetable(timetable)
+    validate_full_solution(current, data)
+    current_objective = mip_objective_value(current, data.pairs, data.days, mode=objective_mode)
+    start_objective = current_objective
+
+    for _ in range(max_swaps):
+        best_candidate: pd.DataFrame | None = None
+        best_objective = current_objective
+        for date, day_df in current.groupby("Date", sort=True):
+            am_exams = day_df.loc[day_df["Slot"] == "AM", "Exam_Name"].tolist()
+            pm_exams = day_df.loc[day_df["Slot"] == "PM", "Exam_Name"].tolist()
+            for left in am_exams:
+                for right in pm_exams:
+                    trial = current.copy()
+                    trial.loc[trial["Exam_Name"] == left, "Slot"] = "PM"
+                    trial.loc[trial["Exam_Name"] == right, "Slot"] = "AM"
+                    try:
+                        validate_full_solution(trial, data)
+                    except ValueError:
+                        continue
+                    objective = mip_objective_value(trial, data.pairs, data.days, mode=objective_mode)
+                    if objective + 1e-6 < best_objective:
+                        best_candidate = trial
+                        best_objective = objective
+        if best_candidate is None:
+            break
+        current = _normalize_timetable(best_candidate)
+        current_objective = best_objective
+    return current, current_objective, start_objective
+
+
+def _inject_timetable_solution(*, built: Any, model: Any, timetable: pd.DataFrame) -> None:
+    placement = placement_from_timetable(timetable)
+    variables = []
+    values = []
+    for key, var in built.x.items():
+        exam, slot, date = key
+        variables.append(var)
+        values.append(1.0 if placement.get(exam) == (pd.Timestamp(date).normalize(), slot) else 0.0)
+    model.cbSetSolution(variables, values)
 
 
 def _deduplicate_progress(progress: pd.DataFrame) -> pd.DataFrame:
