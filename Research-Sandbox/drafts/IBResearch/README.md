@@ -52,6 +52,8 @@ You also need a working Gurobi license.
 - `run_full_mip_experiment.py`: run seeded full-instance MILP proof experiments.
 - `run_toy_mip_experiment.py`: run toy heuristic/MILP and strengthening variants.
 - `run_toy_antony_verbatim.py`: run the Appendix-style toy MILP replication.
+- `run_weight_sensitivity.py`: rerun toy or full MILP proof experiments under
+  alternative objective weight vectors.
 - `summarize_clean_runs.py`: summarize clean logs, histories, and solution
   diagnostics, and regenerate the comparison plots.
 
@@ -152,6 +154,18 @@ py -B run_toy_antony_verbatim.py `
   --progress-output clean_runs_20260508\toy_antony_verbatim_progress.csv `
   --log-output clean_runs_20260508\toy_antony_verbatim.log `
   --plot-output clean_runs_20260508\toy_antony_verbatim_bounds.png
+
+py -B run_weight_sensitivity.py `
+  --instance toy --time-limit 60 `
+  --output clean_runs_20260508\toy_weight_sensitivity_60s.csv `
+  --timetable-dir clean_runs_20260508\toy_weight_sensitivity_timetables `
+  --variants anthony gentle_halving same_slot_heavy near_gap_heavy long_gap_light
+
+py -B run_weight_sensitivity.py `
+  --instance full --time-limit 60 --nb-days 34 --objective-mode formal `
+  --start clean_runs_20260508\full_lns_nb34_guarded_6x120.csv `
+  --output clean_runs_20260508\full_weight_sensitivity_anthony_60s.csv `
+  --variants anthony --enforce-subject-exam-order --symmetry 2
 ```
 
 After logs and histories exist:
