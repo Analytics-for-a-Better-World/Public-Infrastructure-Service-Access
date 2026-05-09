@@ -254,7 +254,7 @@ def _deduplicate_progress(progress: pd.DataFrame) -> pd.DataFrame:
 
 
 def _plot_progress(progress: pd.DataFrame, output: Path) -> None:
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 4.2))
     if not progress.empty:
         ax.plot(progress["time_seconds"], progress["incumbent"], label="Incumbent", color="#d62728", linewidth=3.0)
         ax.plot(progress["time_seconds"], progress["best_bound"], label="Best bound", color="#1f77b4", linewidth=3.0)

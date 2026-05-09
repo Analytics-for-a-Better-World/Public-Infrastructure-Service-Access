@@ -151,7 +151,7 @@ def plot_toy_strengthening() -> None:
         ("y binary + paper order", "toy_exp_ybin_order_300s_progress.csv", "#9467bd"),
         ("paper order + symmetry=2", "toy_exp_order_sym2_300s_progress.csv", "#8c564b"),
     ]
-    fig, ax = plt.subplots(figsize=(10, 6))
+    fig, ax = plt.subplots(figsize=(10, 4.2))
     for label, filename, color in variants:
         df = pd.read_csv(RUN_DIR / filename)
         if "best_bound" in df and not df["best_bound"].dropna().empty:
