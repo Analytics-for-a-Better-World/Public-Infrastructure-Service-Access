@@ -64,7 +64,9 @@ def solve_full_heuristic(
 
     exam_lengths = dict(zip(data.exams["Full Name"], data.exams["Length"]))
     exam_subjects = dict(zip(data.exams["Full Name"], data.exams["Subject"]))
+    pair_values = _pair_value_map(data.pairs)
     candidate_blocks = _build_blocks(data.exams)
+    day_index = {date: idx for idx, date in enumerate(data.dates)}
     candidates = {
         block_id: _generate_block_candidates(
             block_id=block_id,
@@ -96,13 +98,25 @@ def solve_full_heuristic(
     block_choice: dict[str, dict[str, Any]] = {}
     placement: dict[str, tuple[pd.Timestamp, str]] = {}
     for block_id in order:
+        base_objective = _placement_objective_value(
+            placement,
+            data.pairs,
+            data.days,
+            objective_mode,
+            day_index=day_index,
+            pair_values=pair_values,
+        )
+        base_same_slot = _same_slot_clashes(placement, data.pairs, pair_values=pair_values)
         best_candidate = min(
             candidates[block_id],
-            key=lambda candidate: _candidate_score(
+            key=lambda candidate: _candidate_incremental_score(
                 candidate=candidate,
-                partial_placement=placement,
+                base_placement=placement,
+                base_objective=base_objective,
+                base_same_slot=base_same_slot,
                 pairs=data.pairs,
-                days=data.days,
+                pair_values=pair_values,
+                day_index=day_index,
                 exam_lengths=exam_lengths,
                 max_daily_minutes=max_daily_minutes,
                 max_clashes=max_clashes,
@@ -110,11 +124,14 @@ def solve_full_heuristic(
                 clash_cap_penalty=clash_cap_penalty,
             ),
         )
-        if _candidate_score(
+        if _candidate_incremental_score(
             candidate=best_candidate,
-            partial_placement=placement,
+            base_placement=placement,
+            base_objective=base_objective,
+            base_same_slot=base_same_slot,
             pairs=data.pairs,
-            days=data.days,
+            pair_values=pair_values,
+            day_index=day_index,
             exam_lengths=exam_lengths,
             max_daily_minutes=max_daily_minutes,
             max_clashes=max_clashes,
@@ -130,7 +147,9 @@ def solve_full_heuristic(
         candidates=candidates,
         order=order,
         pairs=data.pairs,
+        pair_values=pair_values,
         days=data.days,
+        day_index=day_index,
         exam_lengths=exam_lengths,
         max_daily_minutes=max_daily_minutes,
         max_clashes=max_clashes,
@@ -358,7 +377,9 @@ def _candidate_score(
     candidate: dict[str, Any],
     partial_placement: dict[str, tuple[pd.Timestamp, str]],
     pairs: pd.DataFrame,
+    pair_values: dict[tuple[str, str], float] | None = None,
     days: pd.DataFrame,
+    day_index: dict[pd.Timestamp, int] | None = None,
     exam_lengths: dict[str, float],
     max_daily_minutes: int,
     max_clashes: float | None,
@@ -374,10 +395,51 @@ def _candidate_score(
         max_daily_minutes=max_daily_minutes,
     ):
         return float("inf")
-    timetable = timetable_from_placement(placement, days)
-    value = mip_objective_value(timetable, pairs, days, mode=objective_mode)
+    value = _placement_objective_value(placement, pairs, days, objective_mode, day_index=day_index, pair_values=pair_values)
     if max_clashes is not None:
-        value += clash_cap_penalty * max(0.0, _same_slot_clashes(placement, pairs) - max_clashes)
+        value += clash_cap_penalty * max(0.0, _same_slot_clashes(placement, pairs, pair_values=pair_values) - max_clashes)
+    return value
+
+
+def _candidate_incremental_score(
+    *,
+    candidate: dict[str, Any],
+    base_placement: dict[str, tuple[pd.Timestamp, str]],
+    base_objective: float,
+    base_same_slot: float,
+    pairs: pd.DataFrame,
+    pair_values: dict[tuple[str, str], float],
+    day_index: dict[pd.Timestamp, int],
+    exam_lengths: dict[str, float],
+    max_daily_minutes: int,
+    max_clashes: float | None,
+    objective_mode: str,
+    clash_cap_penalty: float,
+) -> float:
+    assignment = candidate["assignment"]
+    if _violates_assignment_pair_limits(
+        assignment,
+        base_placement=base_placement,
+        exam_lengths=exam_lengths,
+        max_daily_minutes=max_daily_minutes,
+    ):
+        return float("inf")
+
+    objective_delta = _assignment_objective_delta(
+        assignment,
+        base_placement=base_placement,
+        pair_values=pair_values,
+        day_index=day_index,
+        objective_mode=objective_mode,
+    )
+    value = base_objective + objective_delta
+    if max_clashes is not None:
+        same_slot_delta = _assignment_same_slot_delta(
+            assignment,
+            base_placement=base_placement,
+            pair_values=pair_values,
+        )
+        value += clash_cap_penalty * max(0.0, base_same_slot + same_slot_delta - max_clashes)
     return value
 
 
@@ -399,10 +461,33 @@ def _violates_pair_limits(
     return False
 
 
+def _violates_assignment_pair_limits(
+    assignment: dict[str, tuple[pd.Timestamp, str]],
+    *,
+    base_placement: dict[str, tuple[pd.Timestamp, str]],
+    exam_lengths: dict[str, float],
+    max_daily_minutes: int,
+) -> bool:
+    assignment_items = list(assignment.items())
+    for idx, (exam_i, (date_i, _slot_i)) in enumerate(assignment_items):
+        length_i = float(exam_lengths[exam_i])
+        for exam_j, (date_j, _slot_j) in assignment_items[idx + 1 :]:
+            if date_i == date_j and length_i + float(exam_lengths[exam_j]) > max_daily_minutes:
+                return True
+        for exam_j, (date_j, _slot_j) in base_placement.items():
+            if date_i == date_j and length_i + float(exam_lengths[exam_j]) > max_daily_minutes:
+                return True
+    return False
+
+
 def _same_slot_clashes(
     placement: dict[str, tuple[pd.Timestamp, str]],
     pairs: pd.DataFrame,
+    *,
+    pair_values: dict[tuple[str, str], float] | None = None,
 ) -> float:
+    if pair_values is None:
+        pair_values = _pair_value_map(pairs)
     total = 0.0
     exams = list(placement)
     for idx, exam_i in enumerate(exams):
@@ -410,7 +495,25 @@ def _same_slot_clashes(
         for exam_j in exams[idx + 1 :]:
             date_j, slot_j = placement[exam_j]
             if date_i == date_j and slot_i == slot_j:
-                total += float(pairs.loc[exam_i, exam_j])
+                total += pair_values[_ordered_pair(exam_i, exam_j)]
+    return total
+
+
+def _assignment_same_slot_delta(
+    assignment: dict[str, tuple[pd.Timestamp, str]],
+    *,
+    base_placement: dict[str, tuple[pd.Timestamp, str]],
+    pair_values: dict[tuple[str, str], float],
+) -> float:
+    total = 0.0
+    assignment_items = list(assignment.items())
+    for idx, (exam_i, (date_i, slot_i)) in enumerate(assignment_items):
+        for exam_j, (date_j, slot_j) in assignment_items[idx + 1 :]:
+            if date_i == date_j and slot_i == slot_j:
+                total += pair_values[_ordered_pair(exam_i, exam_j)]
+        for exam_j, (date_j, slot_j) in base_placement.items():
+            if date_i == date_j and slot_i == slot_j:
+                total += pair_values[_ordered_pair(exam_i, exam_j)]
     return total
 
 
@@ -428,9 +531,173 @@ def _placement_value(
     objective_mode: str,
     clash_cap_penalty: float,
 ) -> float:
-    timetable = timetable_from_placement(placement, days)
-    value = mip_objective_value(timetable, pairs, days, mode=objective_mode)
-    return value
+    return _placement_objective_value(placement, pairs, days, objective_mode)
+
+
+def _placement_objective_value(
+    placement: dict[str, tuple[pd.Timestamp, str]],
+    pairs: pd.DataFrame,
+    days: pd.DataFrame,
+    objective_mode: str,
+    *,
+    day_index: dict[pd.Timestamp, int] | None = None,
+    pair_values: dict[tuple[str, str], float] | None = None,
+) -> float:
+    if day_index is None:
+        day_list = pd.to_datetime(days["Date"], dayfirst=True).dt.normalize().tolist()
+        day_index = {date: idx for idx, date in enumerate(day_list)}
+    if pair_values is None:
+        pair_values = _pair_value_map(pairs)
+
+    total = 0.0
+    exams = sorted(placement)
+    for idx, exam_i in enumerate(exams):
+        date_i, slot_i = placement[exam_i]
+        day_i = day_index[date_i]
+        for exam_j in exams[idx + 1 :]:
+            cij = pair_values[_ordered_pair(exam_i, exam_j)]
+            if cij == 0:
+                continue
+            date_j, slot_j = placement[exam_j]
+            gap = abs(day_i - day_index[date_j])
+
+            if gap == 0 and slot_i == slot_j:
+                total += cij * 64
+
+            if objective_mode == "anthony_appendix":
+                if gap == 0:
+                    total += cij * 32
+                elif gap == 1 or gap == 5:
+                    total += cij * 16
+                elif gap == 2:
+                    total += cij * 8
+                elif gap == 3:
+                    total += cij * 4
+                elif gap == 4:
+                    total += cij * 2
+            elif objective_mode == "formal":
+                if gap == 0:
+                    total += cij * 32
+                elif gap == 1:
+                    total += cij * 16
+                elif gap == 2:
+                    total += cij * 8
+                elif gap == 3:
+                    total += cij * 4
+                elif gap == 4:
+                    total += cij * 2
+                elif gap == 5:
+                    total += cij
+            else:
+                raise ValueError("objective_mode must be 'formal' or 'anthony_appendix'.")
+    return total
+
+
+def _assignment_objective_delta(
+    assignment: dict[str, tuple[pd.Timestamp, str]],
+    *,
+    base_placement: dict[str, tuple[pd.Timestamp, str]],
+    pair_values: dict[tuple[str, str], float],
+    day_index: dict[pd.Timestamp, int],
+    objective_mode: str,
+) -> float:
+    total = 0.0
+    assignment_items = list(assignment.items())
+    for idx, (exam_i, (date_i, slot_i)) in enumerate(assignment_items):
+        day_i = day_index[date_i]
+        for exam_j, (date_j, slot_j) in assignment_items[idx + 1 :]:
+            total += _pair_objective_contribution(
+                exam_i,
+                date_i,
+                slot_i,
+                exam_j,
+                date_j,
+                slot_j,
+                pair_values=pair_values,
+                day_index=day_index,
+                objective_mode=objective_mode,
+                day_i=day_i,
+            )
+        for exam_j, (date_j, slot_j) in base_placement.items():
+            total += _pair_objective_contribution(
+                exam_i,
+                date_i,
+                slot_i,
+                exam_j,
+                date_j,
+                slot_j,
+                pair_values=pair_values,
+                day_index=day_index,
+                objective_mode=objective_mode,
+                day_i=day_i,
+            )
+    return total
+
+
+def _pair_objective_contribution(
+    exam_i: str,
+    date_i: pd.Timestamp,
+    slot_i: str,
+    exam_j: str,
+    date_j: pd.Timestamp,
+    slot_j: str,
+    *,
+    pair_values: dict[tuple[str, str], float],
+    day_index: dict[pd.Timestamp, int],
+    objective_mode: str,
+    day_i: int | None = None,
+) -> float:
+    cij = pair_values[_ordered_pair(exam_i, exam_j)]
+    if cij == 0:
+        return 0.0
+    if day_i is None:
+        day_i = day_index[date_i]
+    gap = abs(day_i - day_index[date_j])
+    total = cij * 64 if gap == 0 and slot_i == slot_j else 0.0
+    if objective_mode == "anthony_appendix":
+        if gap == 0:
+            total += cij * 32
+        elif gap == 1 or gap == 5:
+            total += cij * 16
+        elif gap == 2:
+            total += cij * 8
+        elif gap == 3:
+            total += cij * 4
+        elif gap == 4:
+            total += cij * 2
+    elif objective_mode == "formal":
+        if gap == 0:
+            total += cij * 32
+        elif gap == 1:
+            total += cij * 16
+        elif gap == 2:
+            total += cij * 8
+        elif gap == 3:
+            total += cij * 4
+        elif gap == 4:
+            total += cij * 2
+        elif gap == 5:
+            total += cij
+    else:
+        raise ValueError("objective_mode must be 'formal' or 'anthony_appendix'.")
+    return total
+
+
+def _pair_value_map(pairs: pd.DataFrame) -> dict[tuple[str, str], float]:
+    matrix = pairs.copy()
+    matrix.index = matrix.index.astype(str).str.strip()
+    matrix.columns = matrix.columns.astype(str).str.strip()
+    values: dict[tuple[str, str], float] = {}
+    exams = list(matrix.index)
+    for idx, exam_i in enumerate(exams):
+        row = matrix.loc[exam_i]
+        for exam_j in exams[idx + 1 :]:
+            values[(exam_i, exam_j)] = float(row[exam_j])
+    return values
+
+
+def _ordered_pair(exam_i: str, exam_j: str) -> tuple[str, str]:
+    return (exam_i, exam_j) if exam_i < exam_j else (exam_j, exam_i)
 
 
 def _local_search(
@@ -439,7 +706,9 @@ def _local_search(
     candidates: dict[str, list[dict[str, Any]]],
     order: list[str],
     pairs: pd.DataFrame,
+    pair_values: dict[tuple[str, str], float],
     days: pd.DataFrame,
+    day_index: dict[pd.Timestamp, int],
     exam_lengths: dict[str, float],
     max_daily_minutes: int,
     max_clashes: float | None,
@@ -453,7 +722,9 @@ def _local_search(
         candidate={"assignment": {}},
         partial_placement=current_placement,
         pairs=pairs,
+        pair_values=pair_values,
         days=days,
+        day_index=day_index,
         exam_lengths=exam_lengths,
         max_daily_minutes=max_daily_minutes,
         max_clashes=max_clashes,
@@ -475,22 +746,25 @@ def _local_search(
             base_choice = dict(block_choice)
             base_choice.pop(block_id)
             base_placement = _build_placement(base_choice)
+            base_objective = _placement_objective_value(
+                base_placement,
+                pairs,
+                days,
+                objective_mode,
+                day_index=day_index,
+                pair_values=pair_values,
+            )
+            base_same_slot = _same_slot_clashes(base_placement, pairs, pair_values=pair_values)
 
             for candidate in candidates[block_id]:
-                trial_placement = dict(base_placement)
-                trial_placement.update(candidate["assignment"])
-                if _violates_pair_limits(
-                    trial_placement,
+                trial_value = _candidate_incremental_score(
+                    candidate=candidate,
+                    base_placement=base_placement,
+                    base_objective=base_objective,
+                    base_same_slot=base_same_slot,
                     pairs=pairs,
-                    exam_lengths=exam_lengths,
-                    max_daily_minutes=max_daily_minutes,
-                ):
-                    continue
-                trial_value = _candidate_score(
-                    candidate={"assignment": {}},
-                    partial_placement=trial_placement,
-                    pairs=pairs,
-                    days=days,
+                    pair_values=pair_values,
+                    day_index=day_index,
                     exam_lengths=exam_lengths,
                     max_daily_minutes=max_daily_minutes,
                     max_clashes=max_clashes,
