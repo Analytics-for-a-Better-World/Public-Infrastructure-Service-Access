@@ -36,7 +36,9 @@ You also need a working Gurobi license.
 - `src/anthony_model.py`: data preparation, Antony MILP builder, objective
   evaluation, MIP starts, timetable extraction, and proof-strengthening switches.
 - `src/full_heuristic.py`: deterministic constructive heuristic and full
-  timetable validation.
+  timetable validation. The current implementation uses incremental candidate
+  scoring and plain Python pair lookups so that candidate moves do not rebuild a
+  full timetable and rescore every pair.
 - `src/lns_improvement.py`: MILP-based large-neighborhood search, including
   date-window and conflict-neighbor neighborhoods, load-aware selection, and
   guarded acceptance.
@@ -162,6 +164,9 @@ py -B summarize_clean_runs.py
 
 - Appendix-style toy model: objective 25,190 proved in 1,443.14 seconds.
 - Reusable toy baseline: objective 25,190 proved in 1,245.53 seconds.
+- Optimized full-instance constructive heuristic: about 2.15 seconds for the
+  two-round run and about 4.29 seconds for the default 20-round run on the
+  clean-run machine.
 - Best clean full-instance guarded LNS timetable: objective 15,855,200.
 - Best clean full-MILP lower-bound plateau in short proof runs: about 10,740,292.
 - Callback and dense-cluster experiments did not improve the best 5-minute
