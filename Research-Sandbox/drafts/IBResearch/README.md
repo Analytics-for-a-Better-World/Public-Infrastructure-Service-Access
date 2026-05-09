@@ -124,6 +124,26 @@ py -B run_full_mip_experiment.py `
   --dense-cluster-cuts 1 --dense-cluster-size 8 --dense-cluster-time-limit 10
 ```
 
+Overlapping dense-cluster cuts can be tested by adding
+`--dense-cluster-overlap` and a novelty threshold. The cluster selector keeps a
+candidate overlapping cluster only when enough of its positive pair mass has not
+already appeared in earlier clusters.
+
+```powershell
+py -B run_full_mip_experiment.py `
+  --start clean_runs_20260508\full_lns_nb34_guarded_6x120.csv `
+  --output clean_runs_20260508\full_mip_dense30_overlap_15min_timetable.csv `
+  --progress-output clean_runs_20260508\full_mip_dense30_overlap_15min_progress.csv `
+  --log-output clean_runs_20260508\full_mip_dense30_overlap_15min.log `
+  --plot-output clean_runs_20260508\full_mip_dense30_overlap_15min_bounds.png `
+  --dense-cluster-summary clean_runs_20260508\full_mip_dense30_overlap_15min_clusters.csv `
+  --nb-days 34 --time-limit 900 --objective-mode formal `
+  --enforce-subject-exam-order --symmetry 2 --mip-focus 3 --cuts 2 `
+  --dense-cluster-cuts 30 --dense-cluster-size 8 `
+  --dense-cluster-overlap --dense-cluster-min-new-pair-share 0.05 `
+  --dense-cluster-time-limit 5
+```
+
 ```powershell
 py -B run_toy_antony_verbatim.py `
   --output clean_runs_20260508\toy_antony_verbatim_mip.csv `
@@ -147,6 +167,10 @@ py -B summarize_clean_runs.py
 - Callback and dense-cluster experiments did not improve the best 5-minute
   incumbent or final bound, but the dense-cluster cut lifted the raw root
   relaxation from about 0.94 million to 4.62 million before Gurobi's own cuts.
+- Overlapping dense-cluster cuts lifted the full-instance raw root relaxation
+  to about 4.69 million, but did not materially change the final bound plateau.
+  On the toy instance, dense cuts slowed the best paper-order proof recipe, so
+  the six-hour full-instance follow-up was not launched.
 
 The toy optimum differs from Antony Furlong's reported thesis value of 25,910.
 With the currently available CSV files and Gurobi 13.0.2, both the verbatim

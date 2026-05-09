@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from itertools import combinations
 import time
 from pathlib import Path
 from typing import Any
@@ -44,6 +45,8 @@ def main() -> None:
     parser.add_argument("--callback-heuristic-max-swaps", type=int, default=4)
     parser.add_argument("--dense-cluster-cuts", type=int, default=0)
     parser.add_argument("--dense-cluster-size", type=int, default=12)
+    parser.add_argument("--dense-cluster-overlap", action="store_true")
+    parser.add_argument("--dense-cluster-min-new-pair-share", type=float, default=0.20)
     parser.add_argument("--dense-cluster-time-limit", type=float, default=60.0)
     parser.add_argument("--dense-cluster-summary", type=Path, default=None)
     args = parser.parse_args()
@@ -84,6 +87,8 @@ def main() -> None:
             nb_days=args.nb_days,
             count=args.dense_cluster_cuts,
             size=args.dense_cluster_size,
+            allow_overlap=args.dense_cluster_overlap,
+            min_new_pair_share=args.dense_cluster_min_new_pair_share,
             subproblem_time_limit=args.dense_cluster_time_limit,
             objective_mode=args.objective_mode,
             enforce_subject_exam_order=args.enforce_subject_exam_order,
@@ -212,13 +217,21 @@ def _add_dense_cluster_cuts(
     nb_days: int,
     count: int,
     size: int,
+    allow_overlap: bool,
+    min_new_pair_share: float,
     subproblem_time_limit: float,
     objective_mode: str,
     enforce_subject_exam_order: bool,
 ) -> list[dict[str, Any]]:
     import gurobipy as gp
 
-    clusters = _select_dense_clusters(built.data.pairs, count=count, size=size)
+    clusters = _select_dense_clusters(
+        built.data.pairs,
+        count=count,
+        size=size,
+        allow_overlap=allow_overlap,
+        min_new_pair_share=min_new_pair_share,
+    )
     rows: list[dict[str, Any]] = []
     for cluster_index, cluster in enumerate(clusters, start=1):
         sub_exams = exams.copy()
@@ -281,6 +294,7 @@ def _add_dense_cluster_cuts(
                 "cluster": cluster_index,
                 "size": len(cluster),
                 "lower_bound": lower_bound,
+                "pair_mass": _cluster_pair_mass(built.data.pairs, cluster),
                 "sub_status": int(sub_built.model.Status),
                 "sub_gap": float(sub_built.model.MIPGap) if sub_built.model.SolCount else None,
                 "exams": ";".join(cluster),
@@ -290,28 +304,66 @@ def _add_dense_cluster_cuts(
     return rows
 
 
-def _select_dense_clusters(pairs: pd.DataFrame, *, count: int, size: int) -> list[list[str]]:
+def _select_dense_clusters(
+    pairs: pd.DataFrame,
+    *,
+    count: int,
+    size: int,
+    allow_overlap: bool,
+    min_new_pair_share: float,
+) -> list[list[str]]:
     matrix = pairs.copy().apply(pd.to_numeric, errors="raise")
-    remaining = set(matrix.index.astype(str))
     clusters: list[list[str]] = []
     total_scores = matrix.sum(axis=1).sort_values(ascending=False)
+    covered_pairs: set[tuple[str, str]] = set()
+    remaining = set(matrix.index.astype(str))
     for seed in total_scores.index:
         seed = str(seed)
-        if seed not in remaining:
+        if not allow_overlap and seed not in remaining:
             continue
         cluster = [seed]
-        remaining.remove(seed)
-        while len(cluster) < size and remaining:
+        if not allow_overlap:
+            remaining.remove(seed)
+        candidate_pool = set(matrix.index.astype(str))
+        candidate_pool.discard(seed)
+        while len(cluster) < size and candidate_pool:
             next_exam = max(
-                remaining,
+                candidate_pool,
                 key=lambda exam: float(matrix.loc[exam, cluster].sum()),
             )
             cluster.append(next_exam)
-            remaining.remove(next_exam)
+            candidate_pool.remove(next_exam)
+            if not allow_overlap and next_exam in remaining:
+                remaining.remove(next_exam)
+        if allow_overlap:
+            cluster_pairs = _positive_cluster_pairs(matrix, cluster)
+            if clusters:
+                new_pairs = cluster_pairs - covered_pairs
+                new_mass = _pair_set_mass(matrix, new_pairs)
+                total_mass = max(1.0, _pair_set_mass(matrix, cluster_pairs))
+                if new_mass / total_mass < min_new_pair_share:
+                    continue
+            covered_pairs.update(cluster_pairs)
         clusters.append(cluster)
         if len(clusters) >= count:
             break
     return clusters
+
+
+def _positive_cluster_pairs(matrix: pd.DataFrame, cluster: list[str]) -> set[tuple[str, str]]:
+    pair_set: set[tuple[str, str]] = set()
+    for exam_i, exam_j in combinations(cluster, 2):
+        if float(matrix.loc[exam_i, exam_j]) > 0:
+            pair_set.add(tuple(sorted((exam_i, exam_j))))
+    return pair_set
+
+
+def _pair_set_mass(matrix: pd.DataFrame, pair_set: set[tuple[str, str]]) -> float:
+    return float(sum(float(matrix.loc[exam_i, exam_j]) for exam_i, exam_j in pair_set))
+
+
+def _cluster_pair_mass(matrix: pd.DataFrame, cluster: list[str]) -> float:
+    return _pair_set_mass(matrix, _positive_cluster_pairs(matrix, cluster))
 
 
 def _timetable_from_callback_solution(*, built: Any, model: Any) -> pd.DataFrame | None:

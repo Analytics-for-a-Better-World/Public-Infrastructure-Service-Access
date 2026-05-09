@@ -16,6 +16,7 @@ from src.anthony_model import (
     timetable_from_solution,
 )
 from src.toy_heuristic import solve_toy_heuristic
+from run_full_mip_experiment import _cluster_pair_mass, _select_dense_clusters
 
 
 def main() -> None:
@@ -34,6 +35,12 @@ def main() -> None:
     parser.add_argument("--proximity-at-most-one", action="store_true")
     parser.add_argument("--enforce-subject-exam-order", action="store_true")
     parser.add_argument("--symmetry", type=int, default=None)
+    parser.add_argument("--dense-cluster-cuts", type=int, default=0)
+    parser.add_argument("--dense-cluster-size", type=int, default=8)
+    parser.add_argument("--dense-cluster-overlap", action="store_true")
+    parser.add_argument("--dense-cluster-min-new-pair-share", type=float, default=0.05)
+    parser.add_argument("--dense-cluster-time-limit", type=float, default=5.0)
+    parser.add_argument("--dense-cluster-summary", type=Path, default=None)
     args = parser.parse_args()
 
     toy_exams = pd.read_csv(args.data_dir / "Toy exam list.csv")
@@ -78,6 +85,22 @@ def main() -> None:
         output_flag=1,
         model_name="toy_seeded_mip",
     )
+    dense_cut_rows: list[dict[str, object]] = []
+    if args.dense_cluster_cuts:
+        dense_cut_rows = _add_dense_cluster_cuts(
+            built=built,
+            exams=exams,
+            days=days,
+            pairs=pairs,
+            count=args.dense_cluster_cuts,
+            size=args.dense_cluster_size,
+            allow_overlap=args.dense_cluster_overlap,
+            min_new_pair_share=args.dense_cluster_min_new_pair_share,
+            subproblem_time_limit=args.dense_cluster_time_limit,
+            enforce_subject_exam_order=args.enforce_subject_exam_order,
+        )
+        if args.dense_cluster_summary is not None:
+            pd.DataFrame(dense_cut_rows).to_csv(args.dense_cluster_summary, index=False)
     if args.start_mode == "heuristic":
         apply_timetable_start(built, heuristic.timetable)
         print("MILP start mode: heuristic")
@@ -130,10 +153,96 @@ def main() -> None:
     print("MILP objective:", mip_objective)
     print("MILP best bound:", float(built.model.ObjBound) if built.model.SolCount else None)
     print("MILP gap:", float(built.model.MIPGap) if built.model.SolCount else None)
+    if dense_cut_rows:
+        print("Dense cluster cuts:", len(dense_cut_rows))
+        print(pd.DataFrame(dense_cut_rows).to_string(index=False))
     print(f"Saved MILP timetable to {args.mip_output}")
     print(f"Saved MILP progress to {args.progress_output}")
     print(f"Saved MILP log to {args.log_output}")
     print(f"Saved bound plot to {args.plot_output}")
+
+
+def _add_dense_cluster_cuts(
+    *,
+    built,
+    exams: pd.DataFrame,
+    days: pd.DataFrame,
+    pairs: pd.DataFrame,
+    count: int,
+    size: int,
+    allow_overlap: bool,
+    min_new_pair_share: float,
+    subproblem_time_limit: float,
+    enforce_subject_exam_order: bool,
+) -> list[dict[str, object]]:
+    import gurobipy as gp
+
+    clusters = _select_dense_clusters(
+        built.data.pairs,
+        count=count,
+        size=size,
+        allow_overlap=allow_overlap,
+        min_new_pair_share=min_new_pair_share,
+    )
+    rows: list[dict[str, object]] = []
+    weights = {"a": 64, "b": 32, "c": 16, "d": 8, "e": 4, "f": 2, "g": 1}
+    for cluster_index, cluster in enumerate(clusters, start=1):
+        sub_exams = exams[exams["Full Name"].astype(str).str.strip().isin(cluster)].copy()
+        sub_pairs = pairs.copy()
+        if sub_pairs.columns[0] not in cluster:
+            sub_pairs = sub_pairs.set_index(sub_pairs.columns[0])
+        sub_pairs.index = sub_pairs.index.astype(str).str.strip()
+        sub_pairs.columns = sub_pairs.columns.astype(str).str.strip()
+        sub_pairs = sub_pairs.loc[cluster, cluster].reset_index()
+        sub_built = build_anthony_mip_model(
+            exams=sub_exams,
+            days=days,
+            pairs=sub_pairs,
+            nb_days=len(days),
+            max_clashes=None,
+            max_afternoon_minutes=180,
+            max_daily_minutes=375,
+            forbid_weekends=True,
+            forbid_may_first=True,
+            forbid_language_fridays=True,
+            forbid_language_friday_afternoons=False,
+            consecutive_subject_exams=True,
+            consecutive_usable_subject_exams=False,
+            first_half_subjects={"Finance", "Law and Ethics"},
+            recode_math_paper_three=False,
+            enforce_subject_exam_order=enforce_subject_exam_order,
+            objective_mode="anthony_appendix",
+            output_flag=0,
+            model_name=f"toy_dense_cluster_lb_{cluster_index}",
+        )
+        sub_built.model.setParam("TimeLimit", subproblem_time_limit)
+        sub_built.model.optimize()
+        lower_bound = max(0.0, float(sub_built.model.ObjBound))
+        lhs = gp.LinExpr()
+        model_order = {exam: idx for idx, exam in enumerate(built.data.exam_names)}
+        ordered_cluster = sorted(cluster, key=model_order.__getitem__)
+        for pos, exam_i in enumerate(ordered_cluster):
+            for exam_j in ordered_cluster[pos + 1 :]:
+                cij = float(built.data.pairs.loc[exam_i, exam_j])
+                if cij == 0:
+                    continue
+                for category, weight in weights.items():
+                    lhs.addTerms(cij * float(weight), built.y[(exam_i, exam_j, category)])
+        if lower_bound > 1e-6:
+            built.model.addConstr(lhs >= lower_bound - 1e-6, name=f"dense_cluster_lb[{cluster_index}]")
+        rows.append(
+            {
+                "cluster": cluster_index,
+                "size": len(cluster),
+                "lower_bound": lower_bound,
+                "pair_mass": _cluster_pair_mass(built.data.pairs, cluster),
+                "sub_status": int(sub_built.model.Status),
+                "sub_gap": float(sub_built.model.MIPGap) if sub_built.model.SolCount else None,
+                "exams": ";".join(cluster),
+            }
+        )
+    built.model.update()
+    return rows
 
 
 def _deduplicate_progress(progress: pd.DataFrame) -> pd.DataFrame:
