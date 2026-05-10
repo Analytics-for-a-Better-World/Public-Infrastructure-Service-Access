@@ -48,6 +48,8 @@ You also need a working Gurobi license.
 - `solution_value_standalone.py`: standalone objective function for use in
   external notebooks.
 - `run_full_heuristic.py`: construct a full-instance feasible timetable.
+- `plot_solution_conflict_heatmaps.py`: regenerate the toy and full
+  best-solution assignment heatmaps with same-slot conflicts highlighted.
 - `run_lns_improvement.py`: run full-instance LNS improvements.
 - `run_full_mip_experiment.py`: run seeded full-instance MILP proof experiments.
 - `run_toy_mip_experiment.py`: run toy heuristic/MILP and strengthening variants.
@@ -172,6 +174,9 @@ After logs and histories exist:
 
 ```powershell
 py -B summarize_clean_runs.py
+
+py -B plot_solution_conflict_heatmaps.py `
+  --figure-dir path\to\manuscript\figures
 ```
 
 ## Clean Rerun Highlights
