@@ -50,6 +50,8 @@ You also need a working Gurobi license.
 - `run_full_heuristic.py`: construct a full-instance feasible timetable.
 - `plot_solution_conflict_heatmaps.py`: regenerate the toy and full
   best-solution assignment heatmaps with same-slot conflicts highlighted.
+- `generate_solution_tables.py`: regenerate the toy and full best-solution
+  schedule tables and objective penalty-breakdown tables for the manuscript.
 - `analyze_conflict_heatmap_structure.py`: diagnose row-order artifacts,
   conflict components, and diagonal-distance patterns in those heatmaps.
 - `run_lns_improvement.py`: run full-instance LNS improvements.
@@ -179,6 +181,9 @@ py -B summarize_clean_runs.py
 
 py -B plot_solution_conflict_heatmaps.py `
   --figure-dir path\to\manuscript\figures
+
+py -B generate_solution_tables.py `
+  --table-dir path\to\manuscript\tables
 
 py -B analyze_conflict_heatmap_structure.py
 ```
