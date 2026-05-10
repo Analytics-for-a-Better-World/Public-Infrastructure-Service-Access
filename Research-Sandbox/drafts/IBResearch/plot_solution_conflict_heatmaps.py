@@ -176,6 +176,8 @@ def _normalize_pairs(pairs: pd.DataFrame, exam_names: list[str]) -> pd.DataFrame
 def _exam_order(exams: pd.DataFrame, timetable: pd.DataFrame) -> list[str]:
     if "Full Name" in exams.columns:
         known = exams["Full Name"].astype(str).str.strip().tolist()
+    elif "FULL_NAME" in exams.columns:
+        known = exams["FULL_NAME"].astype(str).str.strip().tolist()
     elif "Exam_Name" in exams.columns:
         known = exams["Exam_Name"].astype(str).str.strip().tolist()
     else:
