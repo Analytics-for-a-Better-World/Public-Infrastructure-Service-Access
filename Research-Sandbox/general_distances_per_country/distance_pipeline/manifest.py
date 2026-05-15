@@ -13,6 +13,10 @@ from countries.base import CountryConfig
 from distance_pipeline.settings import PipelineSettings
 
 
+SHARED_MANIFEST_SCHEMA_VERSION = 'wfp-access-manifest/v1'
+LEGACY_MANIFEST_SCHEMA_VERSION = 1
+
+
 def make_yaml_safe(value: Any) -> Any:
     """Convert nested values to objects that PyYAML safe_dump can represent."""
     if isinstance(value, Path):
@@ -103,12 +107,18 @@ def country_config_metadata(cfg: CountryConfig) -> dict[str, Any]:
         'distance_threshold_km': cfg.distance_threshold_km,
         'geofabrik_region': cfg.geofabrik_region,
         'worldpop_year': cfg.worldpop_year,
+        'worldpop_dataset': cfg.worldpop_dataset,
+        'worldpop_release': cfg.worldpop_release,
+        'worldpop_version': cfg.worldpop_version,
+        'worldpop_resolution': cfg.worldpop_resolution,
+        'worldpop_constrained': cfg.worldpop_constrained,
         'worldpop_suffix': cfg.worldpop_suffix,
         'worldpop_adjustment': cfg.worldpop_adjustment,
         'worldpop_filename': cfg.resolved_worldpop_filename,
+        'worldpop_path': Path(cfg.WORLDPOP_PATH).as_posix(),
         'pbf_filename': cfg.resolved_pbf_filename,
         'pbf_url': cfg.PBF_URL,
-        'worldpop_url': cfg.WORLDPOP_URL,
+        'worldpop_url': None if cfg.worldpop_path is not None else cfg.WORLDPOP_URL,
         'boundary_source': cfg.boundary_source,
         'candidate_grid_spacing_m': cfg.candidate_grid_spacing_m,
         'candidate_exclude_water': cfg.candidate_exclude_water,
@@ -133,33 +143,68 @@ def build_run_manifest(
     """Build a YAML-serializable manifest for a pipeline run."""
     input_files: dict[str, dict[str, Any]] = {
         'osm_pbf': {
+            'role': 'download:geofabrik_pbf',
             'url': cfg.PBF_URL,
             **file_metadata(cfg.PBF_PATH),
         },
         'worldpop_raster': {
-            'url': cfg.WORLDPOP_URL,
+            'role': 'download:worldpop_raster',
+            'url': None if cfg.worldpop_path is not None else cfg.WORLDPOP_URL,
             **file_metadata(cfg.WORLDPOP_PATH),
         },
     }
+    outputs = {
+        name: file_metadata(path)
+        for name, path in output_paths.items()
+    }
+    country_config = country_config_metadata(cfg)
+    runtime_settings = asdict(settings)
+    resolved_parameters = {
+        'aggregate_factor': aggregate_factor,
+        'amenity_values': amenity_values,
+        'candidate_grid_spacing_m': candidate_grid_spacing_m,
+        'candidate_max_snap_dist_m': candidate_max_snap_dist_m,
+        'has_candidates': has_candidates,
+    }
+    git_commit = current_git_commit(repo_dir)
 
     manifest: dict[str, Any] = {
-        'schema_version': 1,
+        'schema_version': SHARED_MANIFEST_SCHEMA_VERSION,
+        'manifest_kind': 'pipeline_run',
         'created_utc': datetime.now(UTC).isoformat(),
-        'pipeline_git_commit': current_git_commit(repo_dir),
-        'country_config': country_config_metadata(cfg),
-        'runtime_settings': asdict(settings),
-        'resolved_parameters': {
-            'aggregate_factor': aggregate_factor,
-            'amenity_values': amenity_values,
-            'candidate_grid_spacing_m': candidate_grid_spacing_m,
-            'candidate_max_snap_dist_m': candidate_max_snap_dist_m,
-            'has_candidates': has_candidates,
+        'implementation': {
+            'name': 'general_distances_per_country',
+            'role': 'original',
+            'root': Path(repo_dir).as_posix(),
         },
+        'code': {
+            'git_commit': git_commit,
+        },
+        'case': {
+            'country_code': cfg.country_slug,
+            'country_name': cfg.country_name,
+            'iso3': cfg.iso3,
+        },
+        'cache': {
+            'root': Path(cfg.base_root).as_posix(),
+            'country_dir': Path(cfg.BASE_DIR).as_posix(),
+            'policy': 'downloaded inputs and generated artifacts are reused when present unless force_recompute is true',
+        },
+        'inputs': input_files,
+        'parameters': {
+            'runtime_settings': runtime_settings,
+            'resolved': resolved_parameters,
+        },
+        'intermediate_artifacts': {},
+        'outputs': outputs,
+        'diagnostics': {},
+        # Legacy aliases kept for current downstream consumers and older notebooks.
+        'legacy_schema_version': LEGACY_MANIFEST_SCHEMA_VERSION,
+        'pipeline_git_commit': git_commit,
+        'country_config': country_config,
+        'runtime_settings': runtime_settings,
+        'resolved_parameters': resolved_parameters,
         'input_files': input_files,
-        'outputs': {
-            name: file_metadata(path)
-            for name, path in output_paths.items()
-        },
     }
 
     return make_yaml_safe(manifest)
