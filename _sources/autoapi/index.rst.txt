@@ -8,8 +8,8 @@ This page contains auto-generated API reference documentation [#f1]_.
 
    /autoapi/utils/index
    /autoapi/constants/index
-   /autoapi/facilities/index
    /autoapi/population/index
+   /autoapi/facilities/index
    /autoapi/isopolygons/index
    /autoapi/visualisation/index
    /autoapi/osm_road_network/index
