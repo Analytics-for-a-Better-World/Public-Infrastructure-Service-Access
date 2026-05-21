@@ -421,19 +421,20 @@ def _targets_to_polars(targets: pd.DataFrame) -> pl.DataFrame:
         ``'target_id'``, ``'target_nearest_node'``,
         ``'target_to_road_dist'``.
     '''
-    return pl.DataFrame(
-        {
-            'target_id': targets['ID'].to_numpy(copy=False),
-            'target_nearest_node': targets['nearest_node'].to_numpy(
-                dtype=np.int64,
-                copy=False,
-            ),
-            'target_to_road_dist': targets['dist_snap_target'].to_numpy(
-                dtype=np.float64,
-                copy=False,
-            ),
-        }
-    )
+    data = {
+        'target_id': targets['ID'].to_numpy(copy=False),
+        'target_nearest_node': targets['nearest_node'].to_numpy(
+            dtype=np.int64,
+            copy=False,
+        ),
+        'target_to_road_dist': targets['dist_snap_target'].to_numpy(
+            dtype=np.float64,
+            copy=False,
+        ),
+    }
+    if 'target_type' in targets.columns:
+        data['target_type'] = targets['target_type'].astype(str).to_numpy(copy=False)
+    return pl.DataFrame(data)
 
 
 def _sources_to_polars(sources: pd.DataFrame) -> pl.DataFrame:
@@ -452,19 +453,20 @@ def _sources_to_polars(sources: pd.DataFrame) -> pl.DataFrame:
         ``'source_id'``, ``'source_nearest_node'``,
         ``'source_to_road_dist'``.
     '''
-    return pl.DataFrame(
-        {
-            'source_id': sources['ID'].to_numpy(copy=False),
-            'source_nearest_node': sources['nearest_node'].to_numpy(
-                dtype=np.int64,
-                copy=False,
-            ),
-            'source_to_road_dist': sources['dist_snap_source'].to_numpy(
-                dtype=np.float64,
-                copy=False,
-            ),
-        }
-    )
+    data = {
+        'source_id': sources['ID'].to_numpy(copy=False),
+        'source_nearest_node': sources['nearest_node'].to_numpy(
+            dtype=np.int64,
+            copy=False,
+        ),
+        'source_to_road_dist': sources['dist_snap_source'].to_numpy(
+            dtype=np.float64,
+            copy=False,
+        ),
+    }
+    if 'source_type' in sources.columns:
+        data['source_type'] = sources['source_type'].astype(str).to_numpy(copy=False)
+    return pl.DataFrame(data)
 
 
 def compute_distances_polars(
@@ -529,18 +531,21 @@ def compute_distances_polars(
     )
 
     if distances_pl.height == 0:
-        return pl.DataFrame(
-            schema={
-                'target_id': pl.Int64,
-                'source_id': pl.Int64,
-                'source_nearest_node': pl.Int64,
-                'target_nearest_node': pl.Int64,
-                'target_to_road_dist': pl.Float64,
-                'road_distance': pl.Float64,
-                'source_to_road_dist': pl.Float64,
-                'total_dist': pl.Float64,
-            }
-        )
+        schema = {
+            'target_id': pl.Int64,
+            'source_id': pl.Int64,
+            'source_nearest_node': pl.Int64,
+            'target_nearest_node': pl.Int64,
+            'target_to_road_dist': pl.Float64,
+            'road_distance': pl.Float64,
+            'source_to_road_dist': pl.Float64,
+            'total_dist': pl.Float64,
+        }
+        if 'target_type' in targets.columns:
+            schema['target_type'] = pl.Utf8
+        if 'source_type' in sources.columns:
+            schema['source_type'] = pl.Utf8
+        return pl.DataFrame(schema=schema)
 
     targets_pl = _targets_to_polars(targets)
     sources_pl = _sources_to_polars(sources)
@@ -563,18 +568,22 @@ def compute_distances_polars(
     if max_total_dist is not None:
         result = result.filter(pl.col('total_dist') <= max_total_dist)
 
-    result = result.select(
-        [
-            'target_id',
-            'source_id',
-            'source_nearest_node',
-            'target_nearest_node',
-            'target_to_road_dist',
-            'road_distance',
-            'source_to_road_dist',
-            'total_dist',
-        ]
-    ).collect()
+    output_columns = [
+        'target_id',
+        'source_id',
+        'source_nearest_node',
+        'target_nearest_node',
+        'target_to_road_dist',
+        'road_distance',
+        'source_to_road_dist',
+        'total_dist',
+    ]
+    if 'target_type' in targets.columns:
+        output_columns.append('target_type')
+    if 'source_type' in sources.columns:
+        output_columns.append('source_type')
+
+    result = result.select(output_columns).collect()
 
     if verbose:
         print(

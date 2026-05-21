@@ -51,7 +51,14 @@ def set_known_categories(df: pd.DataFrame) -> pd.DataFrame:
     if 'source_type' in result.columns:
         result['source_type'] = pd.Categorical(
             result['source_type'],
-            categories=['existing', 'candidate'],
+            categories=[
+                'amenities',
+                'candidates',
+                'table',
+                'population',
+                'existing',
+                'candidate',
+            ],
         )
 
     if 'road_class' in result.columns:

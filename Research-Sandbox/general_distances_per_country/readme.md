@@ -42,6 +42,7 @@ python run_pipeline.py tls --population-threshold 1 --sample-fraction 1
 python run_pipeline.py prt --sample-fraction 0.1 --save-map
 python run_pipeline.py vnm --aggregate-factor 10 --amenity hospital clinic
 python run_pipeline.py timor_leste --amenity school
+py run_pipeline.py netherlands --map-only --candidate-grid-spacing-m 10000 --map-basemap voyager-no-labels --map-basemap-alpha 0.65
 py run_pipeline.py vietnam --source-layer table --source-table "C:\Users\joaqu\OneDrive - UvA\Bureaublad\stroke-facs-100-en.xlsx" --source-lon-column Longitude --source-lat-column Latitude --source-id-column ID --max-total-dist 150000 --aggregate-factor 10 --save-map
 ```
 
@@ -58,6 +59,8 @@ Known country identifiers include:
 - `timor_leste`, `timor-leste`, `tls`, `tl`
 - `vietnam`, `viet_nam`, `vnm`, `vn`
 - `laos`, `lao`, `la`
+- `indonesia`, `idn`, `id`
+- `nusa_tenggara`, `indonesia_nusa_tenggara`, `idn_nusa_tenggara`
 - `luxembourg`
 
 If a country module is missing, `load_cfg()` can attempt to generate one through the OpenAI helper in `distance_pipeline/use_openai.py`. Existing country configs do not need generation.
@@ -100,6 +103,36 @@ Randomly sample retained population points. Must be in `(0, 1]`. Default: `1.0`.
 ```
 Optional cap on the number of population points.
 
+```bash
+--worldpop-year INT
+```
+Override the population year from the country config.
+
+```bash
+--worldpop-dataset global1
+```
+Select the WorldPop dataset family. `global1` uses the archived 2000-2020 tree. `global2` uses the 2015-2030 release/version tree.
+
+```bash
+--worldpop-release R2025A --worldpop-version v1 --worldpop-resolution 100m --worldpop-constrained true
+```
+Select a WorldPop Global2 release. For example, `--worldpop-dataset global2 --worldpop-year 2025 --worldpop-release R2025A --worldpop-version v1 --worldpop-resolution 100m --worldpop-constrained true` resolves to a constrained country raster named like `vnm_pop_2025_CN_100m_R2025A_v1.tif`.
+
+```bash
+--worldpop-filename FILE.tif
+```
+Use an explicit raster filename while keeping the generated WorldPop URL structure.
+
+```bash
+--worldpop-url URL
+```
+Use an explicit raster download URL.
+
+```bash
+--worldpop-path PATH
+```
+Use an existing local raster and skip downloading WorldPop. This is the strongest reproducibility option when an archived raster has already been stored locally.
+
 ## Aggregation
 
 ```bash
@@ -131,16 +164,77 @@ Restrict OSM facility extraction to specific `amenity=*` values. If omitted, the
 OSM amenities are deduplicated by default after non-point geometries are converted to representative points. Set `--deduplicate-amenities false` to keep the raw OSM amenity features for auditing or sensitivity analysis. When a nearby point/node and polygon/centroid have the same normalized name and amenity, the point/node feature is kept because it is usually the more intentional routing location. Unnamed amenities are deduplicated more conservatively by amenity and a small projected spatial cell.
 
 
-## Custom source and destination tables
+## Source and Destination Layers
 
-The pipeline is being generalized so matrix sources and destinations can come from more than the default population-to-facility setup. The intended layer vocabulary is:
+The default matrix is still WorldPop-derived population destinations against OSM amenity sources plus generated candidate sites when candidate generation is configured. The CLI now also accepts composable source and destination layers:
 
-- `population`: gridded WorldPop-derived points, normally used as demand targets
-- `amenities`: OSM features selected by `--amenity`
-- `candidates`: generated regular-grid candidate sites
-- `custom`: a user-provided table with coordinates
+```bash
+--sources amenities candidates
+--destinations population
+```
 
-Custom point tables may be CSV, Excel, parquet, or GeoJSON. They should contain an `ID` column when stable identifiers matter and either `Longitude`/`Latitude`, `lon`/`lat`, `lng`/`lat`, `x`/`y`, or point geometry. Explicit coordinate columns can be supplied with `--source-lon-column`, `--source-lat-column`, and `--source-id-column`. Optional `population`, `demand`, `weight`, or `headcount` columns are used as demand weights; otherwise a unit weight is assumed. At the CLI, `--source-layer table --source-table <path>` uses the supplied table as the source layer and WorldPop-derived population points as destinations. Candidate-grid sources are disabled for table-source runs so the matrix reflects the provided sources only. This supports use cases such as a supplied spreadsheet of facilities or a later matrix where supplied points and amenity sets are mixed.
+Supported layer values and aliases:
+
+- `population` or `pop`: gridded WorldPop-derived points
+- `amenities`, `amenity`, or `osm`: OSM features selected by `--amenity`
+- `candidates`, `candidate`, or `grid`: generated regular-grid candidate sites
+- `table` or `custom`: a user-provided table with point coordinates
+
+The legacy `--source-layer amenity|table` option remains available. `--source-layer amenity` maps to the old default behavior, and `--source-layer table` uses only the supplied table as sources.
+
+Custom point tables may be CSV, Excel, parquet, GeoJSON, GeoPackage, or shapefile. They should contain an `ID` column when stable identifiers matter and either `Longitude`/`Latitude`, `lon`/`lat`, `lng`/`lat`, `x`/`y`, or point geometry. IDs may be numeric or string-valued; the pipeline preserves them as identifiers when snapping to road nodes. Optional `population`, `demand`, `weight`, or `headcount` columns are used as demand weights when the table is used as a destination layer; otherwise a unit weight is assumed.
+
+Source-table columns:
+
+```bash
+--source-table PATH
+--source-lon-column longitude
+--source-lat-column latitude
+--source-id-column ID
+```
+
+Destination-table columns:
+
+```bash
+--destination-table PATH
+--destination-lon-column longitude
+--destination-lat-column latitude
+--destination-id-column ID
+```
+
+If `--destinations table` is used without `--destination-table`, the pipeline reuses `--source-table`. This is convenient for table-to-table matrices.
+
+When several source or destination layers are requested, the default output is one combined distance matrix with `source_type` and `target_type` columns. Use `--matrix-output-mode split` to compute and write one matrix for each nonempty source/destination layer pair, or `--matrix-output-mode both` to compute the pairs separately and also concatenate a combined file. For example, sources `amenities candidates` and destinations `population table` can produce separate `amenities -> population`, `amenities -> table`, `candidates -> population`, and `candidates -> table` parquet files. In `split` mode, the pipeline avoids building the full `[sources] x [destinations]` intermediate matrix. The run manifest lists every matrix path that was written.
+
+Examples:
+
+```bash
+py run_pipeline.py vietnam --sources table --source-table "C:\path\stroke-facs-100-en.xlsx" --source-lon-column longitude --source-lat-column latitude --source-id-column TT --destinations population --aggregate-factor 10 --max-total-dist 150000
+```
+
+```bash
+py run_pipeline.py netherlands --sources table amenities candidates --source-table institutions.xlsx --source-lon-column lon --source-lat-column lat --destinations table --destination-table institutions.xlsx --max-total-dist 100000
+```
+
+```bash
+py run_pipeline.py nusa_tenggara --sources candidates --destinations table --destination-table "C:\local\GIT\route-the-meals\geocoding\draft\17_routing_targets_enhanced.csv" --destination-lon-column routing_lon --destination-lat-column routing_lat --destination-id-column source_id --bbox 118.8 -11.1 125.4 -7.1 --candidate-grid-spacing-m 2000 --candidate-max-snap-dist-m 1000 --max-total-dist 150000
+```
+
+```bash
+py run_pipeline.py luxembourg --sources candidates --destinations population --candidate-grid-spacing-m 500 --max-total-dist 500
+```
+
+## Per-island distribution planning
+
+`nusa_tenggara_distribution_pipeline.py` turns a generated candidate-to-school distance matrix into independent island-level distribution-planning outputs. It loads a run manifest, splits the school demand table by inferred island, filters the relevant sparse matrix rows, solves a 5-facility location-allocation model per island, assigns each school to an opened candidate, constructs greedy service-route geometries for each opened center, and writes island-specific outputs.
+
+Example using the 2 km candidate matrix:
+
+```bash
+py nusa_tenggara_distribution_pipeline.py --manifest "C:\local\Download_Depot\indonesia_nusa_tenggara_data\outputs\run_manifest_pop_1_sample_1_max_none_agg_10_maxdist_150000_amenity_amenity_all-dst_table_17_routing_targets_enhanced-src_candidates_candidates_spacing_2000_maxsnap_1000.yaml" --school-table "C:\local\GIT\route-the-meals\geocoding\draft\17_routing_targets_enhanced.csv" --facilities-per-island 5 --max-candidates-per-target 50 --time-limit 300 --route-on-road true --max-road-route-legs-per-center 150 --output-prefix nusa_tenggara_distribution --figure-dir "C:\Users\joaqu\Dropbox\Apps\Overleaf\Real Life Distance Generator\figures"
+```
+
+Outputs are written below `<country data>/outputs/<output-prefix>/`. Each island receives its own folder with `selected_distribution_centers`, `demand_allocations`, `route_geometries`, `summary_statistics.csv`, and `diagnostics.log`. A combined `summary_statistics_all_islands.csv` and `pipeline_diagnostics.log` are written at the output-prefix root. To redraw the combined solution from already saved island outputs without rerunning the optimization, use `--plot-only true --output-prefix <output-prefix> --figure-dir <figure-dir>`.
 
 ## Routing utilities
 
@@ -171,7 +265,12 @@ Grid spacing for candidate facility sites in meters. If omitted, the country con
 ```
 Maximum allowed snapping distance from a candidate site to the road network, in meters. If omitted, the country config value is used.
 
-Country configs can also control whether candidates on water are excluded and whether boundary points are included.
+```bash
+--candidate-exclude-water {true,false}
+```
+Override whether generated candidate sites that fall on OSM water bodies are removed. If omitted, the country config value is used. Cache filenames record the effective choice as `no_water` or `water_allowed`.
+
+Country configs can also control whether boundary points are included.
 
 ## Distance Computation
 
@@ -186,6 +285,11 @@ Keep only rows whose `total_dist` is less than or equal to this value, in meters
 --build-map
 ```
 Build the context map stage. By itself this renders and closes the figure unless paired with `--save-map` or `--show-map`.
+
+```bash
+--map-only
+```
+Build and save the context map, then stop before source/target snapping and distance-matrix computation. This is useful for checking map styling or source/destination layers without running the full matrix stage. In map-only mode, generated candidate sites are drawn before road-node snapping so the command does not need to build the Pandana network.
 
 ```bash
 --save-map
@@ -207,6 +311,32 @@ Custom output path for the saved map.
 ```
 Resolution for saved maps. Default: `300`.
 
+```bash
+--map-basemap {voyager-no-labels,voyager,positron-no-labels,positron}
+```
+Choose the context-map tile style. The default is `voyager-no-labels`, which provides a subtle but recognizable map background without competing with the plotted road network.
+
+```bash
+--map-basemap-alpha FLOAT
+```
+Opacity for the context-map basemap, from `0` to `1`. Default: `0.52`.
+
+```bash
+--map-roads {true,false}
+```
+Control whether context maps include the OSM road overlay. The default is `true`. For very large countries, `--map-roads false` can produce a quick visual check using the basemap plus population/source/candidate points without parsing the national road network.
+
+```bash
+--bbox MIN_LON MIN_LAT MAX_LON MAX_LAT
+```
+Subset a run to a longitude/latitude bounding box. This is useful for island groups or regional runs within large countries. For OSM road-network loading, the bbox is passed to `pyrosm.OSM(..., bounding_box=[min_lon, min_lat, max_lon, max_lat])`, so network and road-map extraction can avoid parsing the full national graph. Bbox-specific node, edge, and road caches include the bbox in their filenames. For example, `--bbox 115 -12 128 -6` focuses Indonesia on Bali/Nusa Tenggara/Timor-like extents.
+
+For a map-only visual check with a more visible but still restrained basemap:
+
+```bash
+py run_pipeline.py netherlands --map-only --candidate-grid-spacing-m 10000 --map-basemap voyager-no-labels --map-basemap-alpha 0.65
+```
+
 ---
 
 # Outputs
@@ -220,12 +350,13 @@ The CLI and notebook write parquet outputs under:
 Output files:
 
 - `population_<run_tag>.parquet`
+- `targets_<run_tag>.parquet`
 - `existing_sources_<run_tag>.parquet`
 - `sources_<run_tag>.parquet`
 - `distance_matrix_<run_tag>.parquet`
 - `run_manifest_<run_tag>.yaml`
 
-`existing_sources_<run_tag>.parquet` contains only the OSM amenities selected by the amenity filter. `sources_<run_tag>.parquet` contains the full source layer used by the matrix, including existing amenities and generated candidate sites when candidates are enabled. Use `sources_<run_tag>.parquet` for optimization plots or any model whose selected source IDs may include candidates.
+`targets_<run_tag>.parquet` contains the full destination layer used by the matrix. `population_<run_tag>.parquet` is kept for backward compatibility; when population is a destination layer it contains the snapped population targets, otherwise it mirrors the selected targets. `existing_sources_<run_tag>.parquet` contains non-candidate sources such as OSM amenities, table sources, or population-as-source layers. `sources_<run_tag>.parquet` contains the full source layer used by the matrix, including generated candidate sites when candidates are enabled. Use `sources_<run_tag>.parquet` for optimization plots or any model whose selected source IDs may include candidates.
 
 Large distance matrices are built with Polars in the CLI and written directly to parquet. This avoids converting very large matrices to pandas before writing, which can require several additional gigabytes of memory.
 
@@ -241,7 +372,7 @@ The run manifest is the reproducibility record for a run. It stores:
 - SHA256 checksums for the input and output files
 - the current pipeline git commit when available
 
-This matters because Geofabrik `*-latest.osm.pbf` extracts are moving snapshots of OpenStreetMap. A run on a fresh machine may download different OSM road and facility data than an earlier run. WorldPop inputs are more explicitly versioned by year and filename, but the manifest still records the exact local file bytes used for the run.
+This matters because Geofabrik `*-latest.osm.pbf` extracts are moving snapshots of OpenStreetMap. A run on a fresh machine may download different OSM road and facility data than an earlier run. WorldPop inputs are organized by product family, year, resolution, release, and version. The pipeline defaults to the older Global1-style country configs already in the repository, but runs can now pin Global2 products explicitly with `--worldpop-dataset global2`, `--worldpop-release`, `--worldpop-version`, `--worldpop-resolution`, and `--worldpop-constrained`. For complete control, use `--worldpop-url` or `--worldpop-path`; the manifest records the resolved URL/path and the exact local file bytes used for the run.
 
 The distance matrix columns are:
 
@@ -253,6 +384,8 @@ The distance matrix columns are:
 - `road_distance`
 - `source_to_road_dist`
 - `total_dist`
+- `target_type`, when multiple or typed destination layers are used
+- `source_type`, when multiple or typed source layers are used
 
 All distance values are in meters.
 
