@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 from pathlib import Path
 
 import pandas as pd
@@ -29,14 +30,24 @@ def main() -> None:
     parser.add_argument("--max-spread-regression", type=float, default=None)
     parser.add_argument("--target-max-day-exams", type=int, default=7)
     parser.add_argument("--target-max-slot-exams", type=int, default=4)
+    parser.add_argument("--weights-json", type=Path, default=None)
+    parser.add_argument("--weights-variant", type=str, default=None)
     parser.add_argument("--enforce-subject-exam-order", action="store_true")
     parser.add_argument("--y-binary", action="store_true")
+    parser.add_argument("--strengthen-y-upper-bounds", action="store_true")
     parser.add_argument("--symmetry", type=int, default=None)
     args = parser.parse_args()
 
     exams = pd.read_csv(args.data_dir / "M24 exam names and block lengths.csv")
     days = pd.read_csv(args.data_dir / "exam_days3.csv")
     pairs = pd.read_csv(args.data_dir / "Exam Pairs ABW-2.csv")
+    weights = None
+    if args.weights_json is not None:
+        with args.weights_json.open("r", encoding="utf-8") as file:
+            variants = json.load(file)
+        if args.weights_variant is None:
+            raise ValueError("--weights-variant is required when --weights-json is supplied.")
+        weights = {key: float(value) for key, value in variants[args.weights_variant].items()}
 
     if args.start is None:
         start = solve_full_heuristic(
@@ -44,6 +55,7 @@ def main() -> None:
             days=days,
             pairs=pairs,
             max_rounds=args.heuristic_rounds,
+            weights=weights,
         ).timetable
     else:
         start = pd.read_csv(args.start)
@@ -78,8 +90,10 @@ def main() -> None:
         max_spread_regression=args.max_spread_regression,
         target_max_day_exams=args.target_max_day_exams,
         target_max_slot_exams=args.target_max_slot_exams,
+        weights=weights,
         enforce_subject_exam_order=args.enforce_subject_exam_order,
         y_binary=args.y_binary,
+        strengthen_y_upper_bounds=args.strengthen_y_upper_bounds,
         symmetry=args.symmetry,
     )
 

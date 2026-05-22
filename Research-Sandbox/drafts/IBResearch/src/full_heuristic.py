@@ -8,6 +8,7 @@ import pandas as pd
 
 from src.anthony_model import (
     DEFAULT_SLOTS,
+    DEFAULT_WEIGHTS,
     mip_objective_value,
     prepare_anthony_model_data,
     timetable_from_placement,
@@ -38,6 +39,7 @@ def solve_full_heuristic(
     max_daily_minutes: int = 385,
     first_half_subjects: set[str] | None = None,
     objective_mode: str = "formal",
+    weights: dict[str, float] | None = None,
     clash_cap_penalty: float = 10_000.0,
 ) -> FullHeuristicResult:
     """
@@ -54,6 +56,7 @@ def solve_full_heuristic(
         slots=slots,
         recode_math_paper_three=True,
     )
+    weights = dict(DEFAULT_WEIGHTS if weights is None else weights)
     if first_half_subjects is None:
         first_half_subjects = {
             "BUS MAN",
@@ -103,6 +106,7 @@ def solve_full_heuristic(
             data.pairs,
             data.days,
             objective_mode,
+            weights=weights,
             day_index=day_index,
             pair_values=pair_values,
         )
@@ -121,6 +125,7 @@ def solve_full_heuristic(
                 max_daily_minutes=max_daily_minutes,
                 max_clashes=max_clashes,
                 objective_mode=objective_mode,
+                weights=weights,
                 clash_cap_penalty=clash_cap_penalty,
             ),
         )
@@ -136,6 +141,7 @@ def solve_full_heuristic(
             max_daily_minutes=max_daily_minutes,
             max_clashes=max_clashes,
             objective_mode=objective_mode,
+            weights=weights,
             clash_cap_penalty=clash_cap_penalty,
         ) == float("inf"):
             raise ValueError(f"Could not place block {block_id!r} without violating hard limits.")
@@ -154,12 +160,13 @@ def solve_full_heuristic(
         max_daily_minutes=max_daily_minutes,
         max_clashes=max_clashes,
         objective_mode=objective_mode,
+        weights=weights,
         clash_cap_penalty=clash_cap_penalty,
         max_rounds=max_rounds,
     )
 
     timetable = timetable_from_placement(placement, data.days)
-    objective_value = mip_objective_value(timetable, data.pairs, data.days, mode=objective_mode)
+    objective_value = mip_objective_value(timetable, data.pairs, data.days, weights=weights, mode=objective_mode)
     return FullHeuristicResult(
         timetable=timetable,
         objective_value=objective_value,
@@ -384,6 +391,7 @@ def _candidate_score(
     max_daily_minutes: int,
     max_clashes: float | None,
     objective_mode: str,
+    weights: dict[str, float],
     clash_cap_penalty: float,
 ) -> float:
     placement = dict(partial_placement)
@@ -395,7 +403,15 @@ def _candidate_score(
         max_daily_minutes=max_daily_minutes,
     ):
         return float("inf")
-    value = _placement_objective_value(placement, pairs, days, objective_mode, day_index=day_index, pair_values=pair_values)
+    value = _placement_objective_value(
+        placement,
+        pairs,
+        days,
+        objective_mode,
+        weights=weights,
+        day_index=day_index,
+        pair_values=pair_values,
+    )
     if max_clashes is not None:
         value += clash_cap_penalty * max(0.0, _same_slot_clashes(placement, pairs, pair_values=pair_values) - max_clashes)
     return value
@@ -414,6 +430,7 @@ def _candidate_incremental_score(
     max_daily_minutes: int,
     max_clashes: float | None,
     objective_mode: str,
+    weights: dict[str, float],
     clash_cap_penalty: float,
 ) -> float:
     assignment = candidate["assignment"]
@@ -431,6 +448,7 @@ def _candidate_incremental_score(
         pair_values=pair_values,
         day_index=day_index,
         objective_mode=objective_mode,
+        weights=weights,
     )
     value = base_objective + objective_delta
     if max_clashes is not None:
@@ -530,8 +548,9 @@ def _placement_value(
     days: pd.DataFrame,
     objective_mode: str,
     clash_cap_penalty: float,
+    weights: dict[str, float] | None = None,
 ) -> float:
-    return _placement_objective_value(placement, pairs, days, objective_mode)
+    return _placement_objective_value(placement, pairs, days, objective_mode, weights=weights)
 
 
 def _placement_objective_value(
@@ -540,9 +559,11 @@ def _placement_objective_value(
     days: pd.DataFrame,
     objective_mode: str,
     *,
+    weights: dict[str, float] | None = None,
     day_index: dict[pd.Timestamp, int] | None = None,
     pair_values: dict[tuple[str, str], float] | None = None,
 ) -> float:
+    weights = dict(DEFAULT_WEIGHTS if weights is None else weights)
     if day_index is None:
         day_list = pd.to_datetime(days["Date"], dayfirst=True).dt.normalize().tolist()
         day_index = {date: idx for idx, date in enumerate(day_list)}
@@ -562,32 +583,32 @@ def _placement_objective_value(
             gap = abs(day_i - day_index[date_j])
 
             if gap == 0 and slot_i == slot_j:
-                total += cij * 64
+                total += cij * weights["a"]
 
             if objective_mode == "anthony_appendix":
                 if gap == 0:
-                    total += cij * 32
+                    total += cij * weights["b"]
                 elif gap == 1 or gap == 5:
-                    total += cij * 16
+                    total += cij * weights["c"]
                 elif gap == 2:
-                    total += cij * 8
+                    total += cij * weights["d"]
                 elif gap == 3:
-                    total += cij * 4
+                    total += cij * weights["e"]
                 elif gap == 4:
-                    total += cij * 2
+                    total += cij * weights["f"]
             elif objective_mode == "formal":
                 if gap == 0:
-                    total += cij * 32
+                    total += cij * weights["b"]
                 elif gap == 1:
-                    total += cij * 16
+                    total += cij * weights["c"]
                 elif gap == 2:
-                    total += cij * 8
+                    total += cij * weights["d"]
                 elif gap == 3:
-                    total += cij * 4
+                    total += cij * weights["e"]
                 elif gap == 4:
-                    total += cij * 2
+                    total += cij * weights["f"]
                 elif gap == 5:
-                    total += cij
+                    total += cij * weights["g"]
             else:
                 raise ValueError("objective_mode must be 'formal' or 'anthony_appendix'.")
     return total
@@ -600,6 +621,7 @@ def _assignment_objective_delta(
     pair_values: dict[tuple[str, str], float],
     day_index: dict[pd.Timestamp, int],
     objective_mode: str,
+    weights: dict[str, float],
 ) -> float:
     total = 0.0
     assignment_items = list(assignment.items())
@@ -616,6 +638,7 @@ def _assignment_objective_delta(
                 pair_values=pair_values,
                 day_index=day_index,
                 objective_mode=objective_mode,
+                weights=weights,
                 day_i=day_i,
             )
         for exam_j, (date_j, slot_j) in base_placement.items():
@@ -629,6 +652,7 @@ def _assignment_objective_delta(
                 pair_values=pair_values,
                 day_index=day_index,
                 objective_mode=objective_mode,
+                weights=weights,
                 day_i=day_i,
             )
     return total
@@ -645,6 +669,7 @@ def _pair_objective_contribution(
     pair_values: dict[tuple[str, str], float],
     day_index: dict[pd.Timestamp, int],
     objective_mode: str,
+    weights: dict[str, float],
     day_i: int | None = None,
 ) -> float:
     cij = pair_values[_ordered_pair(exam_i, exam_j)]
@@ -653,31 +678,31 @@ def _pair_objective_contribution(
     if day_i is None:
         day_i = day_index[date_i]
     gap = abs(day_i - day_index[date_j])
-    total = cij * 64 if gap == 0 and slot_i == slot_j else 0.0
+    total = cij * weights["a"] if gap == 0 and slot_i == slot_j else 0.0
     if objective_mode == "anthony_appendix":
         if gap == 0:
-            total += cij * 32
+            total += cij * weights["b"]
         elif gap == 1 or gap == 5:
-            total += cij * 16
+            total += cij * weights["c"]
         elif gap == 2:
-            total += cij * 8
+            total += cij * weights["d"]
         elif gap == 3:
-            total += cij * 4
+            total += cij * weights["e"]
         elif gap == 4:
-            total += cij * 2
+            total += cij * weights["f"]
     elif objective_mode == "formal":
         if gap == 0:
-            total += cij * 32
+            total += cij * weights["b"]
         elif gap == 1:
-            total += cij * 16
+            total += cij * weights["c"]
         elif gap == 2:
-            total += cij * 8
+            total += cij * weights["d"]
         elif gap == 3:
-            total += cij * 4
+            total += cij * weights["e"]
         elif gap == 4:
-            total += cij * 2
+            total += cij * weights["f"]
         elif gap == 5:
-            total += cij
+            total += cij * weights["g"]
     else:
         raise ValueError("objective_mode must be 'formal' or 'anthony_appendix'.")
     return total
@@ -713,6 +738,7 @@ def _local_search(
     max_daily_minutes: int,
     max_clashes: float | None,
     objective_mode: str,
+    weights: dict[str, float],
     clash_cap_penalty: float,
     max_rounds: int,
 ) -> tuple[dict[str, dict[str, Any]], dict[str, tuple[pd.Timestamp, str]]]:
@@ -729,6 +755,7 @@ def _local_search(
         max_daily_minutes=max_daily_minutes,
         max_clashes=max_clashes,
         objective_mode=objective_mode,
+        weights=weights,
         clash_cap_penalty=clash_cap_penalty,
     )
 
@@ -751,6 +778,7 @@ def _local_search(
                 pairs,
                 days,
                 objective_mode,
+                weights=weights,
                 day_index=day_index,
                 pair_values=pair_values,
             )
@@ -769,6 +797,7 @@ def _local_search(
                     max_daily_minutes=max_daily_minutes,
                     max_clashes=max_clashes,
                     objective_mode=objective_mode,
+                    weights=weights,
                     clash_cap_penalty=clash_cap_penalty,
                 )
                 if trial_value + 1e-9 < best_value:

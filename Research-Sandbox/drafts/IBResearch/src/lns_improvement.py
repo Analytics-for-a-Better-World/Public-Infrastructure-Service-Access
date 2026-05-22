@@ -62,6 +62,7 @@ def improve_with_lns(
     adaptive_time: bool = True,
     nb_days: int = 23,
     objective_mode: str = "formal",
+    weights: dict[str, float] | None = None,
     max_clashes: int | None = 10_000,
     max_afternoon_minutes: int = 180,
     max_daily_minutes: int = 385,
@@ -72,6 +73,7 @@ def improve_with_lns(
     target_max_slot_exams: int = 4,
     enforce_subject_exam_order: bool = False,
     y_binary: bool = False,
+    strengthen_y_upper_bounds: bool = False,
     symmetry: int | None = None,
     output_flag: int = 0,
 ) -> LnsResult:
@@ -132,7 +134,7 @@ def improve_with_lns(
         max_daily_minutes=max_daily_minutes,
         first_half_subjects=first_half_subjects,
     )
-    current_objective = mip_objective_value(current, data.pairs, data.days, mode=objective_mode)
+    current_objective = mip_objective_value(current, data.pairs, data.days, weights=weights, mode=objective_mode)
 
     history: list[LnsIteration] = []
     recently_selected: list[str] = []
@@ -188,6 +190,8 @@ def improve_with_lns(
             first_half_subjects=first_half_subjects,
             recode_math_paper_three=False,
             y_binary=y_binary,
+            strengthen_y_upper_bounds=strengthen_y_upper_bounds,
+            weights=weights,
             enforce_subject_exam_order=enforce_subject_exam_order,
             objective_mode=objective_mode,
             output_flag=output_flag,
@@ -218,6 +222,7 @@ def improve_with_lns(
                 built=built,
                 data=data,
                 objective_mode=objective_mode,
+                weights=weights,
                 start_objective=current_objective,
                 start_spread_score=start_spread_score,
                 load_acceptance_tolerance=load_acceptance_tolerance,
@@ -452,6 +457,7 @@ def _best_solution_from_pool(
     built: AnthonyModel,
     data: Any,
     objective_mode: str,
+    weights: dict[str, float] | None = None,
     start_objective: float | None = None,
     start_spread_score: float | None = None,
     load_acceptance_tolerance: float = 0.0,
@@ -459,7 +465,7 @@ def _best_solution_from_pool(
     target_max_slot_exams: int = 4,
 ) -> tuple[pd.DataFrame, float]:
     best_timetable = timetable_from_solution(built)
-    best_objective = mip_objective_value(best_timetable, data.pairs, data.days, mode=objective_mode)
+    best_objective = mip_objective_value(best_timetable, data.pairs, data.days, weights=weights, mode=objective_mode)
     best_key = _candidate_key(
         best_timetable,
         best_objective,
@@ -473,7 +479,7 @@ def _best_solution_from_pool(
     for solution_number in range(1, int(built.model.SolCount)):
         built.model.setParam("SolutionNumber", solution_number)
         candidate = _timetable_from_pool_solution(built)
-        objective = mip_objective_value(candidate, data.pairs, data.days, mode=objective_mode)
+        objective = mip_objective_value(candidate, data.pairs, data.days, weights=weights, mode=objective_mode)
         candidate_key = _candidate_key(
             candidate,
             objective,

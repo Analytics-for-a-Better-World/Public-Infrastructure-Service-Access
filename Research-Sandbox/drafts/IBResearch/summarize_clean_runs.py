@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+import argparse
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -62,12 +63,12 @@ def summarize_mip_logs() -> None:
         "Appendix-style verbatim": "toy_antony_verbatim.log",
         "Reusable baseline": "toy_antony_baseline.log",
         "Seeded 10 min": "toy_seeded_10min.log",
-        "Baseline 300s": "toy_exp_baseline_300s.log",
-        "Binary y 300s": "toy_exp_ybin_300s.log",
-        "Upper-link bounds 300s": "toy_exp_yub_300s.log",
-        "Paper order 300s": "toy_exp_order_300s.log",
-        "Binary y + paper order 300s": "toy_exp_ybin_order_300s.log",
-        "Paper order + Symmetry=2 300s": "toy_exp_order_sym2_300s.log",
+        "Baseline 300s": "toy_exp_baseline.log",
+        "Binary y 300s": "toy_exp_ybin.log",
+        "Upper-link bounds 300s": "toy_exp_yub.log",
+        "Paper order 300s": "toy_exp_order.log",
+        "Binary y + paper order 300s": "toy_exp_ybin_order.log",
+        "Paper order + Symmetry=2 300s": "toy_exp_order_sym2.log",
     }
     full_logs = {
         "Guarded start + paper order + Symmetry=2, 10 min": "full_mip_guarded_order_sym2_10min.log",
@@ -78,7 +79,10 @@ def summarize_mip_logs() -> None:
     for name, mapping in [("toy_mip_summary.csv", toy_logs), ("full_mip_summary.csv", full_logs)]:
         rows = []
         for label, filename in mapping.items():
-            row = parse_log(RUN_DIR / filename)
+            path = RUN_DIR / filename
+            if not path.exists():
+                continue
+            row = parse_log(path)
             row["run"] = label
             rows.append(row)
         pd.DataFrame(rows).to_csv(RUN_DIR / name, index=False)
@@ -94,9 +98,14 @@ def summarize_lns_histories() -> None:
     }
     all_rows = []
     for run, filename in histories.items():
-        df = pd.read_csv(RUN_DIR / filename)
+        path = RUN_DIR / filename
+        if not path.exists():
+            continue
+        df = pd.read_csv(path)
         df.insert(0, "run", run)
         all_rows.append(df)
+    if not all_rows:
+        return
     histories_df = pd.concat(all_rows, ignore_index=True)
     histories_df.to_csv(RUN_DIR / "clean_lns_history_all.csv", index=False)
 
@@ -136,7 +145,10 @@ def summarize_solution_diagnostics() -> None:
     ]
     rows = []
     for label, filename, data in timetables:
-        tt = pd.read_csv(RUN_DIR / filename)
+        path = RUN_DIR / filename
+        if not path.exists():
+            continue
+        tt = pd.read_csv(path)
         diag = spread_diagnostics(tt, data, objective_mode="formal")
         rows.append({"run": label, **diag.__dict__})
     pd.DataFrame(rows).to_csv(RUN_DIR / "clean_solution_diagnostics.csv", index=False)
@@ -144,16 +156,19 @@ def summarize_solution_diagnostics() -> None:
 
 def plot_toy_strengthening() -> None:
     variants = [
-        ("baseline", "toy_exp_baseline_300s_progress.csv", "#1f77b4"),
-        ("y binary", "toy_exp_ybin_300s_progress.csv", "#ff7f0e"),
-        ("y upper bounds", "toy_exp_yub_300s_progress.csv", "#2ca02c"),
-        ("paper order", "toy_exp_order_300s_progress.csv", "#d62728"),
-        ("y binary + paper order", "toy_exp_ybin_order_300s_progress.csv", "#9467bd"),
-        ("paper order + symmetry=2", "toy_exp_order_sym2_300s_progress.csv", "#8c564b"),
+        ("baseline", "toy_exp_baseline_progress.csv", "#1f77b4"),
+        ("y binary", "toy_exp_ybin_progress.csv", "#ff7f0e"),
+        ("y upper bounds", "toy_exp_yub_progress.csv", "#2ca02c"),
+        ("paper order", "toy_exp_order_progress.csv", "#d62728"),
+        ("y binary + paper order", "toy_exp_ybin_order_progress.csv", "#9467bd"),
+        ("paper order + symmetry=2", "toy_exp_order_sym2_progress.csv", "#8c564b"),
     ]
     fig, ax = plt.subplots(figsize=(10, 4.2))
     for label, filename, color in variants:
-        df = pd.read_csv(RUN_DIR / filename)
+        path = RUN_DIR / filename
+        if not path.exists():
+            continue
+        df = pd.read_csv(path)
         if "best_bound" in df and not df["best_bound"].dropna().empty:
             ax.step(df["time_seconds"], df["best_bound"], where="post", label=label, linewidth=3.0, color=color)
     ax.axhline(25190, color="black", linestyle="--", linewidth=2.0, label="optimum 25190")
@@ -170,14 +185,15 @@ def plot_toy_strengthening() -> None:
 
 def plot_full_summary() -> None:
     df = pd.read_csv(RUN_DIR / "clean_solution_diagnostics.csv")
-    labels = [
-        "Initial\n23d",
-        "Mixed\n23d",
-        "Focused\n23d",
-        "Pilot\n34d",
-        "Recommended\n34d",
-        "Guarded\n34d",
-    ]
+    label_map = {
+        "Initial heuristic, 23 days": "Initial\n23d",
+        "LNS mixed, 23 days": "Mixed\n23d",
+        "LNS focused, 23 days": "Focused\n23d",
+        "LNS pilot, 34 days": "Pilot\n34d",
+        "Recommended LNS, 34 days": "Recommended\n34d",
+        "Guarded LNS, 34 days": "Guarded\n34d",
+    }
+    labels = [label_map.get(run, run) for run in df["run"]]
     fig, ax1 = plt.subplots(figsize=(10, 6))
     ax1.plot(labels, df["objective_value"] / 1_000_000, marker="o", linewidth=3.0, color="#1f77b4", label="Objective (millions)")
     ax1.set_ylabel("Objective (millions)")
@@ -194,6 +210,12 @@ def plot_full_summary() -> None:
 
 
 def main() -> None:
+    global RUN_DIR
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--run-dir", type=Path, default=RUN_DIR)
+    args = parser.parse_args()
+    RUN_DIR = args.run_dir if args.run_dir.is_absolute() else ROOT / args.run_dir
+
     summarize_mip_logs()
     summarize_lns_histories()
     summarize_solution_diagnostics()

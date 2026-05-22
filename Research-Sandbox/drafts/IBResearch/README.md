@@ -1,4 +1,4 @@
-# IB Timetabling Experiments
+﻿# IB Timetabling Experiments
 
 This folder contains the Python source used for the IB timetabling heuristic,
 MILP, large-neighborhood search, validation, and clean-run summaries described
@@ -71,14 +71,14 @@ caches.
 ```powershell
 py -B run_full_heuristic.py `
   --max-rounds 2 `
-  --output clean_runs_20260508\full_heuristic_rounds2.csv
+  --output clean_runs_20260521\full_heuristic_rounds2.csv
 ```
 
 ```powershell
 py -B run_lns_improvement.py `
-  --start clean_runs_20260508\full_heuristic_rounds2.csv `
-  --output clean_runs_20260508\full_lns_23day_8x90.csv `
-  --history-output clean_runs_20260508\full_lns_23day_8x90_history.csv `
+  --start clean_runs_20260521\full_heuristic_rounds2.csv `
+  --output clean_runs_20260521\full_lns_23day_8x90.csv `
+  --history-output clean_runs_20260521\full_lns_23day_8x90_history.csv `
   --nb-days 23 --iterations 8 --subjects 10 --time-limit 90 `
   --neighborhood-sizes 6,10,14,6,10,14,12,10 `
   --strategy-cycle worst_subjects,worst_pairs,same_slot_clashes,crowded_days,date_window,conflict_neighbors,same_slot_clashes,worst_subjects `
@@ -88,9 +88,9 @@ py -B run_lns_improvement.py `
 
 ```powershell
 py -B run_lns_improvement.py `
-  --start clean_runs_20260508\full_lns_nb34_recommended_6x90.csv `
-  --output clean_runs_20260508\full_lns_nb34_guarded_6x120.csv `
-  --history-output clean_runs_20260508\full_lns_nb34_guarded_6x120_history.csv `
+  --start clean_runs_20260521\full_lns_nb34_recommended_6x90.csv `
+  --output clean_runs_20260521\full_lns_nb34_guarded_6x120.csv `
+  --history-output clean_runs_20260521\full_lns_nb34_guarded_6x120_history.csv `
   --nb-days 34 --iterations 6 --subjects 8 --time-limit 120 `
   --neighborhood-sizes 12,10,12,8,14,12 `
   --strategy-cycle load_aware_date_window,date_window,conflict_neighbors,date_window,load_aware_date_window,date_window `
@@ -104,11 +104,11 @@ py -B run_lns_improvement.py `
 
 ```powershell
 py -B run_full_mip_experiment.py `
-  --start clean_runs_20260508\full_lns_nb34_guarded_6x120.csv `
-  --output clean_runs_20260508\full_mip_guarded_order_sym2_10min_timetable.csv `
-  --progress-output clean_runs_20260508\full_mip_guarded_order_sym2_10min_progress.csv `
-  --log-output clean_runs_20260508\full_mip_guarded_order_sym2_10min.log `
-  --plot-output clean_runs_20260508\full_mip_guarded_order_sym2_10min_bounds.png `
+  --start clean_runs_20260521\full_lns_nb34_guarded_6x120.csv `
+  --output clean_runs_20260521\full_mip_guarded_order_sym2_10min_timetable.csv `
+  --progress-output clean_runs_20260521\full_mip_guarded_order_sym2_10min_progress.csv `
+  --log-output clean_runs_20260521\full_mip_guarded_order_sym2_10min.log `
+  --plot-output clean_runs_20260521\full_mip_guarded_order_sym2_10min_bounds.png `
   --nb-days 34 --time-limit 600 --objective-mode formal `
   --enforce-subject-exam-order --symmetry 2
 ```
@@ -123,11 +123,11 @@ for that cluster's contribution to the full objective.
 
 ```powershell
 py -B run_full_mip_experiment.py `
-  --start clean_runs_20260508\full_lns_nb34_guarded_6x120.csv `
-  --output clean_runs_20260508\full_mip_callback_dense_5min_timetable.csv `
-  --progress-output clean_runs_20260508\full_mip_callback_dense_5min_progress.csv `
-  --log-output clean_runs_20260508\full_mip_callback_dense_5min.log `
-  --plot-output clean_runs_20260508\full_mip_callback_dense_5min_bounds.png `
+  --start clean_runs_20260521\full_lns_nb34_guarded_6x120.csv `
+  --output clean_runs_20260521\full_mip_callback_dense_5min_timetable.csv `
+  --progress-output clean_runs_20260521\full_mip_callback_dense_5min_progress.csv `
+  --log-output clean_runs_20260521\full_mip_callback_dense_5min.log `
+  --plot-output clean_runs_20260521\full_mip_callback_dense_5min_bounds.png `
   --nb-days 34 --time-limit 300 --objective-mode formal `
   --enforce-subject-exam-order --symmetry 2 --mip-focus 3 --cuts 2 `
   --callback-slot-swap-heuristic `
@@ -141,12 +141,12 @@ already appeared in earlier clusters.
 
 ```powershell
 py -B run_full_mip_experiment.py `
-  --start clean_runs_20260508\full_lns_nb34_guarded_6x120.csv `
-  --output clean_runs_20260508\full_mip_dense30_overlap_15min_timetable.csv `
-  --progress-output clean_runs_20260508\full_mip_dense30_overlap_15min_progress.csv `
-  --log-output clean_runs_20260508\full_mip_dense30_overlap_15min.log `
-  --plot-output clean_runs_20260508\full_mip_dense30_overlap_15min_bounds.png `
-  --dense-cluster-summary clean_runs_20260508\full_mip_dense30_overlap_15min_clusters.csv `
+  --start clean_runs_20260521\full_lns_nb34_guarded_6x120.csv `
+  --output clean_runs_20260521\full_mip_dense30_overlap_15min_timetable.csv `
+  --progress-output clean_runs_20260521\full_mip_dense30_overlap_15min_progress.csv `
+  --log-output clean_runs_20260521\full_mip_dense30_overlap_15min.log `
+  --plot-output clean_runs_20260521\full_mip_dense30_overlap_15min_bounds.png `
+  --dense-cluster-summary clean_runs_20260521\full_mip_dense30_overlap_15min_clusters.csv `
   --nb-days 34 --time-limit 900 --objective-mode formal `
   --enforce-subject-exam-order --symmetry 2 --mip-focus 3 --cuts 2 `
   --dense-cluster-cuts 30 --dense-cluster-size 8 `
@@ -156,28 +156,28 @@ py -B run_full_mip_experiment.py `
 
 ```powershell
 py -B run_toy_antony_verbatim.py `
-  --output clean_runs_20260508\toy_antony_verbatim_mip.csv `
-  --progress-output clean_runs_20260508\toy_antony_verbatim_progress.csv `
-  --log-output clean_runs_20260508\toy_antony_verbatim.log `
-  --plot-output clean_runs_20260508\toy_antony_verbatim_bounds.png
+  --output clean_runs_20260521\toy_antony_verbatim_mip.csv `
+  --progress-output clean_runs_20260521\toy_antony_verbatim_progress.csv `
+  --log-output clean_runs_20260521\toy_antony_verbatim.log `
+  --plot-output clean_runs_20260521\toy_antony_verbatim_bounds.png
 
 py -B run_weight_sensitivity.py `
   --instance toy --time-limit 60 `
-  --output clean_runs_20260508\toy_weight_sensitivity_60s.csv `
-  --timetable-dir clean_runs_20260508\toy_weight_sensitivity_timetables `
+  --output clean_runs_20260521\toy_weight_sensitivity_60s.csv `
+  --timetable-dir clean_runs_20260521\toy_weight_sensitivity_timetables `
   --variants anthony gentle_halving same_slot_heavy near_gap_heavy long_gap_light
 
 py -B run_weight_sensitivity.py `
   --instance full --time-limit 60 --nb-days 34 --objective-mode formal `
-  --start clean_runs_20260508\full_lns_nb34_guarded_6x120.csv `
-  --output clean_runs_20260508\full_weight_sensitivity_anthony_60s.csv `
+  --start clean_runs_20260521\full_lns_nb34_guarded_6x120.csv `
+  --output clean_runs_20260521\full_weight_sensitivity_anthony_60s.csv `
   --variants anthony --enforce-subject-exam-order --symmetry 2
 ```
 
 After logs and histories exist:
 
 ```powershell
-py -B summarize_clean_runs.py
+py -B summarize_clean_runs.py --run-dir clean_runs_20260521
 
 py -B plot_solution_conflict_heatmaps.py `
   --figure-dir path\to\manuscript\figures

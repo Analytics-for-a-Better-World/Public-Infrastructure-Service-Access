@@ -19,13 +19,14 @@ from src.anthony_model import (
 from src.full_heuristic import validate_full_solution
 
 
-WEIGHT_VARIANTS: dict[str, dict[str, int]] = {
+WEIGHT_VARIANTS: dict[str, dict[str, float]] = {
     "anthony": {"a": 64, "b": 32, "c": 16, "d": 8, "e": 4, "f": 2, "g": 1},
     "flat_proximity": {"a": 64, "b": 16, "c": 16, "d": 16, "e": 16, "f": 16, "g": 16},
     "gentle_halving": {"a": 32, "b": 16, "c": 8, "d": 4, "e": 2, "f": 1, "g": 1},
     "same_slot_heavy": {"a": 128, "b": 32, "c": 16, "d": 8, "e": 4, "f": 2, "g": 1},
     "near_gap_heavy": {"a": 64, "b": 48, "c": 32, "d": 8, "e": 4, "f": 2, "g": 1},
     "long_gap_light": {"a": 64, "b": 32, "c": 16, "d": 4, "e": 2, "f": 1, "g": 0},
+    "julien_experiment_e": {"a": 0, "b": -0.5, "c": -1, "d": -2, "e": -3, "f": -4, "g": -5},
 }
 
 
@@ -42,6 +43,8 @@ def main() -> None:
     parser.add_argument("--variants", nargs="*", default=list(WEIGHT_VARIANTS))
     parser.add_argument("--custom-weights-json", type=Path, default=None)
     parser.add_argument("--y-binary", action="store_true")
+    parser.add_argument("--strengthen-y-upper-bounds", action="store_true")
+    parser.add_argument("--proximity-at-most-one", action="store_true")
     parser.add_argument("--enforce-subject-exam-order", action="store_true")
     parser.add_argument("--symmetry", type=int, default=None)
     args = parser.parse_args()
@@ -71,6 +74,8 @@ def main() -> None:
             nb_days=args.nb_days,
             objective_mode=args.objective_mode,
             y_binary=args.y_binary,
+            strengthen_y_upper_bounds=args.strengthen_y_upper_bounds,
+            proximity_at_most_one=args.proximity_at_most_one,
             enforce_subject_exam_order=args.enforce_subject_exam_order,
             symmetry=args.symmetry,
             timetable_dir=timetable_dir,
@@ -87,7 +92,7 @@ def main() -> None:
 def _run_variant(
     *,
     variant_name: str,
-    weights: dict[str, int],
+    weights: dict[str, float],
     instance: str,
     data_dir: Path,
     start_path: Path | None,
@@ -95,6 +100,8 @@ def _run_variant(
     nb_days: int | None,
     objective_mode: str | None,
     y_binary: bool,
+    strengthen_y_upper_bounds: bool,
+    proximity_at_most_one: bool,
     enforce_subject_exam_order: bool,
     symmetry: int | None,
     timetable_dir: Path | None,
@@ -144,6 +151,8 @@ def _run_variant(
         pairs=pairs,
         weights=weights,
         y_binary=y_binary,
+        strengthen_y_upper_bounds=strengthen_y_upper_bounds,
+        proximity_at_most_one=proximity_at_most_one,
         enforce_subject_exam_order=enforce_subject_exam_order,
         objective_mode=objective_mode,
         output_flag=0,
@@ -200,11 +209,11 @@ def _run_variant(
     }
 
 
-def _normalize_weights(weights: dict[str, int | float]) -> dict[str, int]:
+def _normalize_weights(weights: dict[str, int | float]) -> dict[str, float]:
     missing = set(DEFAULT_WEIGHTS).difference(weights)
     if missing:
         raise ValueError(f"Custom weight vector is missing categories: {sorted(missing)}")
-    return {category: int(weights[category]) for category in DEFAULT_WEIGHTS}
+    return {category: float(weights[category]) for category in DEFAULT_WEIGHTS}
 
 
 if __name__ == "__main__":
