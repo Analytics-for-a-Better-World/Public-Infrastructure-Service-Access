@@ -16,6 +16,8 @@ def main() -> None:
     parser.add_argument("--data-dir", type=Path, default=Path("data"))
     parser.add_argument("--clean-run-dir", type=Path, default=Path("clean_runs_20260508"))
     parser.add_argument("--figure-dir", type=Path, default=Path("figures"))
+    parser.add_argument("--toy-solution", type=Path, default=None)
+    parser.add_argument("--full-solution", type=Path, default=None)
     args = parser.parse_args()
 
     args.figure_dir.mkdir(parents=True, exist_ok=True)
@@ -23,8 +25,9 @@ def main() -> None:
     toy_exams = pd.read_csv(args.data_dir / "Toy exam list.csv")
     toy_pairs = pd.read_csv(args.data_dir / "Exam pairs.csv")
     toy_exams, toy_days, toy_pairs = prepare_toy_inputs(toy_exams, toy_pairs)
+    toy_solution = args.toy_solution or args.clean_run_dir / "toy_antony_verbatim_mip.csv"
     plot_solution_conflict_heatmap(
-        timetable=pd.read_csv(args.clean_run_dir / "toy_antony_verbatim_mip.csv"),
+        timetable=pd.read_csv(toy_solution),
         exams=toy_exams,
         days=toy_days,
         pairs=toy_pairs,
@@ -36,8 +39,9 @@ def main() -> None:
     )
 
     full_exams, full_days, full_pairs = load_default_data(args.data_dir)
+    full_solution = args.full_solution or args.clean_run_dir / "full_lns_nb34_guarded_6x120.csv"
     plot_solution_conflict_heatmap(
-        timetable=pd.read_csv(args.clean_run_dir / "full_lns_nb34_guarded_6x120.csv"),
+        timetable=pd.read_csv(full_solution),
         exams=full_exams,
         days=full_days.head(34),
         pairs=full_pairs,
