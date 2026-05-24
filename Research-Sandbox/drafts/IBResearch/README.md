@@ -60,6 +60,12 @@ You also need a working Gurobi license.
 - `run_toy_antony_verbatim.py`: run the Appendix-style toy MILP replication.
 - `run_weight_sensitivity.py`: rerun toy or full MILP proof experiments under
   alternative objective weight vectors.
+- `run_toy_lagrangian_poc.py`: toy proof-of-concept Lagrangian
+  variable-splitting bound.
+- `run_toy_lagrangian_community_poc.py`: toy Lagrangian decomposition with
+  exact dense-community blocks and a full hypograph dual master.
+- `proof_of_concept_bound_strengthening.md`: notes and commands for the lifted
+  clique and Lagrangian proof-of-concept experiments.
 - `summarize_clean_runs.py`: summarize clean logs, histories, and solution
   diagnostics, and regenerate the comparison plots.
 

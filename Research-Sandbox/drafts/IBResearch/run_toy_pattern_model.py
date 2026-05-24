@@ -48,6 +48,18 @@ def main() -> None:
     parser.add_argument("--output-flag", type=int, default=1)
     parser.add_argument("--relax-lambda", action="store_true")
     parser.add_argument("--mu-binary", action="store_true")
+    parser.add_argument("--joint-community-count", type=int, default=0)
+    parser.add_argument("--joint-community-size", type=int, default=4)
+    parser.add_argument("--joint-community-max-tuples", type=int, default=1_000_000)
+    parser.add_argument("--joint-cut-count", type=int, default=0)
+    parser.add_argument("--joint-cut-community-size", type=int, default=3)
+    parser.add_argument("--joint-cut-max-tuples", type=int, default=250_000)
+    parser.add_argument("--joint-cut-rounds", type=int, default=3)
+    parser.add_argument("--joint-cut-max-cuts-per-round", type=int, default=3)
+    parser.add_argument("--joint-cut-tolerance", type=float, default=1e-6)
+    parser.add_argument("--clique-cut-rounds", type=int, default=0)
+    parser.add_argument("--clique-cut-max-cuts-per-round", type=int, default=10)
+    parser.add_argument("--clique-cut-tolerance", type=float, default=1e-6)
     args = parser.parse_args()
 
     raw_exams = pd.read_csv(args.data_dir / "Toy exam list.csv")
@@ -68,6 +80,18 @@ def main() -> None:
         output_flag=args.output_flag,
         relax_lambda=args.relax_lambda,
         mu_binary=args.mu_binary,
+        joint_community_count=args.joint_community_count,
+        joint_community_size=args.joint_community_size,
+        joint_community_max_tuples=args.joint_community_max_tuples,
+        joint_cut_count=args.joint_cut_count,
+        joint_cut_community_size=args.joint_cut_community_size,
+        joint_cut_max_tuples=args.joint_cut_max_tuples,
+        joint_cut_rounds=args.joint_cut_rounds,
+        joint_cut_max_cuts_per_round=args.joint_cut_max_cuts_per_round,
+        joint_cut_tolerance=args.joint_cut_tolerance,
+        clique_cut_rounds=args.clique_cut_rounds,
+        clique_cut_max_cuts_per_round=args.clique_cut_max_cuts_per_round,
+        clique_cut_tolerance=args.clique_cut_tolerance,
         progress_output=args.progress_output,
         plot_output=args.plot_output,
     )
@@ -95,11 +119,24 @@ def main() -> None:
         "elapsed_seconds": elapsed,
         "pattern_count": result["pattern_count"],
         "mu_count": result["mu_count"],
+        "theta_count": result["theta_count"],
+        "joint_community_count": result["joint_community_count"],
+        "joint_communities": result["joint_communities"],
+        "joint_cut_count": result["joint_cut_count"],
+        "joint_cut_communities": result["joint_cut_communities"],
+        "joint_cut_max_violation": result["joint_cut_max_violation"],
+        "clique_cut_count": result["clique_cut_count"],
+        "clique_cut_max_violation": result["clique_cut_max_violation"],
         "incompatible_mu_count": result["incompatible_mu_count"],
         "same_slot_clashes": reported_same_slot_clashes,
         "max_clashes": 15,
         "relax_lambda": args.relax_lambda,
         "mu_binary": args.mu_binary,
+        "joint_community_size": args.joint_community_size,
+        "joint_community_max_tuples": args.joint_community_max_tuples,
+        "joint_cut_community_size": args.joint_cut_community_size,
+        "joint_cut_max_tuples": args.joint_cut_max_tuples,
+        "joint_cut_rounds": args.joint_cut_rounds,
     }
     pd.DataFrame([summary]).to_csv(args.summary_output, index=False)
 
@@ -116,6 +153,11 @@ def main() -> None:
     print("Work:", result["work"])
     print("Patterns:", result["pattern_count"])
     print("Mu variables:", result["mu_count"])
+    print("Theta variables:", result["theta_count"])
+    print("Joint communities:", result["joint_communities"])
+    print("Generated joint cuts:", result["joint_cut_count"])
+    print("Joint cut communities:", result["joint_cut_communities"])
+    print("Generated clique cuts:", result["clique_cut_count"])
     print("Incompatible mu variables fixed to zero:", result["incompatible_mu_count"])
     print("Same-slot clashes:", result["same_slot_clashes"])
     print(f"Saved timetable to {args.output}")
@@ -136,6 +178,18 @@ def solve_pattern_model(
     output_flag: int,
     relax_lambda: bool,
     mu_binary: bool,
+    joint_community_count: int,
+    joint_community_size: int,
+    joint_community_max_tuples: int,
+    joint_cut_count: int,
+    joint_cut_community_size: int,
+    joint_cut_max_tuples: int,
+    joint_cut_rounds: int,
+    joint_cut_max_cuts_per_round: int,
+    joint_cut_tolerance: float,
+    clique_cut_rounds: int,
+    clique_cut_max_cuts_per_round: int,
+    clique_cut_tolerance: float,
     progress_output: Path,
     plot_output: Path,
 ) -> dict[str, Any]:
@@ -238,6 +292,21 @@ def solve_pattern_model(
                     name=_var_name("mu_right", left_subject, right_subject, right_pattern.index),
                 )
 
+    joint_stats = _add_joint_community_constraints(
+        model=model,
+        gp=gp,
+        patterns=patterns,
+        blocks=blocks,
+        pairs=pairs,
+        cross_costs=cross_costs,
+        lam=lam,
+        mu=mu,
+        subjects=subjects,
+        community_count=joint_community_count,
+        community_size=joint_community_size,
+        max_tuples=joint_community_max_tuples,
+    )
+
     clash_expr = gp.LinExpr()
     objective = gp.LinExpr()
     for subject, subject_patterns in patterns.items():
@@ -258,6 +327,39 @@ def solve_pattern_model(
     model.addConstr(clash_expr <= 15, name="max_same_slot_clashes")
     model.setObjective(objective, GRB.MINIMIZE)
     model.update()
+
+    clique_cut_stats = _generate_incompatibility_clique_cuts(
+        model=model,
+        gp=gp,
+        patterns=patterns,
+        cross_costs=cross_costs,
+        lam=lam,
+        subjects=subjects,
+        relax_lambda=relax_lambda,
+        rounds=clique_cut_rounds,
+        max_cuts_per_round=clique_cut_max_cuts_per_round,
+        tolerance=clique_cut_tolerance,
+    )
+
+    joint_cut_stats = _generate_joint_consistency_cuts(
+        model=model,
+        gp=gp,
+        patterns=patterns,
+        blocks=blocks,
+        pairs=pairs,
+        cross_costs=cross_costs,
+        lam=lam,
+        mu=mu,
+        subjects=subjects,
+        relax_lambda=relax_lambda,
+        mu_binary=mu_binary,
+        community_count=joint_cut_count,
+        community_size=joint_cut_community_size,
+        max_tuples=joint_cut_max_tuples,
+        rounds=joint_cut_rounds,
+        max_cuts_per_round=joint_cut_max_cuts_per_round,
+        tolerance=joint_cut_tolerance,
+    )
 
     progress: list[dict[str, float]] = []
 
@@ -317,6 +419,14 @@ def solve_pattern_model(
         "runtime_seconds": float(model.Runtime),
         "pattern_count": sum(len(subject_patterns) for subject_patterns in patterns.values()),
         "mu_count": len(mu),
+        "theta_count": joint_stats["theta_count"],
+        "joint_community_count": len(joint_stats["communities"]),
+        "joint_communities": ";".join("|".join(community) for community in joint_stats["communities"]),
+        "joint_cut_count": len(joint_cut_stats["cuts"]),
+        "joint_cut_communities": ";".join("|".join(cut["community"]) for cut in joint_cut_stats["cuts"]),
+        "joint_cut_max_violation": joint_cut_stats["max_violation"],
+        "clique_cut_count": len(clique_cut_stats["cuts"]),
+        "clique_cut_max_violation": clique_cut_stats["max_violation"],
         "incompatible_mu_count": incompatible_count,
         "same_slot_clashes": same_slot_clashes,
         "timetable": timetable,
@@ -338,6 +448,594 @@ def _build_blocks(exams: pd.DataFrame) -> dict[str, list[str]]:
         subject_df = subject_df.sort_values("Exam")
         blocks[str(subject)] = subject_df["Full Name"].astype(str).tolist()
     return blocks
+
+
+def _add_joint_community_constraints(
+    *,
+    model: Any,
+    gp: Any,
+    patterns: dict[str, list[Pattern]],
+    blocks: dict[str, list[str]],
+    pairs: pd.DataFrame,
+    cross_costs: dict[tuple[str, int, str, int], CrossCost],
+    lam: dict[tuple[str, int], Any],
+    mu: dict[tuple[str, int, str, int], Any],
+    subjects: list[str],
+    community_count: int,
+    community_size: int,
+    max_tuples: int,
+) -> dict[str, Any]:
+    if community_count <= 0:
+        return {"communities": [], "theta_count": 0}
+
+    subject_order = {subject: pos for pos, subject in enumerate(subjects)}
+    communities = _select_dense_subject_communities(
+        blocks=blocks,
+        pairs=pairs,
+        patterns=patterns,
+        count=community_count,
+        size=community_size,
+        max_tuples=max_tuples,
+    )
+
+    theta_count = 0
+    for community_index, community in enumerate(communities, start=1):
+        by_subject_pattern: dict[tuple[str, int], list[Any]] = {}
+        by_pair_pattern: dict[tuple[str, int, str, int], list[Any]] = {}
+        subject_patterns = [patterns[subject] for subject in community]
+
+        for combo in itertools.product(*subject_patterns):
+            signature = tuple(pattern.index for pattern in combo)
+            if _combo_has_incompatible_pair(combo, community, cross_costs, subject_order):
+                continue
+
+            theta = model.addVar(
+                vtype=gp.GRB.CONTINUOUS,
+                lb=0.0,
+                ub=1.0,
+                name=_var_name("theta", community_index, *signature),
+            )
+            theta_count += 1
+
+            for pattern in combo:
+                by_subject_pattern.setdefault((pattern.subject, pattern.index), []).append(theta)
+
+            for left_pos, left_pattern in enumerate(combo):
+                for right_pattern in combo[left_pos + 1 :]:
+                    key = _ordered_pattern_pair_key(
+                        left_pattern.subject,
+                        left_pattern.index,
+                        right_pattern.subject,
+                        right_pattern.index,
+                        subject_order,
+                    )
+                    by_pair_pattern.setdefault(key, []).append(theta)
+
+        model.update()
+
+        for subject in community:
+            for pattern in patterns[subject]:
+                model.addConstr(
+                    gp.quicksum(by_subject_pattern.get((subject, pattern.index), []))
+                    == lam[(subject, pattern.index)],
+                    name=_var_name("theta_lambda", community_index, subject, pattern.index),
+                )
+
+        for left_pos, left_subject in enumerate(community):
+            for right_subject in community[left_pos + 1 :]:
+                for left_pattern in patterns[left_subject]:
+                    for right_pattern in patterns[right_subject]:
+                        key = _ordered_pattern_pair_key(
+                            left_subject,
+                            left_pattern.index,
+                            right_subject,
+                            right_pattern.index,
+                            subject_order,
+                        )
+                        model.addConstr(
+                            gp.quicksum(by_pair_pattern.get(key, [])) == mu[key],
+                            name=_var_name(
+                                "theta_mu",
+                                community_index,
+                                left_subject,
+                                left_pattern.index,
+                                right_subject,
+                                right_pattern.index,
+                            ),
+                        )
+
+    return {"communities": communities, "theta_count": theta_count}
+
+
+def _generate_joint_consistency_cuts(
+    *,
+    model: Any,
+    gp: Any,
+    patterns: dict[str, list[Pattern]],
+    blocks: dict[str, list[str]],
+    pairs: pd.DataFrame,
+    cross_costs: dict[tuple[str, int, str, int], CrossCost],
+    lam: dict[tuple[str, int], Any],
+    mu: dict[tuple[str, int, str, int], Any],
+    subjects: list[str],
+    relax_lambda: bool,
+    mu_binary: bool,
+    community_count: int,
+    community_size: int,
+    max_tuples: int,
+    rounds: int,
+    max_cuts_per_round: int,
+    tolerance: float,
+) -> dict[str, Any]:
+    if community_count <= 0 or rounds <= 0:
+        return {"cuts": [], "max_violation": 0.0}
+
+    subject_order = {subject: pos for pos, subject in enumerate(subjects)}
+    communities = _select_dense_subject_communities(
+        blocks=blocks,
+        pairs=pairs,
+        patterns=patterns,
+        count=community_count,
+        size=community_size,
+        max_tuples=max_tuples,
+    )
+    if not communities:
+        return {"cuts": [], "max_violation": 0.0}
+
+    original_lambda_types = {key: var.VType for key, var in lam.items()}
+    original_mu_types = {key: var.VType for key, var in mu.items()}
+    if not relax_lambda:
+        for var in lam.values():
+            var.VType = gp.GRB.CONTINUOUS
+    if mu_binary:
+        for var in mu.values():
+            var.VType = gp.GRB.CONTINUOUS
+    model.update()
+
+    generated: list[dict[str, Any]] = []
+    max_violation = 0.0
+    original_output_flag = int(model.Params.OutputFlag)
+    model.setParam("OutputFlag", 0)
+
+    try:
+        for round_index in range(1, rounds + 1):
+            model.optimize()
+            if model.Status != gp.GRB.OPTIMAL:
+                break
+
+            added_this_round = 0
+            for community in communities:
+                cut = _separate_joint_consistency_cut(
+                    gp=gp,
+                    patterns=patterns,
+                    cross_costs=cross_costs,
+                    lam=lam,
+                    mu=mu,
+                    community=community,
+                    subject_order=subject_order,
+                    tolerance=tolerance,
+                )
+                if cut is None:
+                    continue
+
+                expression = gp.LinExpr()
+                for key, coefficient in cut["coefficients"].items():
+                    if key[0] == "lambda":
+                        _kind, subject, pattern_index = key
+                        expression.addTerms(coefficient, lam[(subject, pattern_index)])
+                    else:
+                        _kind, left_subject, left_index, right_subject, right_index = key
+                        expression.addTerms(coefficient, mu[(left_subject, left_index, right_subject, right_index)])
+
+                model.addConstr(
+                    expression <= cut["rhs"] + 1e-7,
+                    name=_var_name("joint_sep_cut", round_index, len(generated) + 1),
+                )
+                generated.append(cut)
+                max_violation = max(max_violation, float(cut["violation"]))
+                added_this_round += 1
+                if added_this_round >= max_cuts_per_round:
+                    break
+
+            model.update()
+            if added_this_round == 0:
+                break
+    finally:
+        model.setParam("OutputFlag", original_output_flag)
+        for key, var_type in original_lambda_types.items():
+            lam[key].VType = var_type
+        for key, var_type in original_mu_types.items():
+            mu[key].VType = var_type
+        model.update()
+        model.reset()
+
+    return {"cuts": generated, "max_violation": max_violation}
+
+
+def _generate_incompatibility_clique_cuts(
+    *,
+    model: Any,
+    gp: Any,
+    patterns: dict[str, list[Pattern]],
+    cross_costs: dict[tuple[str, int, str, int], CrossCost],
+    lam: dict[tuple[str, int], Any],
+    subjects: list[str],
+    relax_lambda: bool,
+    rounds: int,
+    max_cuts_per_round: int,
+    tolerance: float,
+) -> dict[str, Any]:
+    if rounds <= 0 or max_cuts_per_round <= 0:
+        return {"cuts": [], "max_violation": 0.0}
+
+    subject_order = {subject: pos for pos, subject in enumerate(subjects)}
+    adjacency = _build_incompatibility_graph(
+        patterns=patterns,
+        cross_costs=cross_costs,
+        subject_order=subject_order,
+        max_same_slot_clashes=15.0,
+    )
+    if not adjacency:
+        return {"cuts": [], "max_violation": 0.0}
+
+    original_lambda_types = {key: var.VType for key, var in lam.items()}
+    if not relax_lambda:
+        for var in lam.values():
+            var.VType = gp.GRB.CONTINUOUS
+    model.update()
+
+    generated: list[dict[str, Any]] = []
+    generated_keys: set[frozenset[tuple[str, int]]] = set()
+    max_violation = 0.0
+    original_output_flag = int(model.Params.OutputFlag)
+    model.setParam("OutputFlag", 0)
+
+    try:
+        for round_index in range(1, rounds + 1):
+            model.optimize()
+            if model.Status != gp.GRB.OPTIMAL:
+                break
+
+            weights = {node: float(lam[node].X) for node in adjacency}
+            added_this_round = 0
+            candidate_cliques = _exact_violated_cliques(
+                gp=gp,
+                adjacency=adjacency,
+                weights=weights,
+                max_cliques=max_cuts_per_round,
+                tolerance=tolerance,
+            )
+            for clique in candidate_cliques:
+                key = frozenset(clique)
+                if key in generated_keys:
+                    continue
+                generated_keys.add(key)
+                violation = sum(weights[node] for node in clique) - 1.0
+                model.addConstr(
+                    gp.quicksum(lam[node] for node in clique) <= 1.0,
+                    name=_var_name("lifted_clique", round_index, len(generated) + 1),
+                )
+                generated.append({"clique": clique, "violation": violation})
+                max_violation = max(max_violation, violation)
+                added_this_round += 1
+                if added_this_round >= max_cuts_per_round:
+                    break
+
+            model.update()
+            if added_this_round == 0:
+                break
+    finally:
+        model.setParam("OutputFlag", original_output_flag)
+        for key, var_type in original_lambda_types.items():
+            lam[key].VType = var_type
+        model.update()
+        model.reset()
+
+    return {"cuts": generated, "max_violation": max_violation}
+
+
+def _build_incompatibility_graph(
+    *,
+    patterns: dict[str, list[Pattern]],
+    cross_costs: dict[tuple[str, int, str, int], CrossCost],
+    subject_order: dict[str, int],
+    max_same_slot_clashes: float,
+) -> dict[tuple[str, int], set[tuple[str, int]]]:
+    nodes = [(subject, pattern.index) for subject, subject_patterns in patterns.items() for pattern in subject_patterns]
+    adjacency: dict[tuple[str, int], set[tuple[str, int]]] = {node: set() for node in nodes}
+    subjects = list(patterns)
+
+    for left_pos, left_subject in enumerate(subjects):
+        for right_subject in subjects[left_pos + 1 :]:
+            for left_pattern in patterns[left_subject]:
+                for right_pattern in patterns[right_subject]:
+                    key = _ordered_pattern_pair_key(
+                        left_subject,
+                        left_pattern.index,
+                        right_subject,
+                        right_pattern.index,
+                        subject_order,
+                    )
+                    cost = cross_costs[key]
+                    pair_is_impossible = (
+                        cost.daily_length_infeasible
+                        or cost.same_slot_clashes > max_same_slot_clashes
+                    )
+                    if not pair_is_impossible:
+                        continue
+                    left_node = (left_subject, left_pattern.index)
+                    right_node = (right_subject, right_pattern.index)
+                    adjacency[left_node].add(right_node)
+                    adjacency[right_node].add(left_node)
+
+    return {node: neighbors for node, neighbors in adjacency.items() if neighbors}
+
+
+def _exact_violated_cliques(
+    *,
+    gp: Any,
+    adjacency: dict[tuple[str, int], set[tuple[str, int]]],
+    weights: dict[tuple[str, int], float],
+    max_cliques: int,
+    tolerance: float,
+) -> list[tuple[tuple[str, int], ...]]:
+    nodes = [node for node in adjacency if weights.get(node, 0.0) > tolerance]
+    if len(nodes) < 2:
+        return []
+
+    cliques: list[tuple[tuple[str, int], ...]] = []
+    forbidden: list[frozenset[tuple[str, int]]] = []
+    for _ in range(max_cliques):
+        sep = gp.Model("pattern_clique_separator")
+        sep.setParam("OutputFlag", 0)
+        z = sep.addVars(len(nodes), vtype=gp.GRB.BINARY, name="z")
+        sep.setObjective(
+            gp.quicksum(weights[nodes[index]] * z[index] for index in range(len(nodes))),
+            gp.GRB.MAXIMIZE,
+        )
+
+        for i, left in enumerate(nodes):
+            left_neighbors = adjacency.get(left, set())
+            for j in range(i + 1, len(nodes)):
+                right = nodes[j]
+                if right not in left_neighbors:
+                    sep.addConstr(z[i] + z[j] <= 1)
+
+        for clique in forbidden:
+            sep.addConstr(
+                gp.quicksum(z[index] for index, node in enumerate(nodes) if node in clique) <= len(clique) - 1
+            )
+
+        sep.optimize()
+        if sep.Status != gp.GRB.OPTIMAL or sep.ObjVal <= 1.0 + tolerance:
+            break
+
+        clique = tuple(sorted(nodes[index] for index in range(len(nodes)) if z[index].X > 0.5))
+        if len(clique) < 2:
+            break
+        cliques.append(clique)
+        forbidden.append(frozenset(clique))
+
+    return cliques
+
+
+def _greedy_violated_cliques(
+    *,
+    adjacency: dict[tuple[str, int], set[tuple[str, int]]],
+    weights: dict[tuple[str, int], float],
+    max_cliques: int,
+    tolerance: float,
+) -> list[tuple[tuple[str, int], ...]]:
+    seeds = sorted(adjacency, key=lambda node: (-weights.get(node, 0.0), node))
+    cliques: list[tuple[tuple[str, int], ...]] = []
+    seen: set[frozenset[tuple[str, int]]] = set()
+
+    for seed in seeds:
+        if weights.get(seed, 0.0) <= tolerance:
+            break
+        clique = [seed]
+        candidates = set(adjacency[seed])
+        while candidates:
+            next_node = max(candidates, key=lambda node: (weights.get(node, 0.0), node))
+            if weights.get(next_node, 0.0) <= tolerance:
+                break
+            clique.append(next_node)
+            candidates &= adjacency[next_node]
+
+        clique_key = frozenset(clique)
+        if clique_key in seen:
+            continue
+        seen.add(clique_key)
+        if len(clique) >= 2 and sum(weights.get(node, 0.0) for node in clique) > 1.0 + tolerance:
+            cliques.append(tuple(sorted(clique)))
+            if len(cliques) >= max_cliques:
+                break
+    return cliques
+
+
+def _separate_joint_consistency_cut(
+    *,
+    gp: Any,
+    patterns: dict[str, list[Pattern]],
+    cross_costs: dict[tuple[str, int, str, int], CrossCost],
+    lam: dict[tuple[str, int], Any],
+    mu: dict[tuple[str, int, str, int], Any],
+    community: tuple[str, ...],
+    subject_order: dict[str, int],
+    tolerance: float,
+) -> dict[str, Any] | None:
+    keys: list[tuple[Any, ...]] = []
+    value_by_key: dict[tuple[Any, ...], float] = {}
+
+    for subject in community:
+        for pattern in patterns[subject]:
+            key = ("lambda", subject, pattern.index)
+            keys.append(key)
+            value_by_key[key] = float(lam[(subject, pattern.index)].X)
+
+    for left_pos, left_subject in enumerate(community):
+        for right_subject in community[left_pos + 1 :]:
+            for left_pattern in patterns[left_subject]:
+                for right_pattern in patterns[right_subject]:
+                    ordered_key = _ordered_pattern_pair_key(
+                        left_subject,
+                        left_pattern.index,
+                        right_subject,
+                        right_pattern.index,
+                        subject_order,
+                    )
+                    key = ("mu", *ordered_key)
+                    keys.append(key)
+                    value_by_key[key] = float(mu[ordered_key].X)
+
+    key_index = {key: index for index, key in enumerate(keys)}
+    sep = gp.Model("joint_consistency_separator")
+    sep.setParam("OutputFlag", 0)
+    y_plus = sep.addVars(len(keys), lb=0.0, name="yp")
+    y_minus = sep.addVars(len(keys), lb=0.0, name="ym")
+    delta_plus = sep.addVar(lb=0.0, name="dp")
+    delta_minus = sep.addVar(lb=0.0, name="dm")
+    delta = delta_plus - delta_minus
+
+    sep.addConstr(
+        gp.quicksum(y_plus[index] + y_minus[index] for index in range(len(keys)))
+        + delta_plus
+        + delta_minus
+        <= 1.0,
+        name="normalization",
+    )
+
+    objective = gp.quicksum(
+        (y_plus[index] - y_minus[index]) * value_by_key[key]
+        for key, index in key_index.items()
+    ) - delta
+    sep.setObjective(objective, gp.GRB.MAXIMIZE)
+
+    subject_patterns = [patterns[subject] for subject in community]
+    for combo_index, combo in enumerate(itertools.product(*subject_patterns)):
+        if _combo_has_incompatible_pair(combo, community, cross_costs, subject_order):
+            continue
+
+        active_indices: list[int] = []
+        for pattern in combo:
+            active_indices.append(key_index[("lambda", pattern.subject, pattern.index)])
+
+        for left_pos, left_pattern in enumerate(combo):
+            for right_pattern in combo[left_pos + 1 :]:
+                ordered_key = _ordered_pattern_pair_key(
+                    left_pattern.subject,
+                    left_pattern.index,
+                    right_pattern.subject,
+                    right_pattern.index,
+                    subject_order,
+                )
+                active_indices.append(key_index[("mu", *ordered_key)])
+
+        sep.addConstr(
+            gp.quicksum(y_plus[index] - y_minus[index] for index in active_indices) <= delta,
+            name=f"joint_tuple[{combo_index}]",
+        )
+
+    sep.optimize()
+    if sep.Status != gp.GRB.OPTIMAL:
+        return None
+
+    violation = float(sep.ObjVal)
+    if violation <= tolerance:
+        return None
+
+    coefficients: dict[tuple[Any, ...], float] = {}
+    for key, index in key_index.items():
+        coefficient = float(y_plus[index].X - y_minus[index].X)
+        if abs(coefficient) > 1e-8:
+            coefficients[key] = coefficient
+
+    rhs = float(delta_plus.X - delta_minus.X)
+    return {
+        "community": community,
+        "coefficients": coefficients,
+        "rhs": rhs,
+        "violation": violation,
+    }
+
+
+def _select_dense_subject_communities(
+    *,
+    blocks: dict[str, list[str]],
+    pairs: pd.DataFrame,
+    patterns: dict[str, list[Pattern]],
+    count: int,
+    size: int,
+    max_tuples: int,
+) -> list[tuple[str, ...]]:
+    if size <= 1:
+        return []
+
+    candidates: list[tuple[float, int, tuple[str, ...]]] = []
+    subjects = list(blocks)
+    for community in itertools.combinations(subjects, size):
+        tuple_count = 1
+        for subject in community:
+            tuple_count *= len(patterns[subject])
+        if tuple_count > max_tuples:
+            continue
+        score = _community_pair_mass(community, blocks, pairs)
+        if score > 0:
+            candidates.append((score, tuple_count, community))
+
+    candidates.sort(key=lambda row: (-row[0], row[1], row[2]))
+    selected: list[tuple[str, ...]] = []
+    used: set[str] = set()
+    for _score, _tuple_count, community in candidates:
+        if any(subject in used for subject in community):
+            continue
+        selected.append(community)
+        used.update(community)
+        if len(selected) >= count:
+            break
+    return selected
+
+
+def _community_pair_mass(community: tuple[str, ...], blocks: dict[str, list[str]], pairs: pd.DataFrame) -> float:
+    total = 0.0
+    for left_pos, left_subject in enumerate(community):
+        for right_subject in community[left_pos + 1 :]:
+            for exam_i in blocks[left_subject]:
+                for exam_j in blocks[right_subject]:
+                    total += float(pairs.loc[exam_i, exam_j])
+    return total
+
+
+def _combo_has_incompatible_pair(
+    combo: tuple[Pattern, ...],
+    community: tuple[str, ...],
+    cross_costs: dict[tuple[str, int, str, int], CrossCost],
+    subject_order: dict[str, int],
+) -> bool:
+    for left_pos, left_pattern in enumerate(combo):
+        for right_pattern in combo[left_pos + 1 :]:
+            key = _ordered_pattern_pair_key(
+                left_pattern.subject,
+                left_pattern.index,
+                right_pattern.subject,
+                right_pattern.index,
+                subject_order,
+            )
+            if cross_costs[key].daily_length_infeasible:
+                return True
+    return False
+
+
+def _ordered_pattern_pair_key(
+    left_subject: str,
+    left_pattern: int,
+    right_subject: str,
+    right_pattern: int,
+    subject_order: dict[str, int],
+) -> tuple[str, int, str, int]:
+    if subject_order[left_subject] < subject_order[right_subject]:
+        return (left_subject, left_pattern, right_subject, right_pattern)
+    return (right_subject, right_pattern, left_subject, left_pattern)
 
 
 def _generate_all_patterns(
