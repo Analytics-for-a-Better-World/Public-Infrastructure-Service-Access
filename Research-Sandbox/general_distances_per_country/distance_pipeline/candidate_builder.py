@@ -17,6 +17,101 @@ from distance_pipeline.snapping import snap_points_to_nodes
 from distance_pipeline.water import load_water_bodies
 
 
+def _resolve_candidate_grid_settings(
+    *,
+    cfg: CountryConfig,
+    settings: PipelineSettings,
+) -> tuple[float | None, float | None]:
+    """Resolve candidate grid and road-snap settings."""
+    candidate_grid_spacing_m = (
+        settings.candidate_grid_spacing_m
+        if settings.candidate_grid_spacing_m is not None
+        else cfg.candidate_grid_spacing_m
+    )
+    candidate_max_snap_dist_m = (
+        settings.candidate_max_snap_dist_m
+        if settings.candidate_max_snap_dist_m is not None
+        else cfg.candidate_max_snap_dist_m
+    )
+    return candidate_grid_spacing_m, candidate_max_snap_dist_m
+
+
+def build_candidate_grid(
+    *,
+    cfg: CountryConfig,
+    settings: PipelineSettings,
+    cache: CacheManager,
+) -> pd.DataFrame | None:
+    """Build unsnapped candidate facility locations for map-only runs."""
+    candidate_grid_spacing_m, candidate_max_snap_dist_m = _resolve_candidate_grid_settings(
+        cfg=cfg,
+        settings=settings,
+    )
+
+    if settings.verbose:
+        print(f'candidate_grid_spacing_m = {candidate_grid_spacing_m}')
+        print(f'candidate_max_snap_dist_m = {candidate_max_snap_dist_m}')
+        print(f'candidate_exclude_water = {cfg.candidate_exclude_water}')
+
+    if candidate_grid_spacing_m is None:
+        if settings.verbose:
+            print('Candidate generation is disabled.')
+        return None
+
+    if cfg.boundary_source != 'natural_earth':
+        raise ValueError(
+            f'Unsupported boundary_source {cfg.boundary_source!r}. '
+            'Only natural_earth is supported.'
+        )
+
+    country_boundary = cache.run(
+        cache_path=cache.country_boundary_path(),
+        builder=lambda: load_country_geometry(
+            iso3=cfg.iso3,
+            cache_dir=cache.boundaries_dir(),
+            projected_epsg=cfg.PROJECTED_EPSG,
+            verbose=settings.verbose,
+        ),
+    )
+
+    def build_candidates() -> pd.DataFrame:
+        candidates = build_regular_grid_within_polygon(
+            polygon_gdf=country_boundary,
+            spacing_m=candidate_grid_spacing_m,
+            include_boundary=cfg.candidate_include_boundary,
+            verbose=settings.verbose,
+        )
+
+        if not cfg.candidate_exclude_water:
+            if settings.verbose:
+                print('Skipping water body loading because candidate_exclude_water=False.')
+            return candidates
+
+        water_bodies = cache.run(
+            cache_path=cache.water_bodies_path(),
+            builder=lambda: load_water_bodies(
+                cfg.PBF_PATH,
+                projected_epsg=cfg.PROJECTED_EPSG,
+                verbose=settings.verbose,
+            ),
+        )
+
+        return exclude_points_on_water(
+            candidates=candidates,
+            water_bodies=water_bodies,
+            verbose=settings.verbose,
+        )
+
+    return cache.run(
+        cache_path=cache.candidate_sites_path(
+            grid_spacing_m=candidate_grid_spacing_m,
+            exclude_water=cfg.candidate_exclude_water,
+            include_boundary=cfg.candidate_include_boundary,
+        ),
+        builder=build_candidates,
+    )
+
+
 def build_candidate_sites(
     *,
     cfg: CountryConfig,
@@ -45,16 +140,9 @@ def build_candidate_sites(
     '''
     t0 = pc()
 
-    candidate_grid_spacing_m = (
-        settings.candidate_grid_spacing_m
-        if settings.candidate_grid_spacing_m is not None
-        else cfg.candidate_grid_spacing_m
-    )
-
-    candidate_max_snap_dist_m = (
-        settings.candidate_max_snap_dist_m
-        if settings.candidate_max_snap_dist_m is not None
-        else cfg.candidate_max_snap_dist_m
+    candidate_grid_spacing_m, candidate_max_snap_dist_m = _resolve_candidate_grid_settings(
+        cfg=cfg,
+        settings=settings,
     )
 
     if settings.verbose:
@@ -67,60 +155,10 @@ def build_candidate_sites(
             print('Candidate generation is disabled.')
         return None, None
 
-    if cfg.boundary_source != 'natural_earth':
-        raise ValueError(
-            f'Unsupported boundary_source {cfg.boundary_source!r}. '
-            'Only natural_earth is supported.'
-        )
-
-    country_boundary = cache.run(
-        cache_path=cache.country_boundary_path(),
-        builder=lambda: load_country_geometry(
-            iso3=cfg.iso3,
-            cache_dir=cache.boundaries_dir(),
-            projected_epsg=cfg.PROJECTED_EPSG,
-            verbose=settings.verbose,
-        ),
-    )
-
-    def build_candidates() -> pd.DataFrame:
-        '''
-        Build candidate locations and optionally exclude candidates on water.
-        '''
-        candidates = build_regular_grid_within_polygon(
-            polygon_gdf=country_boundary,
-            spacing_m=candidate_grid_spacing_m,
-            include_boundary=cfg.candidate_include_boundary,
-            verbose=settings.verbose,
-        )
-
-        if not cfg.candidate_exclude_water:
-            if settings.verbose:
-                print('Skipping water body loading because candidate_exclude_water=False.')
-            return candidates
-
-        water_bodies = cache.run(
-            cache_path=cache.water_bodies_path(),
-            builder=lambda: load_water_bodies(
-                cfg.PBF_PATH,
-                projected_epsg=cfg.PROJECTED_EPSG,
-                verbose=settings.verbose,
-            ),
-        )
-
-        return exclude_points_on_water(
-            candidates=candidates,
-            water_bodies=water_bodies,
-            verbose=settings.verbose,
-        )
-
-    candidate_sites = cache.run(
-        cache_path=cache.candidate_sites_path(
-            grid_spacing_m=candidate_grid_spacing_m,
-            exclude_water=cfg.candidate_exclude_water,
-            include_boundary=cfg.candidate_include_boundary,
-        ),
-        builder=build_candidates,
+    candidate_sites = build_candidate_grid(
+        cfg=cfg,
+        settings=settings,
+        cache=cache,
     )
 
     candidate_sites_snapped = cache.run(

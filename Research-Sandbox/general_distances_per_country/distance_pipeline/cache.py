@@ -27,6 +27,29 @@ def _amenity_part(amenity_values: list[str] | None) -> str:
     return '_'.join(sorted(amenity_values))
 
 
+def _safe_part(value: object) -> str:
+    """Format an arbitrary cache-key component for filenames."""
+    return str(value).replace('-', 'm').replace('.', 'p').replace('+', '')
+
+
+def _bbox_part(bbox: tuple[float, float, float, float] | list[float] | None) -> str:
+    """Format an optional lon/lat bbox for cache-key filenames."""
+    if bbox is None:
+        return ''
+    min_lon, min_lat, max_lon, max_lat = bbox
+    return (
+        f'_bbox_{_safe_part(min_lon)}_{_safe_part(min_lat)}_'
+        f'{_safe_part(max_lon)}_{_safe_part(max_lat)}'
+    )
+
+
+def _backend_part(network_backend: str | None) -> str:
+    """Format an optional OSM network backend for cache-key filenames."""
+    if network_backend in (None, '', 'pyrosm'):
+        return ''
+    return f'_backend_{_safe_part(network_backend)}'
+
+
 def _load_pickle[T](cache_path: Path) -> T:
     """Load a pickled object from disk."""
     with cache_path.open('rb') as file:
@@ -118,8 +141,15 @@ class CacheManager:
     def worldpop_stem(self) -> str:
         return self.cfg.WORLDPOP_PATH.stem
 
-    def nodes_path(self) -> Path:
-        return self.cache_dir / f'{self.pbf_stem}_nodes.pkl'
+    def nodes_path(
+        self,
+        bbox: tuple[float, float, float, float] | list[float] | None = None,
+        network_backend: str | None = None,
+    ) -> Path:
+        return (
+            self.cache_dir
+            / f'{self.pbf_stem}_nodes{_bbox_part(bbox)}{_backend_part(network_backend)}.pkl'
+        )
 
     def boundaries_dir(self) -> Path:
         return self.cache_dir / 'boundaries'
@@ -173,11 +203,25 @@ class CacheManager:
             )
         )
 
-    def edges_path(self) -> Path:
-        return self.cache_dir / f'{self.pbf_stem}_edges.pkl'
+    def edges_path(
+        self,
+        bbox: tuple[float, float, float, float] | list[float] | None = None,
+        network_backend: str | None = None,
+    ) -> Path:
+        return (
+            self.cache_dir
+            / f'{self.pbf_stem}_edges{_bbox_part(bbox)}{_backend_part(network_backend)}.pkl'
+        )
 
-    def roads_path(self) -> Path:
-        return self.cache_dir / f'{self.pbf_stem}_roads.pkl'
+    def roads_path(
+        self,
+        bbox: tuple[float, float, float, float] | list[float] | None = None,
+        network_backend: str | None = None,
+    ) -> Path:
+        return (
+            self.cache_dir
+            / f'{self.pbf_stem}_roads{_bbox_part(bbox)}{_backend_part(network_backend)}.pkl'
+        )
 
     def facilities_path(
         self,
@@ -385,10 +429,12 @@ class CacheManager:
     def load_or_build_network_data(
         self,
         builder: Callable[[], tuple[object, object]],
+        bbox: tuple[float, float, float, float] | list[float] | None = None,
+        network_backend: str | None = None,
     ) -> tuple[object, object]:
         """Load cached nodes and edges, or build and cache both in a single pass."""
-        nodes_path = self.nodes_path()
-        edges_path = self.edges_path()
+        nodes_path = self.nodes_path(bbox=bbox, network_backend=network_backend)
+        edges_path = self.edges_path(bbox=bbox, network_backend=network_backend)
         t0: float = pc()
 
         can_load = (

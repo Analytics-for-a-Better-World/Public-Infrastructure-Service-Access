@@ -25,3 +25,4 @@ class PipelineSettings:
     context_map_roads: bool = True
     bbox: tuple[float, float, float, float] | None = None
     matrix_output_mode: str = 'combined'
+    network_backend: str = 'pyrosm'

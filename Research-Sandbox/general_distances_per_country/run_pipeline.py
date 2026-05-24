@@ -447,6 +447,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--network-backend',
+        choices=('pyrosm', 'osmium', 'auto'),
+        default='pyrosm',
+        help=(
+            'Backend used to extract the OSM driving network. '
+            'pyrosm preserves the historical behavior. osmium streams the PBF '
+            'with pyosmium and can be more memory cautious for large extracts. '
+            'auto uses osmium when the optional package is installed.'
+        ),
+    )
+
+    parser.add_argument(
         '--population-threshold',
         type=float,
         default=1.0,
@@ -773,6 +785,7 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         context_map_roads=args.map_roads == 'true',
         bbox=parse_bbox(args.bbox),
         matrix_output_mode=args.matrix_output_mode,
+        network_backend=args.network_backend,
     )
 
 
@@ -1006,12 +1019,16 @@ def main(
         )
     elif map_only:
         roads = cache.run(
-            cache_path=cache.roads_path(bbox=settings.bbox),
+            cache_path=cache.roads_path(
+                bbox=settings.bbox,
+                network_backend=settings.network_backend,
+            ),
             builder=lambda: classify_roads(
                 load_osm_road_edges(
                     cfg.PBF_PATH,
                     verbose=settings.verbose,
                     bbox=settings.bbox,
+                    backend=settings.network_backend,
                 ),
                 verbose=settings.verbose,
             ),
@@ -1023,11 +1040,16 @@ def main(
                 cfg.PBF_PATH,
                 verbose=settings.verbose,
                 bbox=settings.bbox,
+                backend=settings.network_backend,
             ),
             bbox=settings.bbox,
+            network_backend=settings.network_backend,
         )
         roads = cache.run(
-            cache_path=cache.roads_path(bbox=settings.bbox),
+            cache_path=cache.roads_path(
+                bbox=settings.bbox,
+                network_backend=settings.network_backend,
+            ),
             builder=lambda: classify_roads(edges, verbose=settings.verbose),
         )
         roads = filter_to_bbox(roads, settings.bbox)

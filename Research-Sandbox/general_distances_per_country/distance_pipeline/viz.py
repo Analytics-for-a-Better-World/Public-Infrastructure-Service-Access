@@ -11,6 +11,29 @@ from matplotlib.lines import Line2D
 from shapely.geometry import box
 
 
+CONTEXT_BASEMAPS: dict[str, object] = {
+    'positron': cx.providers.CartoDB.Positron,
+    'positron-no-labels': cx.providers.CartoDB.PositronNoLabels,
+    'voyager': cx.providers.CartoDB.Voyager,
+    'voyager-no-labels': cx.providers.CartoDB.VoyagerNoLabels,
+    'osm': cx.providers.OpenStreetMap.Mapnik,
+}
+CONTEXT_BASEMAP_CHOICES: tuple[str, ...] = tuple(CONTEXT_BASEMAPS)
+
+
+def resolve_context_basemap(provider: object | None) -> object | None:
+    """Resolve a named context-map basemap to a contextily provider."""
+    if provider is None:
+        return None
+    if not isinstance(provider, str):
+        return provider
+    key = provider.strip().lower()
+    if key not in CONTEXT_BASEMAPS:
+        choices = ', '.join(CONTEXT_BASEMAP_CHOICES)
+        raise ValueError(f'Unsupported basemap provider {provider!r}. Expected one of: {choices}.')
+    return CONTEXT_BASEMAPS[key]
+
+
 def estimate_utm_epsg(gdf: gpd.GeoDataFrame) -> int:
     '''Estimate a suitable UTM EPSG code from the GeoDataFrame extent.'''
     if gdf.empty:
@@ -435,6 +458,8 @@ def plot_context_map(
 
     if basemap_provider is None:
         basemap_provider = cx.providers.CartoDB.PositronNoLabels
+    else:
+        basemap_provider = resolve_context_basemap(basemap_provider)
 
     if verbose:
         counts = roads['road_class'].value_counts()

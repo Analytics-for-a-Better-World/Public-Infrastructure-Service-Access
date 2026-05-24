@@ -329,7 +329,15 @@ Control whether context maps include the OSM road overlay. The default is `true`
 ```bash
 --bbox MIN_LON MIN_LAT MAX_LON MAX_LAT
 ```
-Subset a run to a longitude/latitude bounding box. This is useful for island groups or regional runs within large countries. For OSM road-network loading, the bbox is passed to `pyrosm.OSM(..., bounding_box=[min_lon, min_lat, max_lon, max_lat])`, so network and road-map extraction can avoid parsing the full national graph. Bbox-specific node, edge, and road caches include the bbox in their filenames. For example, `--bbox 115 -12 128 -6` focuses Indonesia on Bali/Nusa Tenggara/Timor-like extents.
+Subset a run to a longitude/latitude bounding box. This is useful for island groups or regional runs within large countries. For OSM road-network loading, the bbox is passed to the selected network backend, so network and road-map extraction can avoid retaining the full national graph. Node, edge, and road caches include the bbox and non-default backend in their filenames. For example, `--bbox 115 -12 128 -6` focuses Indonesia on Bali/Nusa Tenggara/Timor-like extents.
+
+```bash
+--network-backend {pyrosm,osmium,auto}
+```
+
+Choose how the OSM driving network is extracted from the country PBF. The default, `pyrosm`, preserves the original pipeline behavior. The `osmium` backend uses the optional Python `osmium` bindings to stream the PBF and emit a Pandana-ready driving graph directly from OSM ways. This can be useful for large extracts where the full `pyrosm` network extraction is memory intensive. The `auto` setting uses `osmium` when the package is installed and falls back to `pyrosm` otherwise.
+
+The two backends are intended to produce the same kind of downstream artefacts: nodes, directed road edges, Pandana networks, context maps, and capped distance matrices. The `osmium` backend is deliberately conservative: it keeps standard drivable highway classes, respects basic one-way tags, filters blocked motor access, and computes segment lengths geodesically from node coordinates. For proof or publication runs, record the backend in the run notes together with the bbox and distance cap.
 
 For a map-only visual check with a more visible but still restrained basemap:
 
@@ -447,6 +455,7 @@ The main libraries used by the pipeline include:
 - `pyarrow`
 - `pyyaml`
 - `pyrosm`
+- `osmium` (optional streaming backend for large OSM PBF extracts)
 - `rasterio`
 - `scipy`
 - `shapely`
