@@ -49,6 +49,21 @@ def main() -> None:
     parser.add_argument("--dense-cluster-min-new-pair-share", type=float, default=0.20)
     parser.add_argument("--dense-cluster-time-limit", type=float, default=60.0)
     parser.add_argument("--dense-cluster-summary", type=Path, default=None)
+    parser.add_argument("--branch-priority-mode", choices=["none", "pair_mass", "dense_cluster"], default="none")
+    parser.add_argument("--branch-priority-clusters", type=int, default=4)
+    parser.add_argument("--branch-priority-cluster-size", type=int, default=12)
+    parser.add_argument("--branch-priority-summary", type=Path, default=None)
+    parser.add_argument(
+        "--global-objective-lower-bound",
+        type=float,
+        default=None,
+        help=(
+            "Optional certified lower bound for the full objective, for example "
+            "from the nonnegative subject-pattern relaxation. Adds a global "
+            "integer-valid objective cut."
+        ),
+    )
+    parser.add_argument("--summary-output", type=Path, default=None)
     args = parser.parse_args()
 
     exams, days, pairs = load_default_data(args.data_dir)
@@ -95,6 +110,24 @@ def main() -> None:
         )
         if args.dense_cluster_summary is not None:
             pd.DataFrame(dense_cut_rows).to_csv(args.dense_cluster_summary, index=False)
+
+    branch_priority_rows: list[dict[str, Any]] = []
+    if args.branch_priority_mode != "none":
+        branch_priority_rows = _apply_branch_priorities(
+            built=built,
+            mode=args.branch_priority_mode,
+            cluster_count=args.branch_priority_clusters,
+            cluster_size=args.branch_priority_cluster_size,
+        )
+        if args.branch_priority_summary is not None:
+            pd.DataFrame(branch_priority_rows).to_csv(args.branch_priority_summary, index=False)
+
+    if args.global_objective_lower_bound is not None:
+        built.model.addConstr(
+            built.model.getObjective() >= args.global_objective_lower_bound - 1e-6,
+            name="global_objective_lower_bound",
+        )
+        built.model.update()
 
     if args.enforce_subject_exam_order:
         start = _repair_subject_exam_order(start, built.data)
@@ -202,6 +235,34 @@ def main() -> None:
     if dense_cut_rows:
         print("Dense cluster cuts:", len(dense_cut_rows))
         print(pd.DataFrame(dense_cut_rows).to_string(index=False))
+    if branch_priority_rows:
+        print("Branch priority mode:", args.branch_priority_mode)
+        print("Branch priority exams:", len(branch_priority_rows))
+        print(pd.DataFrame(branch_priority_rows).head(20).to_string(index=False))
+    if args.summary_output is not None:
+        summary = {
+            "start": str(args.start),
+            "start_objective": start_objective,
+            "objective": objective,
+            "best_bound": float(built.model.ObjBound) if built.model.SolCount else None,
+            "gap": float(built.model.MIPGap) if built.model.SolCount else None,
+            "status": int(built.model.Status),
+            "solve_seconds": solve_seconds,
+            "node_count": float(built.model.NodeCount),
+            "iteration_count": float(built.model.IterCount),
+            "work": float(built.model.Work),
+            "dense_cluster_cuts": args.dense_cluster_cuts,
+            "dense_cluster_size": args.dense_cluster_size,
+            "branch_priority_mode": args.branch_priority_mode,
+            "branch_priority_exams": len(branch_priority_rows),
+            "global_objective_lower_bound": args.global_objective_lower_bound,
+            "callback_slot_swap_heuristic": bool(args.callback_slot_swap_heuristic),
+            "callback_attempts": heuristic_stats["attempts"],
+            "callback_accepted": heuristic_stats["accepted"],
+            "callback_best_injected": heuristic_stats["best_injected"],
+        }
+        pd.DataFrame([summary]).to_csv(args.summary_output, index=False)
+        print(f"Saved summary to {args.summary_output}")
     print(f"Saved timetable to {args.output}")
     print(f"Saved progress to {args.progress_output}")
     print(f"Saved log to {args.log_output}")
@@ -364,6 +425,53 @@ def _pair_set_mass(matrix: pd.DataFrame, pair_set: set[tuple[str, str]]) -> floa
 
 def _cluster_pair_mass(matrix: pd.DataFrame, cluster: list[str]) -> float:
     return _pair_set_mass(matrix, _positive_cluster_pairs(matrix, cluster))
+
+
+def _apply_branch_priorities(
+    *,
+    built: Any,
+    mode: str,
+    cluster_count: int,
+    cluster_size: int,
+) -> list[dict[str, Any]]:
+    pairs = built.data.pairs
+    exam_scores = {
+        exam: float(pairs.loc[exam].sum() + pairs[exam].sum())
+        for exam in built.data.exam_names
+    }
+    selected_exams: set[str]
+    if mode == "dense_cluster":
+        clusters = _select_dense_clusters(
+            pairs,
+            count=cluster_count,
+            size=cluster_size,
+            allow_overlap=True,
+            min_new_pair_share=0.0,
+        )
+        selected_exams = {exam for cluster in clusters for exam in cluster}
+    elif mode == "pair_mass":
+        selected_exams = set(exam_scores)
+    else:
+        raise ValueError(f"Unknown branch priority mode: {mode}")
+
+    max_score = max(exam_scores.values()) if exam_scores else 1.0
+    rows: list[dict[str, Any]] = []
+    for exam in built.data.exam_names:
+        if exam not in selected_exams:
+            priority = 20
+        else:
+            scaled = 0 if max_score <= 0 else round(80.0 * exam_scores[exam] / max_score)
+            priority = int(100 + scaled)
+            rows.append({"exam": exam, "pair_mass": exam_scores[exam], "priority": priority})
+        for slot in built.data.slots:
+            for date in built.data.dates:
+                built.x[(exam, slot, date)].BranchPriority = priority
+
+    for var in built.y.values():
+        if getattr(var, "VType", None) != "C":
+            var.BranchPriority = 1
+    built.model.update()
+    return sorted(rows, key=lambda row: (-float(row["priority"]), str(row["exam"])))
 
 
 def _timetable_from_callback_solution(*, built: Any, model: Any) -> pd.DataFrame | None:
