@@ -1,0 +1,1 @@
+"""Persistence contracts and repository."""

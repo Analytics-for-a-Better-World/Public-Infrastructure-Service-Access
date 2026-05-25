@@ -1,0 +1,1 @@
+"""Artifact declarations and runner."""

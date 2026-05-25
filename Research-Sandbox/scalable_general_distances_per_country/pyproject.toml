@@ -1,0 +1,37 @@
+[project]
+name = "scalable-general-distances-per-country"
+version = "0.1.0"
+description = "Modular, API-first reengineering of the general country distance pipeline."
+requires-python = ">=3.10,<3.11"
+dependencies = [
+    "pandas>=2.0",
+    "pyyaml>=6.0",
+]
+
+[project.scripts]
+scalable-distances = "scalable_distances.cli:main"
+
+[project.optional-dependencies]
+geospatial = [
+    "geopandas>=1.0.1",
+    "numpy>=1.23.5",
+    "pyproj>=3.3",
+    "shapely>=2.0.6",
+]
+osm = [
+    "npyosmium>=4.2.0",
+]
+routing = [
+    "networkx>=2.8",
+    "pandana",
+]
+dev = [
+    "pytest>=7.2",
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+where = ["src"]
