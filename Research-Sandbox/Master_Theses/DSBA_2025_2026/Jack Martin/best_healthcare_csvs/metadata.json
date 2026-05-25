@@ -1,0 +1,53 @@
+{
+  "created_for": "Jack Martin MSc thesis healthcare accessibility study",
+  "created_on": "2026-05-18T07:41:40.928585+00:00",
+  "study_layers": {
+    "nearest_healthcare_facility_any_type": [
+      "general_practitioner",
+      "huisartsenpost",
+      "hospital"
+    ],
+    "nearest_emergency_care_facility": [
+      "hospital"
+    ],
+    "gatekept_emergency_route_first_leg": [
+      "general_practitioner",
+      "huisartsenpost"
+    ],
+    "gatekept_emergency_route_second_leg": [
+      "hospital"
+    ]
+  },
+  "sources": {
+    "huisartsenpost": "RIVM/VZinfo map Locaties huisartsenspoedposten 2025, peildatum december 2025, based on Benchmark huisartsenposten 2024 and RIVM edits through January 2026.",
+    "general_practitioner": "OpenStreetMap via Overpass API; tags amenity=doctors, healthcare=doctor, healthcare:speciality/name huisarts/general practitioner.",
+    "hospital_emergency_proxy": "OpenStreetMap via Overpass API; amenity=hospital or healthcare=hospital. Treat as emergency-care proxy until official SEH-only list is extracted.",
+    "hospital": "RIVM/VZinfo SEH travel-time map, 2025. Includes 24/7 basic SEH and locations in the official map location file; see hospital_type for opening classification."
+  },
+  "counts": {
+    "general_practitioner": 2465,
+    "hospital_emergency_proxy": 212,
+    "huisartsenpost": 103
+  },
+  "files": [
+    "metadata.json",
+    "netherlands_general_practitioner.csv",
+    "netherlands_general_practitioner.geojson",
+    "netherlands_health_service_locations_all_layers.csv",
+    "netherlands_health_service_locations_all_layers.geojson",
+    "netherlands_health_service_locations_study_layers.csv",
+    "netherlands_health_service_locations_study_layers.geojson",
+    "netherlands_hospital_emergency_proxy.csv",
+    "netherlands_hospital_emergency_proxy.geojson",
+    "netherlands_hospitals_seh_official.csv",
+    "netherlands_hospitals_seh_official.geojson",
+    "netherlands_huisartsenpost.csv",
+    "netherlands_huisartsenpost.geojson"
+  ],
+  "recommended_study_file": "netherlands_health_service_locations_study_layers.csv",
+  "counts_recommended_study_layers": {
+    "general_practitioner": 2465,
+    "huisartsenpost": 103,
+    "hospital": 79
+  }
+}

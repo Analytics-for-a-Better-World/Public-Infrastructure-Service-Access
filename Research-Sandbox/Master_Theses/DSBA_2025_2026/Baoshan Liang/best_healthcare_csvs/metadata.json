@@ -1,0 +1,17 @@
+{
+  "counts": {
+    "primary_care": 1597,
+    "hospital_emergency_proxy": 353
+  },
+  "note": "Portugal layers are OSM-derived proxies. permanent_care captures SAP/AP/atendimento complementar name patterns and should be reviewed against official SNS/ERS facility registers if a stable downloadable endpoint is identified.",
+  "recommended_study_file": "portugal_health_service_locations_official_preferred.csv",
+  "counts_official_preferred": {
+    "primary_care": 1597,
+    "hospital_emergency_official": 94
+  },
+  "official_source_notes": {
+    "hospital_emergency_official": "SNS Transparency Portal dataset caracterizacao-das-valencias-de-urgencia, facility-level coordinates.",
+    "primary_care": "Still OSM-derived. SNS Transparency Unidades Funcionais is aggregate by CSP area, not individual facility-level points.",
+    "permanent_care": "SAP/AP recognized as a relevant layer, but no stable official facility-level downloadable list was identified in this pass."
+  }
+}

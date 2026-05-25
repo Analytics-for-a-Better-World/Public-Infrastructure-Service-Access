@@ -19,9 +19,16 @@ class CountryConfig:
     distance_threshold_km: float = 150.0
     geofabrik_region: str = 'europe'
     worldpop_year: int = 2020
+    worldpop_dataset: str = 'global1'
+    worldpop_release: str | None = None
+    worldpop_version: str = 'v1'
+    worldpop_resolution: str = '100m'
+    worldpop_constrained: bool = False
     worldpop_suffix: str = 'ppp'
     worldpop_adjustment: str | None = 'UNadj'
     worldpop_filename: str | None = None
+    worldpop_url: str | None = None
+    worldpop_path: Path | None = None
     pbf_filename: str | None = None
     plot_title_suffix: str = 'roads, population, and service facilities'
     boundary_source: str = 'natural_earth'
@@ -49,6 +56,15 @@ class CountryConfig:
         if self.worldpop_filename is not None:
             return self.worldpop_filename
 
+        if self.worldpop_dataset == 'global2':
+            constrained_part = 'CN' if self.worldpop_constrained else 'UA'
+            release_part = self.worldpop_release or 'R2025A'
+            return (
+                f'{self.iso3.lower()}_pop_{self.worldpop_year}_'
+                f'{constrained_part}_{self.worldpop_resolution}_'
+                f'{release_part}_{self.worldpop_version}.tif'
+            )
+
         parts: list[str] = [
             self.iso3.lower(),
             self.worldpop_suffix,
@@ -69,6 +85,21 @@ class CountryConfig:
     @property
     def WORLDPOP_URL(self) -> str:
         '''Return the WorldPop raster download URL.'''
+        if self.worldpop_url is not None:
+            return self.worldpop_url
+
+        if self.worldpop_dataset == 'global2':
+            release_part = self.worldpop_release or 'R2025A'
+            constraint_part = (
+                'constrained' if self.worldpop_constrained else 'unconstrained'
+            )
+            return (
+                'https://worldpop-public-data.soton.ac.uk/GIS/Population/'
+                f'Global_2015_2030/{release_part}/{self.worldpop_year}/'
+                f'{self.iso3}/{self.worldpop_version}/{self.worldpop_resolution}/'
+                f'{constraint_part}/{self.resolved_worldpop_filename}'
+            )
+
         return (
             'https://data.worldpop.org/GIS/Population/Global_2000_2020/'
             f'{self.worldpop_year}/{self.iso3}/{self.resolved_worldpop_filename}'
@@ -82,6 +113,8 @@ class CountryConfig:
     @property
     def WORLDPOP_PATH(self) -> Path:
         '''Return the local WorldPop raster path.'''
+        if self.worldpop_path is not None:
+            return self.worldpop_path
         return self.BASE_DIR / self.resolved_worldpop_filename
 
     @property
@@ -110,9 +143,16 @@ DEFAULTS: dict[str, ConfigValue] = {
     'distance_threshold_km': 150.0,
     'geofabrik_region': 'europe',
     'worldpop_year': 2020,
+    'worldpop_dataset': 'global1',
+    'worldpop_release': None,
+    'worldpop_version': 'v1',
+    'worldpop_resolution': '100m',
+    'worldpop_constrained': False,
     'worldpop_suffix': 'ppp',
     'worldpop_adjustment': 'UNadj',
     'worldpop_filename': None,
+    'worldpop_url': None,
+    'worldpop_path': None,
     'pbf_filename': None,
     'plot_title_suffix': 'roads, population, and service facilities',
     'boundary_source': 'natural_earth',
@@ -154,6 +194,10 @@ def build_config(
     candidate_grid_spacing_m = merged['candidate_grid_spacing_m']
     candidate_max_snap_dist_m = merged['candidate_max_snap_dist_m']
     aggregate_factor = merged['aggregate_factor']
+    worldpop_dataset = str(merged['worldpop_dataset'])
+
+    if worldpop_dataset not in {'global1', 'global2'}:
+        raise ValueError("worldpop_dataset must be 'global1' or 'global2'.")
 
     if aggregate_factor is not None and int(aggregate_factor) < 2:
         raise ValueError('aggregate_factor must be >= 2 or None.')
@@ -168,6 +212,15 @@ def build_config(
         distance_threshold_km=float(merged['distance_threshold_km']),
         geofabrik_region=str(merged['geofabrik_region']),
         worldpop_year=int(merged['worldpop_year']),
+        worldpop_dataset=worldpop_dataset,
+        worldpop_release=(
+            None
+            if merged['worldpop_release'] is None
+            else str(merged['worldpop_release'])
+        ),
+        worldpop_version=str(merged['worldpop_version']),
+        worldpop_resolution=str(merged['worldpop_resolution']),
+        worldpop_constrained=bool(merged['worldpop_constrained']),
         worldpop_suffix=str(merged['worldpop_suffix']),
         worldpop_adjustment=(
             None
@@ -178,6 +231,16 @@ def build_config(
             None
             if merged['worldpop_filename'] is None
             else str(merged['worldpop_filename'])
+        ),
+        worldpop_url=(
+            None
+            if merged['worldpop_url'] is None
+            else str(merged['worldpop_url'])
+        ),
+        worldpop_path=(
+            None
+            if merged['worldpop_path'] is None
+            else Path(merged['worldpop_path'])
         ),
         pbf_filename=(
             None

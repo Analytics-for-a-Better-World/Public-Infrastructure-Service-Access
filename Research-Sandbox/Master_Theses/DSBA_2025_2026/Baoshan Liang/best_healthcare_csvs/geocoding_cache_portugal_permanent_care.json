@@ -1,0 +1,308 @@
+{
+  "google_maps::Serviço de Atendimento Complementar (SAC) Algés, Praça de S. Francisco Xavier, Lisboa, Algés, Portugal": {
+    "geocode_confidence": "GEOMETRIC_CENTER",
+    "geocode_formatted_address": "Praça de São Francisco Xavier, 1400 Lisboa, Portugal",
+    "geocode_provider": "google_maps",
+    "geocode_raw_type": "route",
+    "geocode_status": "geocoded",
+    "latitude": 38.7096627,
+    "longitude": -9.2109217
+  },
+  "google_maps::Serviço de Atendimento Complementar (SAC) Paço de Arcos, Avenida António Bernardo Cabral Macedo, Paço de Arcos, Paço de Arcos, Portugal": {
+    "geocode_confidence": "GEOMETRIC_CENTER",
+    "geocode_formatted_address": "Av. António Bernardo Cabral de Macedo, Paço de Arcos, Portugal",
+    "geocode_provider": "google_maps",
+    "geocode_raw_type": "route",
+    "geocode_status": "geocoded",
+    "latitude": 38.7025722,
+    "longitude": -9.2988894
+  },
+  "google_maps::Serviço de Atendimento Complementar (SAC) de Almeida, Bairro da Trigueira 6350-209 Almeida, Almeida, Portugal": {
+    "geocode_confidence": "APPROXIMATE",
+    "geocode_formatted_address": "6350 Almeida, Portugal",
+    "geocode_provider": "google_maps",
+    "geocode_raw_type": "locality|political",
+    "geocode_status": "geocoded",
+    "latitude": 40.7254048,
+    "longitude": -6.905594199999999
+  },
+  "google_maps::Serviço de Atendimento Complementar (SAC) de Caminha, Rua Eng. Luís Agostinho Pereira Castro 4910-102 Caminha, Caminha, Portugal": {
+    "geocode_confidence": "GEOMETRIC_CENTER",
+    "geocode_formatted_address": "R. Eng. Luís Agostinho de Pereira Castro, 4910-102 Caminha, Portugal",
+    "geocode_provider": "google_maps",
+    "geocode_raw_type": "route",
+    "geocode_status": "geocoded",
+    "latitude": 41.8756247,
+    "longitude": -8.8344414
+  },
+  "google_maps::Serviço de Atendimento Complementar (SAC) de Celorico da Beira, Avenida da Corredoura 6360-320 Celorico da Beira, Celorico da Beira, Portugal": {
+    "geocode_confidence": "GEOMETRIC_CENTER",
+    "geocode_formatted_address": "Av. da Corredoura, 6360 Celorico da Beira, Portugal",
+    "geocode_provider": "google_maps",
+    "geocode_raw_type": "route",
+    "geocode_status": "geocoded",
+    "latitude": 40.6302734,
+    "longitude": -7.395878
+  },
+  "google_maps::Serviço de Atendimento Complementar (SAC) de Gouveia, Rua Dr. Mário Gomes Figueira 6290-370 Gouveia, Gouveia, Portugal": {
+    "geocode_confidence": "GEOMETRIC_CENTER",
+    "geocode_formatted_address": "R. Dr. Mário Gomes Figueira, 6290 Gouveia, Portugal",
+    "geocode_provider": "google_maps",
+    "geocode_raw_type": "route",
+    "geocode_status": "geocoded",
+    "latitude": 40.4935673,
+    "longitude": -7.6033481
+  },
+  "google_maps::Serviço de Atendimento Complementar (SAC) de Melgaço, Rua Fonte da Vila, s/n - Vila 4960-546 Melgaço, Melgaço, Portugal": {
+    "geocode_confidence": "GEOMETRIC_CENTER",
+    "geocode_formatted_address": "R. da Fonte da Vila, 4960-546 Melgaço, Portugal",
+    "geocode_provider": "google_maps",
+    "geocode_raw_type": "route",
+    "geocode_status": "geocoded",
+    "latitude": 42.115687,
+    "longitude": -8.2577527
+  },
+  "google_maps::Serviço de Atendimento Complementar (SAC) de Paredes de Coura, Avenida Cónego Bernardo Chousal 4940-520 Paredes de Coura, Paredes de Coura, Portugal": {
+    "geocode_confidence": "GEOMETRIC_CENTER",
+    "geocode_formatted_address": "Av. Cónego Bernardo Chouzal, 4940-520 Paredes de Coura, Portugal",
+    "geocode_provider": "google_maps",
+    "geocode_raw_type": "route",
+    "geocode_status": "geocoded",
+    "latitude": 41.9117667,
+    "longitude": -8.5650035
+  },
+  "google_maps::Serviço de Atendimento Complementar (SAC) de Viana do Castelo, Rua Dr. Tiago de Almeida 4900-497 Viana do Castelo, Viana do Castelo, Portugal": {
+    "geocode_confidence": "GEOMETRIC_CENTER",
+    "geocode_formatted_address": "R. Dr. Tiago de Almeida, 4900-497 Viana do Castelo, Portugal",
+    "geocode_provider": "google_maps",
+    "geocode_raw_type": "establishment|health|hospital|point_of_interest",
+    "geocode_status": "geocoded",
+    "latitude": 41.6974206,
+    "longitude": -8.8290926
+  },
+  "nominatim::Av. 25 de Abril 6370-127 Fornos de Algodres, Fornos de Algodres, Portugal": {
+    "geocode_confidence": 0.053385182726787175,
+    "geocode_formatted_address": "Avenida 25 de Abril, Infias, Fornos de Algodres, Guarda, 6370-321, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "residential",
+    "geocode_status": "geocoded",
+    "latitude": 40.6298039,
+    "longitude": -7.5398852
+  },
+  "nominatim::Av. Dr. Francisco Sá Carneiro, 72 6440-102 Figueira de Castelo Rodrigo, Figueira de Castelo Rodrigo, Portugal": {
+    "geocode_confidence": 0.05338550774395358,
+    "geocode_formatted_address": "Avenida Doutor Francisco Sá Carneiro, Figueira de Castelo Rodrigo, Guarda, 6440-111, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "residential",
+    "geocode_status": "geocoded",
+    "latitude": 40.8919742,
+    "longitude": -6.9645387
+  },
+  "nominatim::Av. Gago Coutinho e Sacadura Cabral 6430-183 Mêda, Mêda, Portugal": {
+    "geocode_confidence": 0.05338497215228501,
+    "geocode_formatted_address": "Avenida Gago Coutinho e Sacadura Cabral, Mêda, Mêda, Outeiro de Gatos e Fonte Longa, Mêda, Guarda, 6430-211, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "tertiary",
+    "geocode_status": "geocoded",
+    "latitude": 40.9657579,
+    "longitude": -7.2612112
+  },
+  "nominatim::Avenida António Bernardo Cabral Macedo, Paço de Arcos, Paço de Arcos, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Avenida Calouste Gulbenkian 6420-033 Trancoso, Trancoso, Portugal": {
+    "geocode_confidence": 0.05338707331960018,
+    "geocode_formatted_address": "Avenida Calouste Gulbenkian, Trancoso (São Pedro e Santa Maria) e Souto Maior, Trancoso, Guarda, 6420-039, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "residential",
+    "geocode_status": "geocoded",
+    "latitude": 40.777574,
+    "longitude": -7.3531991
+  },
+  "nominatim::Avenida Cónego Bernardo Chousal 4940-520 Paredes de Coura, Paredes de Coura, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Avenida D. José I, nº4 6400-490 Pinhel, Pinhel, Portugal": {
+    "geocode_confidence": 0.05338669336995495,
+    "geocode_formatted_address": "Avenida Dom José I, Pinhel, Guarda, 6400-398, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "tertiary",
+    "geocode_status": "geocoded",
+    "latitude": 40.7718809,
+    "longitude": -7.0675203
+  },
+  "nominatim::Avenida da Corredoura 6360-320 Celorico da Beira, Celorico da Beira, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Bairro da Trigueira 6350-209 Almeida, Almeida, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Largo das Oliveiras 4920-275 Vila Nova de Cerveira, Vila Nova de Cerveira, Portugal": {
+    "geocode_confidence": 0.040052186617837784,
+    "geocode_formatted_address": "Largo das Oliveiras, Vila Nova de Cerveira e Lovelhe, Vila Nova de Cerveira, Viana do Castelo, 4920-275, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "service",
+    "geocode_status": "geocoded",
+    "latitude": 41.9449577,
+    "longitude": -8.7433347
+  },
+  "nominatim::Praça de S. Francisco Xavier, Lisboa, Algés, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Rua Alexandre Herculano, s/n 6320-354 Sabugal, Sabugal, Portugal": {
+    "geocode_confidence": 0.05338743495841913,
+    "geocode_formatted_address": "Rua Alexandre Herculano, Sabugal, Sabugal e Aldeia de Santo António, Sabugal, Guarda, 6320-349, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "residential",
+    "geocode_status": "geocoded",
+    "latitude": 40.3512979,
+    "longitude": -7.0795877
+  },
+  "nominatim::Rua Dr. Francisco Sá Carneiro, 2 4980-633 Ponte da Barca, Ponte da Barca, Portugal": {
+    "geocode_confidence": 0.05338567559319444,
+    "geocode_formatted_address": "Rua Doutor Francisco Sá Carneiro, Ponte da Barca, Ponte da Barca, Vila Nova de Muía e Paço Vedro de Magalhães, Ponte da Barca, Viana do Castelo, 4980-634, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "tertiary",
+    "geocode_status": "geocoded",
+    "latitude": 41.8067226,
+    "longitude": -8.4135981
+  },
+  "nominatim::Rua Dr. Mário Gomes Figueira 6290-370 Gouveia, Gouveia, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Rua Dr. Tiago de Almeida 4900-497 Viana do Castelo, Viana do Castelo, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Rua Egas Moniz, São João do Estoril, São João do Estoril, Portugal": {
+    "geocode_confidence": 0.05339421606775002,
+    "geocode_formatted_address": "Rua Egas Moniz, Quinta da Carreira, São João do Estoril, Cascais e Estoril, Cascais, Lisboa, 2765-478, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "tertiary",
+    "geocode_status": "geocoded",
+    "latitude": 38.699456,
+    "longitude": -9.3803766
+  },
+  "nominatim::Rua Eng. Adelino Amaro da Costa 4970-458 Arcos de Valdevez, Arcos de Valdevez, Portugal": {
+    "geocode_confidence": 0.05338733730067899,
+    "geocode_formatted_address": "Rua Engenheiro Adelino Amaro da Costa, Salvador, Arcos de Valdevez (Salvador), Vila Fonche e Parada, Arcos de Valdevez, Viana do Castelo, 4970-604, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "residential",
+    "geocode_status": "geocoded",
+    "latitude": 41.8431641,
+    "longitude": -8.4216033
+  },
+  "nominatim::Rua Eng. Luís Agostinho Pereira Castro 4910-102 Caminha, Caminha, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Rua Fonte da Vila, s/n - Vila 4960-546 Melgaço, Melgaço, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Rua Infante D. Henrique 6260-136 Manteigas, Manteigas, Portugal": {
+    "geocode_confidence": 0.05338478141451129,
+    "geocode_formatted_address": "Rua Infante Dom Henrique, Manteigas (São Pedro), Manteigas, Guarda, 6260-109, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "residential",
+    "geocode_status": "geocoded",
+    "latitude": 40.4001924,
+    "longitude": -7.5386067
+  },
+  "nominatim::Rua Nossa Senhora de Fátima 4930-768 Valença, Valença, Portugal": {
+    "geocode_confidence": 0.05338689173723961,
+    "geocode_formatted_address": "Rua Nossa Senhora de Fátima, Arão, Valença, Cristelo Covo e Arão, Valença, Viana do Castelo, 4930-632, Portugal",
+    "geocode_provider": "nominatim",
+    "geocode_raw_type": "residential",
+    "geocode_status": "geocoded",
+    "latitude": 42.0245861,
+    "longitude": -8.6470115
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) Algés, Algés, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) Algés, Praça de S. Francisco Xavier, Lisboa, Algés, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) Paço de Arcos, Avenida António Bernardo Cabral Macedo, Paço de Arcos, Paço de Arcos, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) Paço de Arcos, Paço de Arcos, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) São João do Estoril, Rua Egas Moniz, São João do Estoril, São João do Estoril, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) da Mêda, Av. Gago Coutinho e Sacadura Cabral 6430-183 Mêda, Mêda, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Almeida, Almeida, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Almeida, Bairro da Trigueira 6350-209 Almeida, Almeida, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Arcos de Valdevez, Rua Eng. Adelino Amaro da Costa 4970-458 Arcos de Valdevez, Arcos de Valdevez, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Caminha, Caminha, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Caminha, Rua Eng. Luís Agostinho Pereira Castro 4910-102 Caminha, Caminha, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Celorico da Beira, Avenida da Corredoura 6360-320 Celorico da Beira, Celorico da Beira, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Celorico da Beira, Celorico da Beira, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Fornos de Algodres, Av. 25 de Abril 6370-127 Fornos de Algodres, Fornos de Algodres, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Gouveia, Gouveia, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Gouveia, Rua Dr. Mário Gomes Figueira 6290-370 Gouveia, Gouveia, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Manteigas, Rua Infante D. Henrique 6260-136 Manteigas, Manteigas, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Melgaço, Melgaço, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Melgaço, Rua Fonte da Vila, s/n - Vila 4960-546 Melgaço, Melgaço, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Paredes de Coura, Avenida Cónego Bernardo Chousal 4940-520 Paredes de Coura, Paredes de Coura, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Paredes de Coura, Paredes de Coura, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Pinhel, Avenida D. José I, nº4 6400-490 Pinhel, Pinhel, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Ponte da Barca, Rua Dr. Francisco Sá Carneiro, 2 4980-633 Ponte da Barca, Ponte da Barca, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Trancoso, Avenida Calouste Gulbenkian 6420-033 Trancoso, Trancoso, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Valença, Rua Nossa Senhora de Fátima 4930-768 Valença, Valença, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Viana do Castelo, Rua Dr. Tiago de Almeida 4900-497 Viana do Castelo, Viana do Castelo, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Viana do Castelo, Viana do Castelo, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) de Vila Nova de Cerveira, Largo das Oliveiras 4920-275 Vila Nova de Cerveira, Vila Nova de Cerveira, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Complementar (SAC) do Sabugal, Rua Alexandre Herculano, s/n 6320-354 Sabugal, Sabugal, Portugal": {
+    "geocode_status": "not_found"
+  },
+  "nominatim::Serviço de Atendimento Permanente (SAP) de Figueira de Castelo Rodrigo, Av. Dr. Francisco Sá Carneiro, 72 6440-102 Figueira de Castelo Rodrigo, Figueira de Castelo Rodrigo, Portugal": {
+    "geocode_status": "not_found"
+  }
+}

@@ -66,7 +66,9 @@ def snap_points_to_nodes(
     else:
         result['Latitude'] = pd.to_numeric(result['Latitude'], errors='raise').astype('float64')
 
-    result[id_col] = pd.to_numeric(result[id_col], errors='raise').astype('int64')
+    # Custom point-table identifiers may be strings, for example OSM-style
+    # facility IDs. Keep identifiers stable instead of forcing integer IDs.
+    result[id_col] = result[id_col].astype(str)
 
     points_proj = result.to_crs(epsg=projected_epsg)
     nodes_proj = nodes.to_crs(epsg=projected_epsg)
@@ -85,7 +87,6 @@ def snap_points_to_nodes(
     result[distance_col] = distances.astype('float64')
 
     result = result.drop_duplicates(subset=id_col).set_index(id_col, drop=False)
-    result.index = result.index.astype('int64')
 
     if not keep_geometry:
         result = pd.DataFrame(result.drop(columns='geometry')).copy()

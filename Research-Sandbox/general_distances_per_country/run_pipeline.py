@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import logging
 from dataclasses import replace
 from pathlib import Path
@@ -147,11 +148,15 @@ def table_descriptor(path: str | Path | None) -> str:
         return 'table_missing'
 
     table_path = Path(path)
-    descriptor = ''.join(
+    raw_descriptor = ''.join(
         char.lower() if char.isalnum() else '_'
         for char in table_path.stem
     ).strip('_')
-    return f'table_{descriptor or "custom"}'
+    descriptor = raw_descriptor or "custom"
+    if len(descriptor) > 48:
+        digest = hashlib.sha1(str(table_path).encode('utf-8')).hexdigest()[:10]
+        descriptor = f'{descriptor[:36]}_{digest}'
+    return f'table_{descriptor}'
 
 
 def layer_signature(

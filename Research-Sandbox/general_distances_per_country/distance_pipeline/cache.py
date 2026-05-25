@@ -1,4 +1,5 @@
 from collections.abc import Callable
+import hashlib
 from pathlib import Path
 import pickle
 from time import perf_counter as pc
@@ -24,7 +25,11 @@ def _amenity_part(amenity_values: list[str] | None) -> str:
     """Format amenity filters for cache-key filenames."""
     if amenity_values is None:
         return 'all'
-    return '_'.join(sorted(amenity_values))
+    raw = '_'.join(sorted(amenity_values))
+    if len(raw) <= 120:
+        return raw
+    digest = hashlib.sha1(raw.encode('utf-8')).hexdigest()[:10]
+    return f'{raw[:80]}_{digest}'
 
 
 def _safe_part(value: object) -> str:
