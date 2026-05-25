@@ -7,6 +7,7 @@ from scalable_distances.config import CountryDataSources
 from scalable_distances.core.context import DataContext
 from scalable_distances.geospatial import detect_geospatial_backend
 from scalable_distances.matrix import MatrixOutputMode, MatrixOutputSet, write_matrix_outputs
+from scalable_distances.pipeline import ProductionRunConfig, ProductionRunResult, run_country_pipeline
 from scalable_distances.storage.repository import Repository
 
 
@@ -60,3 +61,8 @@ def write_distance_matrix(
         run_tag=run_tag,
         mode=mode,
     )
+
+
+def run_production_country(config: ProductionRunConfig) -> ProductionRunResult:
+    """Run the full production pipeline with the selected lazy routing strategy."""
+    return run_country_pipeline(config)

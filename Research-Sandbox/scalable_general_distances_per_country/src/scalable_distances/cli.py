@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pandas as pd
 
-from scalable_distances.api import describe_backends, describe_country_sources, write_distance_matrix
+from scalable_distances.api import describe_backends, describe_country_sources, run_production_country, write_distance_matrix
+from scalable_distances.config import CountryDataSources
+from scalable_distances.pipeline import ProductionRunConfig
 
 
 def _json_print(value: object) -> None:
@@ -71,6 +73,28 @@ def main(argv: list[str] | None = None) -> int:
     smoke.add_argument("--run-tag", default="smoke")
     smoke.add_argument("--mode", choices=["combined", "split", "both"], default="both")
 
+    run = subparsers.add_parser(
+        "run",
+        help="Run the full country pipeline: download, parse, rasterize, extract, snap, route, write.",
+    )
+    run.add_argument("--country-slug", required=True)
+    run.add_argument("--iso3", required=True)
+    run.add_argument("--base-dir", required=True)
+    run.add_argument("--output-dir", required=True)
+    run.add_argument("--run-tag", required=True)
+    run.add_argument("--amenity", action="append", dest="amenities", default=[])
+    run.add_argument("--router", choices=["networkx", "pandana"], default="networkx")
+    run.add_argument("--matrix-output-mode", choices=["combined", "split", "both"], default="combined")
+    run.add_argument("--population-threshold", type=float, default=1.0)
+    run.add_argument("--aggregate-factor", type=int)
+    run.add_argument("--worldpop-dataset", choices=["global1", "global2"], default="global1")
+    run.add_argument("--worldpop-year", type=int, default=2020)
+    run.add_argument("--worldpop-release")
+    run.add_argument("--worldpop-version", default="v1")
+    run.add_argument("--worldpop-resolution", default="100m")
+    run.add_argument("--worldpop-constrained", action="store_true")
+    run.add_argument("--no-download", action="store_true")
+
     args = parser.parse_args(argv)
 
     if args.command == "backends":
@@ -101,6 +125,39 @@ def main(argv: list[str] | None = None) -> int:
             mode=args.mode,
         )
         _json_print({"mode": result.mode, "paths": result.paths})
+        return 0
+
+    if args.command == "run":
+        sources_config = CountryDataSources(
+            country_slug=args.country_slug,
+            iso3=args.iso3,
+            base_dir=Path(args.base_dir),
+            worldpop_dataset=args.worldpop_dataset,
+            worldpop_year=args.worldpop_year,
+            worldpop_release=args.worldpop_release,
+            worldpop_version=args.worldpop_version,
+            worldpop_resolution=args.worldpop_resolution,
+            worldpop_constrained=args.worldpop_constrained,
+        )
+        result = run_production_country(
+            ProductionRunConfig(
+                sources=sources_config,
+                output_dir=Path(args.output_dir),
+                run_tag=args.run_tag,
+                amenity_values=tuple(args.amenities or ["school"]),
+                router=args.router,
+                matrix_output_mode=args.matrix_output_mode,
+                population_threshold=args.population_threshold,
+                aggregate_factor=args.aggregate_factor,
+                download=not args.no_download,
+            )
+        )
+        _json_print(
+            {
+                "diagnostics": result.diagnostics,
+                "matrix_outputs": result.matrix_outputs.paths,
+            }
+        )
         return 0
 
     parser.error(f"Unknown command: {args.command}")

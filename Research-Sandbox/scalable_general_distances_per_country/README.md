@@ -5,10 +5,10 @@ This folder is the promoted reengineering draft for
 country-data semantics and shared cache discipline, but exposes the new work as a
 small Python API first and a CLI second.
 
-The current goal is not to replace every original implementation detail in one
-step. The goal is to make the stable contracts explicit: data source resolution,
-shared-cache manifests, lightweight data reuse, interchangeable routing engines,
-modular geocoding, and scalable matrix outputs.
+The current goal is to provide a production-capable runner while keeping stable
+contracts explicit: data source resolution, shared-cache manifests, lightweight
+data reuse, interchangeable routing engines, modular geocoding, and scalable
+matrix outputs.
 
 ## What Is Consistent With The Original
 
@@ -21,13 +21,15 @@ The promoted version mirrors the current GitHub `main` behavior in these areas:
 - Matrix output modes: `combined`, `split`, and `both`.
 - Stable split matrix keys such as `distance_matrix_src_amenities_dst_population`.
 - Pandas and Polars transparency for matrix splitting/writing.
-- Strategy boundaries for routing engines such as Pandana, NetworkX, and R5.
+- Lazy strategy boundaries for routing engines. NetworkX is available as a
+  pure-Python shortest-path strategy; Pandana is imported only when the Pandana
+  strategy is selected.
 - Modular geocoding stages that operate on the same data objects used by routing.
 
-The original pipeline still owns the full production path for downloading,
-network construction, population raster conversion, facility extraction, snapping,
-and route computation. This package wraps those concepts behind smaller contracts
-so each part can be swapped or tested independently.
+The package now owns a full production runner for the standard country-distance
+flow: download/reuse source artifacts, parse OSM roads, convert WorldPop rasters
+to target points, extract OSM facilities, snap points, compute routes, and write
+matrix outputs.
 
 ## Install For Local Use
 
@@ -138,6 +140,24 @@ scalable-distances backends
 scalable-distances split-smoke --mode both
 ```
 
+Run a full country pipeline:
+
+```powershell
+py -m scalable_distances.cli run `
+  --country-slug luxembourg `
+  --iso3 LUX `
+  --base-dir C:\local\Download_Depot\luxembourg_data `
+  --output-dir C:\local\Download_Depot\luxembourg_data\outputs `
+  --run-tag luxembourg_networkx `
+  --amenity school `
+  --router networkx `
+  --matrix-output-mode both
+```
+
+Use `--router pandana` only in deployments where Pandana is installed and
+compatible with the NumPy version. Pandana is never imported by the package
+unless that strategy is selected.
+
 ## Architecture
 
 ```text
@@ -149,8 +169,12 @@ src/scalable_distances/
   data/          dataset handles, schemas, frame protocol
   geocoding/     geocoding stage contracts and pipeline
   geospatial/    optional backend version detection
+  io/            deterministic source download/reuse helpers
   matrix/        combined/split matrix output contracts
+  network/       OSM PBF road network parsing
   optimization/  facility-location strategy contracts
+  pipeline/      full production runner
+  population/    WorldPop raster-to-point conversion
   routing/       router strategy contracts and registry
   storage/       repository and codec contracts
 tools/
@@ -174,18 +198,22 @@ write diagnostics, manifests, smoke outputs, and small test artifacts under
 
 ## Stability Status
 
-Stable enough to commit:
+Production-capable:
 
 - API facade imports and backend detection compile.
 - Country source resolution covers current original naming rules and the local
   WorldPop global2/local-path extension.
+- Full runner performs download, network parsing, raster conversion, facility
+  extraction, snapping, routing, and output writing.
+- NetworkX router smoke test does not import Pandana.
 - Split matrix output smoke checks pass for pandas and, when installed, Polars.
 - The promoted folder is a sibling of the original pipeline and no generated
   diagnostics are committed.
 
-Still intentionally delegated to the original production pipeline:
+Remaining implementation choices:
 
-- Full OSM network parsing and Pandana graph construction.
-- Raster-to-point population conversion.
-- Facility extraction and candidate-site generation.
-- Full Luxembourg/Timor/Vietnam/Nusa Tenggara real-data end-to-end runs.
+- Candidate-site generation is still a separate extension point rather than a
+  default stage in the production runner.
+- Full Luxembourg/Timor/Vietnam/Nusa Tenggara real-data benchmark runs should be
+  rerun after each source-data refresh because Geofabrik and WorldPop snapshots
+  are moving inputs.
