@@ -30,6 +30,11 @@ py -m pip install pandas matplotlib gurobipy
 ```
 
 You also need a working Gurobi license.
+For the optional constraint-programming toy experiments, install OR-Tools:
+
+```powershell
+py -m pip install ortools
+```
 
 ## Main Files
 
@@ -57,6 +62,8 @@ You also need a working Gurobi license.
 - `run_lns_improvement.py`: run full-instance LNS improvements.
 - `run_full_mip_experiment.py`: run seeded full-instance MILP proof experiments.
 - `run_toy_mip_experiment.py`: run toy heuristic/MILP and strengthening variants.
+- `run_toy_cp_experiment.py`: run the aligned toy instance with OR-Tools
+  CP-SAT on the subject/block pattern formulation.
 - `run_toy_antony_verbatim.py`: run the Appendix-style toy MILP replication.
 - `run_weight_sensitivity.py`: rerun toy or full MILP proof experiments under
   alternative objective weight vectors.
@@ -167,6 +174,24 @@ py -B run_toy_antony_verbatim.py `
   --log-output clean_runs_20260521\toy_antony_verbatim.log `
   --plot-output clean_runs_20260521\toy_antony_verbatim_bounds.png
 
+py -B run_toy_cp_experiment.py `
+  --time-limit 300 --workers 8 --hint none --decision-strategy none `
+  --output toy_cp_portfolio_300s_timetable.csv `
+  --summary-output toy_cp_portfolio_300s_summary.csv `
+  --progress-output toy_cp_portfolio_300s_progress.csv `
+  --log-output toy_cp_portfolio_300s.log `
+  --plot-output toy_cp_portfolio_300s_bounds.png
+
+py -B run_toy_cp_experiment.py `
+  --time-limit 300 --workers 8 `
+  --hint-file toy_cp_portfolio_300s_timetable.csv `
+  --decision-strategy none `
+  --output toy_cp_besthint_300s_timetable.csv `
+  --summary-output toy_cp_besthint_300s_summary.csv `
+  --progress-output toy_cp_besthint_300s_progress.csv `
+  --log-output toy_cp_besthint_300s.log `
+  --plot-output toy_cp_besthint_300s_bounds.png
+
 py -B run_weight_sensitivity.py `
   --instance toy --time-limit 60 `
   --output clean_runs_20260521\toy_weight_sensitivity_60s.csv `
@@ -198,6 +223,9 @@ py -B analyze_conflict_heatmap_structure.py
 
 - Appendix-style toy model: objective 25,190 proved in 1,443.14 seconds.
 - Reusable toy baseline: objective 25,190 proved in 1,245.53 seconds.
+- OR-Tools CP-SAT toy pattern experiment: found objective 25,190 in the
+  300-second portfolio run, validating exactly against `mip_objective_value`,
+  but did not prove optimality; the best CP-SAT bound remained 15,370.
 - Optimized full-instance constructive heuristic: about 2.15 seconds for the
   two-round run and about 4.29 seconds for the default 20-round run on the
   clean-run machine.
