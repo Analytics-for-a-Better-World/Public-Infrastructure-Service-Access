@@ -22,3 +22,17 @@ class RouterStrategy(Protocol):
     def snap(self, points: Any) -> Any: ...
 
     def route_many(self, origins: Any, destinations: Any) -> Any: ...
+
+
+@dataclass(frozen=True)
+class NetworkData:
+    """Router-neutral road network tables."""
+
+    nodes: Any
+    edges: Any
+    node_id_col: str = "node_id"
+    source_col: str = "u"
+    target_col: str = "v"
+    weight_col: str = "length_m"
+    x_col: str = "lon"
+    y_col: str = "lat"

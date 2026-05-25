@@ -34,10 +34,18 @@ That means the promoted API can describe both current GitHub source naming and
 the local WorldPop `global2`/override extension without depending on the original
 implementation internals.
 
-## Remaining Non-Equivalence
+## Remaining Scope Differences
 
-This folder is not yet a full production runner. It does not independently
-download data, parse road networks, convert rasters, extract facilities, snap
-points, or compute Pandana distances end to end. Those stages remain delegated to
-the original implementation while the scalable package stabilizes the API,
-manifest, cache, data, geocoding, routing, and matrix contracts.
+This folder now has a full production runner for the standard OSM/WorldPop
+country-distance flow. It independently downloads/reuses sources, parses road
+networks, converts WorldPop rasters, extracts OSM facilities, snaps points,
+computes shortest paths, and writes matrix outputs.
+
+Differences that remain intentional:
+
+- Candidate-site generation is an extension point rather than always enabled.
+- NetworkX is the default portable strategy; Pandana is available lazily when
+  installed and selected.
+- R5 remains a future multimodal adapter.
+- Real-data benchmark outputs can differ when Geofabrik or WorldPop publish new
+  snapshots.
