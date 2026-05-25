@@ -61,6 +61,8 @@ py -m pip install ortools
   conflict components, and diagonal-distance patterns in those heatmaps.
 - `run_lns_improvement.py`: run full-instance LNS improvements.
 - `run_full_mip_experiment.py`: run seeded full-instance MILP proof experiments.
+- `run_full_cp_lns.py`: run a full-instance OR-Tools CP-SAT
+  subject-pattern LNS neighborhood from an existing timetable.
 - `run_toy_mip_experiment.py`: run toy heuristic/MILP and strengthening variants.
 - `run_toy_cp_experiment.py`: run the aligned toy instance with OR-Tools
   CP-SAT on the subject/block pattern formulation.
@@ -192,6 +194,22 @@ py -B run_toy_cp_experiment.py `
   --log-output toy_cp_besthint_300s.log `
   --plot-output toy_cp_besthint_300s_bounds.png
 
+py -B run_full_cp_lns.py `
+  --start pattern_sweep_runs_20260523\band_interaction_pass2_180s_final.csv `
+  --nb-days 34 --objective-mode formal --time-limit 300 --workers 8 `
+  --selected-subject "BUSINESS MANAGEMENT" `
+  --selected-subject "CLASS.GREEK" `
+  --selected-subject "FRENCH A LAL" `
+  --selected-subject "GEOGRAPHY" `
+  --selected-subject "HISTORY" `
+  --selected-subject "MATHEMATICS ANALYSIS AND APPROACHES" `
+  --selected-subject "MATHEMATICS APPLICATIONS AND INTERP" `
+  --selected-subject "SBS" `
+  --selected-subject "SPANISH A LAL" `
+  --output full_cp_lns_heurstart_knownchange_9x300_timetable.csv `
+  --summary-output full_cp_lns_heurstart_knownchange_9x300_summary.csv `
+  --log-output full_cp_lns_heurstart_knownchange_9x300.log
+
 py -B run_weight_sensitivity.py `
   --instance toy --time-limit 60 `
   --output clean_runs_20260521\toy_weight_sensitivity_60s.csv `
@@ -226,6 +244,12 @@ py -B analyze_conflict_heatmap_structure.py
 - OR-Tools CP-SAT toy pattern experiment: found objective 25,190 in the
   300-second portfolio run, validating exactly against `mip_objective_value`,
   but did not prove optimality; the best CP-SAT bound remained 15,370.
+- OR-Tools CP-SAT full-instance LNS: from the best pattern-sweep heuristic
+  timetable, the 9-subject neighborhood that explains the later MILP
+  improvement rediscovered objective 14,618,048 and proved that neighborhood
+  optimal in 75.37 seconds. Starting from 14,618,048, the same neighborhood was
+  also proven locally optimal in 81.50 seconds. A larger 13-subject
+  neighborhood did not beat 14,618,048 in 300 seconds.
 - Optimized full-instance constructive heuristic: about 2.15 seconds for the
   two-round run and about 4.29 seconds for the default 20-round run on the
   clean-run machine.
