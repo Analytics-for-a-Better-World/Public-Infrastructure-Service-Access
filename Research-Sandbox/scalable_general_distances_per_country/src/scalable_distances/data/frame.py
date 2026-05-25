@@ -1,0 +1,19 @@
+from __future__ import annotations
+
+from typing import Any, Protocol
+
+
+class DataFrameLike(Protocol):
+    """Minimal dataframe contract used by pipeline modules."""
+
+    def select(self, columns: list[str]) -> "DataFrameLike": ...
+
+    def filter(self, expression: Any) -> "DataFrameLike": ...
+
+    def join(self, other: "DataFrameLike", on: str | list[str], how: str = "left") -> "DataFrameLike": ...
+
+    def to_pandas(self) -> Any: ...
+
+    def to_polars(self) -> Any: ...
+
+    def to_arrow(self) -> Any: ...
