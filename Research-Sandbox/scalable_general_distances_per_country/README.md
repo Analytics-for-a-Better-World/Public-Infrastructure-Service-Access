@@ -5,6 +5,10 @@ This folder is the promoted reengineering draft for
 country-data semantics and shared cache discipline, but exposes the new work as a
 small Python API first and a CLI second.
 
+It supersedes the older `Research-Sandbox/drafts/WFP` draft. The Luxembourg
+school-case migration note is preserved in
+`notebooks/wfp_retirement_luxembourg_school_case.ipynb`.
+
 The current goal is not to replace every original implementation detail in one
 step. The goal is to make the stable contracts explicit: data source resolution,
 shared-cache manifests, lightweight data reuse, interchangeable routing engines,
