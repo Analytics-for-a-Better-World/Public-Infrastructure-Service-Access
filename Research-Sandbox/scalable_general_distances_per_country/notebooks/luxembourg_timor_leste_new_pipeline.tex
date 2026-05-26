@@ -1,0 +1,256 @@
+\documentclass[11pt]{article}
+
+\usepackage[margin=1in]{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{amsmath}
+
+\title{Luxembourg and Timor-Leste Case Studies Recreated With the Scalable Distance Pipeline}
+\author{Public Infrastructure Service Access}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Purpose}
+
+This note restates the Luxembourg school-access and Timor-Leste health-facility
+case studies using the reengineered
+\texttt{scalable\_general\_distances\_per\_country} pipeline.  The goal is to
+describe the same analytical narrative as the original paper, but in terms of
+the new modular contracts: shared cache manifests, country source descriptors,
+source and target tables, interchangeable routing strategies, sparse distance
+matrices, and optimization-ready coverage neighborhoods.
+
+The companion notebook
+\texttt{luxembourg\_api\_illustration.ipynb} contains executable miniature
+versions of the cases.  Those examples are intentionally small enough to run on
+a fresh development machine, while the final notebook cells show the country
+scale API and CLI calls that use the shared cache.
+
+\section{Pipeline Architecture Used by Both Cases}
+
+Both case studies use the same sequence of self-contained modules.
+
+\begin{enumerate}
+  \item \textbf{Country source resolution.}
+  \texttt{CountryDataSources} resolves the Geofabrik PBF filename, WorldPop
+  filename, download URLs, and deterministic cache paths before any data are
+  downloaded.
+
+  \item \textbf{Shared cache and manifest.}
+  Downloaded artefacts are stored under the shared cache used by the original
+  implementation.  The cache layout and manifest make it explicit which files
+  are downloaded, generated, or reused.
+
+  \item \textbf{Data extraction.}
+  The production runner extracts a drivable network from the OSM PBF, converts
+  WorldPop raster cells to target points, and extracts OSM facilities matching
+  the requested amenity values.
+
+  \item \textbf{Routing strategy.}
+  The router is selected by name.  \texttt{NetworkXRouter} is the portable
+  default.  \texttt{PandanaRouter} is imported only when selected, so deployment
+  environments without a compatible Pandana and NumPy stack can still use the
+  package.
+
+  \item \textbf{Distance matrix output.}
+  The same source and target tables feed the router, and the matrix writer can
+  produce combined, split, or both output layouts.  The split layout supports
+  large-country runs by keeping source-target distance chunks lightweight.
+
+  \item \textbf{Downstream analysis.}
+  Descriptive coverage and prescriptive maximum-covering models consume the
+  sparse matrix without depending on the implementation details of the routing
+  backend.
+\end{enumerate}
+
+\section{Case Definitions}
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{0.22\linewidth}p{0.34\linewidth}p{0.34\linewidth}}
+\toprule
+Case & Paper settings & Paper-scale reported result \\
+\midrule
+Luxembourg schools &
+OSM \texttt{amenity=school}; no population aggregation; retained matrix
+threshold of 1,000 m; context map saved. &
+394 OSM school features; 102,061 population targets representing 478,010
+people; 266,225 people within 1,000 m of an OSM school. \\
+\addlinespace
+Timor-Leste health &
+Default health amenities plus generated 5 km candidate sites; aggregate factor
+8; retained matrix threshold of 10 km; maximum covering with \(p=20\). &
+28,162 population targets; 860 sources; 100,997 retained distance rows; Gurobi
+and HiGHS both cover 757,053 represented people at 10 km. \\
+\bottomrule
+\end{tabular}
+\caption{Paper case definitions restated as scalable-pipeline inputs.}
+\end{table}
+
+\section{Luxembourg School Access}
+
+The Luxembourg case is descriptive.  OSM schools are treated as existing source
+locations and WorldPop cells are treated as population targets.  The reengineered
+pipeline resolves the country data as:
+
+\begin{verbatim}
+CountryDataSources(
+    country_slug="luxembourg",
+    iso3="LUX",
+    base_dir=shared_cache / "luxembourg_data",
+    worldpop_filename="lux_ppp_2020.tif",
+)
+\end{verbatim}
+
+The production configuration is:
+
+\begin{verbatim}
+ProductionRunConfig(
+    sources=luxembourg_sources,
+    output_dir=shared_cache / "luxembourg_data" / "outputs",
+    run_tag="luxembourg_schools_networkx",
+    amenity_values=("school",),
+    router="networkx",
+    matrix_output_mode="both",
+)
+\end{verbatim}
+
+For each target \(i\), the analysis asks whether at least one school \(j\) is
+within a road-network threshold \(R\):
+
+\[
+  \operatorname{covered}_i(R) =
+  \begin{cases}
+    1 & \text{if } \min_{j \in J_{\mathrm{school}}} d_{ij} \le R,\\
+    0 & \text{otherwise.}
+  \end{cases}
+\]
+
+The population covered at threshold \(R\) is then
+\[
+  \sum_i w_i \operatorname{covered}_i(R),
+\]
+where \(w_i\) is the represented population of target \(i\).  A target is counted
+only once per threshold even if several schools are reachable.  For school
+ranking, the same matrix can assign each covered target to its nearest school.
+
+The corresponding CLI call is:
+
+\begin{verbatim}
+py -m scalable_distances.cli run ^
+  --country-slug luxembourg ^
+  --iso3 LUX ^
+  --base-dir C:\local\Download_Depot\luxembourg_data ^
+  --output-dir C:\local\Download_Depot\luxembourg_data\outputs ^
+  --run-tag luxembourg_schools_networkx ^
+  --amenity school ^
+  --router networkx ^
+  --matrix-output-mode both
+\end{verbatim}
+
+\section{Timor-Leste Health Facility Coverage}
+
+The Timor-Leste case is prescriptive.  It builds a sparse matrix between
+population targets and health-related source locations, then chooses a limited
+number of sources to maximize covered population.  The reengineered pipeline
+resolves the country data as:
+
+\begin{verbatim}
+CountryDataSources(
+    country_slug="east-timor",
+    iso3="TLS",
+    base_dir=shared_cache / "east-timor_data",
+    worldpop_filename="tls_ppp_2020.tif",
+)
+\end{verbatim}
+
+The health amenity run is configured as:
+
+\begin{verbatim}
+ProductionRunConfig(
+    sources=timor_leste_sources,
+    output_dir=shared_cache / "east-timor_data" / "outputs",
+    run_tag="timor_leste_health_networkx",
+    amenity_values=(
+        "hospital", "clinic", "doctors", "dentist", "pharmacy",
+        "health_post", "nursing_home", "social_facility",
+    ),
+    router="networkx",
+    aggregate_factor=8,
+    matrix_output_mode="both",
+)
+\end{verbatim}
+
+The paper case also includes generated 5 km candidate sites.  In the new design,
+candidate generation belongs to the same source-table contract as OSM amenities:
+candidate points can be added as an additional source layer before snapping and
+routing, while the router and matrix writer remain unchanged.
+
+Let \(N(i)\) be the set of source locations within 10 km of target \(i\), based
+on the sparse routing matrix.  The maximum-covering model is:
+
+\[
+\max \sum_i w_i z_i
+\]
+\[
+z_i \le \sum_{j \in N(i)} y_j \quad \forall i,
+\qquad
+\sum_j y_j \le p,
+\qquad
+z_i, y_j \in \{0, 1\}.
+\]
+
+Here \(y_j=1\) if source \(j\) is selected and \(z_i=1\) if population target
+\(i\) is covered.  In the paper-scale case, \(p=20\), the coverage radius is
+10 km, and both Gurobi and HiGHS reach the same covered population.
+
+The corresponding CLI scaffold is:
+
+\begin{verbatim}
+py -m scalable_distances.cli run ^
+  --country-slug east-timor ^
+  --iso3 TLS ^
+  --base-dir C:\local\Download_Depot\east-timor_data ^
+  --output-dir C:\local\Download_Depot\east-timor_data\outputs ^
+  --run-tag timor_leste_health_networkx ^
+  --amenity hospital --amenity clinic --amenity doctors ^
+  --amenity dentist --amenity pharmacy --amenity health_post ^
+  --amenity nursing_home --amenity social_facility ^
+  --router networkx ^
+  --aggregate-factor 8 ^
+  --matrix-output-mode both
+\end{verbatim}
+
+\section{Reproducibility Checks}
+
+The new pipeline makes the following checks explicit for both cases:
+
+\begin{itemize}
+  \item source-data filenames and URLs are resolved before download;
+  \item downloads are cached in the shared cache and reused on repeated runs;
+  \item source and target tables expose stable IDs, geometry, and attributes;
+  \item route computation records router name, network size, source count,
+  target count, and matrix row count;
+  \item split and combined matrix outputs can be compared from the same run;
+  \item Pandana is not imported unless the Pandana strategy is requested.
+\end{itemize}
+
+These checks allow the original implementation and the scalable implementation
+to be compared at the level of cache contents, road-network inputs, coordinate
+handling, snapping, origin-destination pairs, distance calculations, and final
+summary statistics.
+
+\section{Interpretation}
+
+The core scientific narrative is unchanged: the Luxembourg case measures the
+population already close to schools, while the Timor-Leste case uses the same
+distance-matrix representation to support facility-location decisions.  The
+engineering narrative changes substantially.  Instead of one monolithic script,
+the reengineered version exposes lightweight data contracts, lazy routing
+strategies, explicit persistence choices, and cache metadata that can be reused
+by notebooks, command-line runs, tests, and future geocoding or optimization
+modules.
+
+\end{document}
