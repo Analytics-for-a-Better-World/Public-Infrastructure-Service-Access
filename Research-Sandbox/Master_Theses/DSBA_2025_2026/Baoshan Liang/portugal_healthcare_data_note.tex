@@ -1,0 +1,106 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\title{Portugal Healthcare Facility Data, Geocoding, and Distance Matrix Note}
+\author{Baoshan Liang thesis sandbox}
+\date{26 May 2026}
+
+\begin{document}
+\maketitle
+
+\section*{Purpose}
+This note documents the current Portugal healthcare facility dataset prepared for the distance-analysis pipeline. The data are intended for descriptive access analytics and later optimization experiments using existing healthcare service locations only. No generated candidate sites were included in the distance matrix run.
+
+\section*{Current preferred dataset}
+The preferred pipeline input is:
+\begin{quote}
+\texttt{best\_healthcare\_csvs/portugal\_health\_service\_locations\_pipeline\_with\_permanent\_care\_geocoded.csv}
+\end{quote}
+It contains 1,712 geocoded healthcare service locations:
+\begin{itemize}[leftmargin=*]
+  \item 94 official hospital emergency locations from the SNS Transparency Portal urgency dataset;
+  \item 1,597 primary-care locations from the best current OpenStreetMap-derived primary-care proxy;
+  \item 21 permanent-care / SAP-like locations curated from official pages and geocoded on 25 May 2026.
+\end{itemize}
+This combined table is currently preferred because the hospital-emergency layer is official and facility-level, the primary-care layer is the best available open point layer found so far, and the missing middle layer is represented by a curated geocoded list.
+
+\section*{Layer interpretation}
+For descriptive analytics the notebook maps the Portuguese layers as follows:
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Analysis layer & Facility layer in CSV \\
+\midrule
+Layer 1 & \texttt{hospital\_emergency\_official} \\
+Layer 2 & \texttt{permanent\_care\_geocoded} \\
+Layer 3 & \texttt{primary\_care} \\
+\bottomrule
+\end{tabular}
+\end{center}
+Layer 1 is used for hospital catchment summaries. Layer 2 represents the middle urgent-care layer, including SAP/SAC/permanent-care services where they could be identified. Layer 3 represents primary-care points.
+
+\section*{Data sources}
+The hospital emergency layer comes from the official Portuguese SNS Transparency Portal urgency dataset and includes facility-level coordinates. The primary-care layer is an OpenStreetMap-derived proxy based on healthcare and amenity tags and primary-care name patterns such as Centro de Saude, USF, and UCSP. The middle SAP/SAC/permanent-care layer was not available in a single unified open national facility file during the exploration. A small curated list was therefore assembled from official pages and then geocoded.
+
+The folder also keeps audit and context files:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{portugal\_hospital\_emergency\_official\_sns.csv}: official SNS hospital emergency locations, 94 rows;
+  \item \texttt{portugal\_primary\_care.csv}: OSM-derived primary-care proxy, 1,597 rows;
+  \item \texttt{portugal\_permanent\_care\_curated\_official\_pages.csv}: curated official-page SAP/SAC/permanent-care list before geocoding, 21 rows;
+  \item \texttt{portugal\_permanent\_care\_curated\_official\_pages\_geocoded.csv}: geocoded middle-layer list, 21 rows;
+  \item \texttt{portugal\_primary\_care\_official\_sns\_area\_counts.csv}: SNS area-level primary-care counts for validation/context, not facility-level routing;
+  \item \texttt{portugal\_health\_service\_locations\_study\_layers.csv}: broader exploratory OSM-derived study layer for sensitivity checks.
+\end{itemize}
+
+\section*{Geocoding procedure}
+The permanent-care / SAP-like list was geocoded using the script:
+\begin{quote}
+\texttt{geocode\_portugal\_permanent\_care.py}
+\end{quote}
+The script first attempts Nominatim geocoding. If Nominatim does not return a usable coordinate, it falls back to the Google Maps Geocoding API using the Google Maps API key stored in the local environment. The API key is not written to the output files. The geocoding cache is stored as:
+\begin{quote}
+\texttt{best\_healthcare\_csvs/geocoding\_cache\_portugal\_permanent\_care.json}
+\end{quote}
+The final result was 21 out of 21 rows geocoded: 12 by Nominatim and 9 by Google Maps fallback.
+
+\section*{Distance matrix run}
+The completed distance matrix was generated on 25 May 2026 with the shared country pipeline and the following substantive settings:
+\begin{itemize}[leftmargin=*]
+  \item country: Portugal;
+  \item source mode: custom table only;
+  \item destination mode: population points;
+  \item population aggregation factor: 20;
+  \item maximum retained total distance: 150 km;
+  \item matrix output mode: split;
+  \item network backend: \texttt{pyrosm};
+  \item no generated candidates;
+  \item no additional OSM amenity extraction beyond the supplied source table.
+\end{itemize}
+The run produced 10,494,966 retained source--target distance rows from 1,712 healthcare source points and 23,486 aggregated population target points.
+
+\section*{Shared analysis files}
+The files needed to run the descriptive notebook were copied to:
+\begin{quote}
+\texttt{C:\textbackslash Users\textbackslash joaqu\textbackslash OneDrive - UvA\textbackslash share\textbackslash Baoshan Liang\textbackslash healthcare\_access\_analysis}
+\end{quote}
+This share folder contains the curated facility CSVs, source parquet, target parquet, 150 km capped distance matrix, geocoding script, geocoding cache, and the Portugal context figure. The notebook \texttt{descriptive\_healthcare\_access\_analysis.ipynb} now reads from this shared location.
+
+\section*{Descriptive analytics}
+The notebook computes, for each population point:
+\begin{itemize}[leftmargin=*]
+  \item the closest facility overall;
+  \item the closest layer 1 facility;
+  \item the closest layer 2 facility;
+  \item the closest layer 3 facility.
+\end{itemize}
+It then produces population-weighted distance summaries and a per-hospital catchment table reporting the percentage of national population for which each hospital is the closest layer 1 facility.
+
+\section*{Caveats}
+The emergency layer is official and comparatively robust. The primary-care layer is open-data derived and should be checked against official facility registers if a complete national point file becomes available. The permanent-care / SAP-like layer is a first curated geocoded layer, not yet a confirmed exhaustive national registry. The 150 km cap also means that very remote source--target pairs are intentionally absent from the matrix.
+
+\end{document}
