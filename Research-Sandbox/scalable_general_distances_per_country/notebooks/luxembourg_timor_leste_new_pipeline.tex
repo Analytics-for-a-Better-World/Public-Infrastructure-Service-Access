@@ -36,7 +36,10 @@ Both case studies use the same sequence of self-contained modules.
   \item \textbf{Country source resolution.}
   \texttt{CountryDataSources} resolves the Geofabrik PBF filename, WorldPop
   filename, download URLs, and deterministic cache paths before any data are
-  downloaded.
+  downloaded.  Geofabrik publishes country and regional OpenStreetMap extracts
+  in \texttt{.osm.pbf} form, and its technical notes describe the daily extract
+  process based on OSM tooling such as Osmium \cite{geofabrik-download,
+  geofabrik-technical}.
 
   \item \textbf{Shared cache and manifest.}
   Downloaded artefacts are stored under the shared cache used by the original
@@ -46,11 +49,16 @@ Both case studies use the same sequence of self-contained modules.
   \item \textbf{Data extraction.}
   The production runner extracts a drivable network from the OSM PBF, converts
   WorldPop raster cells to target points, and extracts OSM facilities matching
-  the requested amenity values.
+  the requested amenity values.  OSM tags such as \texttt{amenity=school},
+  \texttt{amenity=hospital}, and \texttt{amenity=clinic} are part of the
+  community-maintained map-feature vocabulary \cite{osm-map-features}.
 
   \item \textbf{Routing strategy.}
   The router is selected by name.  \texttt{NetworkXRouter} is the portable
-  default.  \texttt{PandanaRouter} is imported only when selected, so deployment
+  default and uses NetworkX shortest-path routines for weighted graphs
+  \cite{networkx-shortest-path}.  \texttt{PandanaRouter} is imported only when
+  selected; Pandana is designed for network accessibility and fast shortest-path
+  queries using contraction hierarchies \cite{pandana-docs}, so deployment
   environments without a compatible Pandana and NumPy stack can still use the
   package.
 
@@ -58,12 +66,63 @@ Both case studies use the same sequence of self-contained modules.
   The same source and target tables feed the router, and the matrix writer can
   produce combined, split, or both output layouts.  The split layout supports
   large-country runs by keeping source-target distance chunks lightweight.
+  The same strategy boundary can support future engines such as R5, Conveyal's
+  multimodal accessibility routing engine \cite{r5-github}.
 
   \item \textbf{Downstream analysis.}
   Descriptive coverage and prescriptive maximum-covering models consume the
   sparse matrix without depending on the implementation details of the routing
   backend.
 \end{enumerate}
+
+\section{Data Sources, Data Types, and Persistence}
+
+The reengineered pipeline separates source-data identity from in-memory data
+representation.  The country descriptor records the expected filenames and URLs;
+the cache records whether an artefact was downloaded or generated; and the
+pipeline modules exchange explicit source, target, network, and matrix tables.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{p{0.18\linewidth}p{0.29\linewidth}p{0.43\linewidth}}
+\toprule
+Object & Typical source format & Pipeline role \\
+\midrule
+Road network &
+\texttt{.osm.pbf} from Geofabrik &
+Parsed into node and edge tables with stable node IDs, longitude, latitude, and
+edge length in metres. \\
+\addlinespace
+Facilities &
+OSM tags in the same \texttt{.osm.pbf} &
+Filtered into source rows with \texttt{source\_id}, \texttt{source\_type},
+coordinates, and amenity attributes. \\
+\addlinespace
+Population &
+WorldPop GeoTIFF raster &
+Converted into target rows with \texttt{target\_id}, coordinates, and represented
+population.  GeoTIFF is the OGC standard for georeferenced TIFF imagery
+\cite{ogc-geotiff}. \\
+\addlinespace
+Distance matrix &
+Generated table &
+Stored as combined or split source-target rows with source ID, target ID,
+network distance, and snapping diagnostics. \\
+\bottomrule
+\end{tabular}
+\caption{Main data objects and their pipeline roles.}
+\end{table}
+
+The table contract is intentionally compatible with either pandas or Polars.
+Both libraries expose two-dimensional DataFrame objects for tabular data, while
+the pipeline keeps the public contract at the column-schema level rather than at
+the implementation level \cite{pandas-dataframe, polars-dataframe}.  Persistence
+is likewise a boundary concern.  CSV is useful for transparent row-oriented
+exchange \cite{python-csv}; XLSX is useful when analysts need Excel-compatible
+workbooks \cite{microsoft-xlsx}; and Parquet is useful for larger analytical
+tables because it is a columnar file format with an explicit specification
+\cite{apache-parquet}.  The pipeline therefore treats persistence as an
+interchangeable writer choice, not as part of the routing or geocoding logic.
 
 \section{Case Definitions}
 
@@ -92,8 +151,10 @@ and HiGHS both cover 757,053 represented people at 10 km. \\
 \section{Luxembourg School Access}
 
 The Luxembourg case is descriptive.  OSM schools are treated as existing source
-locations and WorldPop cells are treated as population targets.  The reengineered
-pipeline resolves the country data as:
+locations and WorldPop cells are treated as population targets.  WorldPop
+population layers are gridded raster products, so the pipeline converts raster
+cell values into weighted point targets before routing \cite{worldpop-data}.
+The reengineered pipeline resolves the country data as:
 
 \begin{verbatim}
 CountryDataSources(
@@ -154,8 +215,10 @@ py -m scalable_distances.cli run ^
 
 The Timor-Leste case is prescriptive.  It builds a sparse matrix between
 population targets and health-related source locations, then chooses a limited
-number of sources to maximize covered population.  The reengineered pipeline
-resolves the country data as:
+number of sources to maximize covered population.  The model follows the
+maximal covering location problem introduced by Church and ReVelle
+\cite{church-revelle-1974}.  The reengineered pipeline resolves the country
+data as:
 
 \begin{verbatim}
 CountryDataSources(
@@ -230,7 +293,8 @@ The new pipeline makes the following checks explicit for both cases:
 \begin{itemize}
   \item source-data filenames and URLs are resolved before download;
   \item downloads are cached in the shared cache and reused on repeated runs;
-  \item source and target tables expose stable IDs, geometry, and attributes;
+  \item source and target tables expose stable IDs, coordinates, geometry, and
+  attributes;
   \item route computation records router name, network size, source count,
   target count, and matrix row count;
   \item split and combined matrix outputs can be compared from the same run;
@@ -252,5 +316,80 @@ the reengineered version exposes lightweight data contracts, lazy routing
 strategies, explicit persistence choices, and cache metadata that can be reused
 by notebooks, command-line runs, tests, and future geocoding or optimization
 modules.
+
+\begin{thebibliography}{99}
+
+\bibitem{geofabrik-download}
+Geofabrik GmbH.
+\newblock \emph{Geofabrik Download Server: OpenStreetMap Data Extracts}.
+\newblock \url{https://download.geofabrik.de/}.
+
+\bibitem{geofabrik-technical}
+Geofabrik GmbH.
+\newblock \emph{Technical Details of the Geofabrik Download Server}.
+\newblock \url{https://download.geofabrik.de/technical.html}.
+
+\bibitem{osm-map-features}
+OpenStreetMap contributors.
+\newblock \emph{OpenStreetMap Wiki: Map Features}.
+\newblock \url{https://wiki.openstreetmap.org/map_features}.
+
+\bibitem{worldpop-data}
+WorldPop, University of Southampton.
+\newblock \emph{WorldPop Open Population Repository and Population Grids}.
+\newblock \url{https://data.worldpop.org/}.
+
+\bibitem{ogc-geotiff}
+Open Geospatial Consortium.
+\newblock \emph{OGC GeoTIFF Standard}.
+\newblock \url{https://www.ogc.org/standards/geotiff/}.
+
+\bibitem{networkx-shortest-path}
+NetworkX Developers.
+\newblock \emph{NetworkX Shortest Path Algorithms Documentation}.
+\newblock \url{https://networkx.org/documentation/stable/reference/algorithms/shortest_paths.html}.
+
+\bibitem{pandana-docs}
+UrbanSim Inc. and contributors.
+\newblock \emph{Pandana Documentation}.
+\newblock \url{https://udst.github.io/pandana/}.
+
+\bibitem{r5-github}
+Conveyal.
+\newblock \emph{R5 Routing Engine}.
+\newblock \url{https://github.com/conveyal/r5}.
+
+\bibitem{pandas-dataframe}
+pandas development team.
+\newblock \emph{pandas DataFrame Documentation}.
+\newblock \url{https://pandas.pydata.org/docs/reference/api/pandas.DataFrame.html}.
+
+\bibitem{polars-dataframe}
+Polars contributors.
+\newblock \emph{Polars DataFrame Documentation}.
+\newblock \url{https://docs.pola.rs/api/python/stable/reference/dataframe/}.
+
+\bibitem{python-csv}
+Python Software Foundation.
+\newblock \emph{CSV File Reading and Writing}.
+\newblock \url{https://docs.python.org/3/library/csv.html}.
+
+\bibitem{microsoft-xlsx}
+Microsoft.
+\newblock \emph{Excel (.xlsx) Extensions to the Office Open XML SpreadsheetML File Format}.
+\newblock \url{https://learn.microsoft.com/en-us/openspecs/office_standards/ms-xlsx/2c5dee00-eff2-4b22-92b6-0738acd4475e}.
+
+\bibitem{apache-parquet}
+Apache Software Foundation.
+\newblock \emph{Apache Parquet Documentation}.
+\newblock \url{https://parquet.apache.org/docs/}.
+
+\bibitem{church-revelle-1974}
+Church, R. L. and ReVelle, C. S.
+\newblock The maximal covering location problem.
+\newblock \emph{Papers in Regional Science}, 32(1):101--118, 1974.
+\newblock \url{https://doi.org/10.1111/j.1435-5597.1974.tb00902.x}.
+
+\end{thebibliography}
 
 \end{document}
