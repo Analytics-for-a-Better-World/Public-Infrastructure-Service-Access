@@ -4,6 +4,7 @@
 \usepackage{booktabs}
 \usepackage{hyperref}
 \usepackage{amsmath}
+\usepackage{graphicx}
 
 \title{Luxembourg and Timor-Leste Case Studies Recreated With the Scalable Distance Pipeline}
 \author{Public Infrastructure Service Access}
@@ -74,6 +75,16 @@ Both case studies use the same sequence of self-contained modules.
   sparse matrix without depending on the implementation details of the routing
   backend.
 \end{enumerate}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.98\linewidth]{figures/pipeline_data_objects.png}
+\caption{The scalable pipeline separates source-data identity, in-memory table
+contracts, routing strategy, matrix persistence, and downstream analysis.  The
+same source and target tables can be reused by different routers and writers
+without duplicating country-scale downloads in memory or on disk.}
+\label{fig:pipeline-data-objects}
+\end{figure}
 
 \section{Data Sources, Data Types, and Persistence}
 
@@ -197,6 +208,16 @@ where \(w_i\) is the represented population of target \(i\).  A target is counte
 only once per threshold even if several schools are reachable.  For school
 ranking, the same matrix can assign each covered target to its nearest school.
 
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.78\linewidth]{figures/luxembourg_network_sources_targets.png}
+\caption{Illustrative Luxembourg data objects used in the notebook: a small
+road network with edge lengths, two school source points, and three population
+target points.  The country-scale run uses the same object contracts after
+extracting OSM schools and WorldPop target cells.}
+\label{fig:luxembourg-network}
+\end{figure}
+
 The corresponding CLI call is:
 
 \begin{verbatim}
@@ -268,6 +289,16 @@ z_i, y_j \in \{0, 1\}.
 Here \(y_j=1\) if source \(j\) is selected and \(z_i=1\) if population target
 \(i\) is covered.  In the paper-scale case, \(p=20\), the coverage radius is
 10 km, and both Gurobi and HiGHS reach the same covered population.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.78\linewidth]{figures/timor_leste_network_sources_targets.png}
+\caption{Illustrative Timor-Leste data objects used in the notebook: a road
+network with kilometre-scale edge lengths, health-related source locations,
+candidate sites, and weighted population demand.  The sparse matrix turns these
+objects into coverage neighborhoods for the maximum-covering model.}
+\label{fig:timor-leste-network}
+\end{figure}
 
 The corresponding CLI scaffold is:
 
