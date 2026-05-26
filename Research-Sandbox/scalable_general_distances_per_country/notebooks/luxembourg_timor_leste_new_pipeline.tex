@@ -27,7 +27,10 @@ The companion notebook
 \texttt{luxembourg\_api\_illustration.ipynb} contains executable miniature
 versions of the cases.  Those examples are intentionally small enough to run on
 a fresh development machine, while the final notebook cells show the country
-scale API and CLI calls that use the shared cache.
+scale API and CLI calls that use the shared cache.  The notebook now mirrors
+the two analytical endpoints in the original paper: Luxembourg descriptive
+access tables and nearest-school assignments, and Timor-Leste maximum-covering
+neighborhoods plus a selected-facility optimization step.
 
 \section{Pipeline Architecture Used by Both Cases}
 
@@ -207,14 +210,22 @@ The population covered at threshold \(R\) is then
 where \(w_i\) is the represented population of target \(i\).  A target is counted
 only once per threshold even if several schools are reachable.  For school
 ranking, the same matrix can assign each covered target to its nearest school.
+The notebook therefore reproduces the paper's descriptive outputs in three
+steps: compute the sparse road-distance matrix, summarize covered represented
+population at 500 m and 1,000 m, and rank schools by the population assigned to
+their nearest school.  At country scale, these correspond to the paper's 394 OSM
+schools, 102,061 population targets, and 266,225 represented people within
+1,000 m.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.78\linewidth]{figures/luxembourg_network_sources_targets.png}
 \caption{Illustrative Luxembourg data objects used in the notebook: a small
-road network with edge lengths, two school source points, and three population
-target points.  The country-scale run uses the same object contracts after
-extracting OSM schools and WorldPop target cells.}
+road network with edge lengths, two school source points, three population
+target points, and schematic 500 m and 1,000 m radius guides.  The country-scale
+run uses the same object contracts after extracting OSM schools and WorldPop
+target cells; the radius guides are visual aids, while coverage is computed from
+network distances.}
 \label{fig:luxembourg-network}
 \end{figure}
 
@@ -289,14 +300,21 @@ z_i, y_j \in \{0, 1\}.
 Here \(y_j=1\) if source \(j\) is selected and \(z_i=1\) if population target
 \(i\) is covered.  In the paper-scale case, \(p=20\), the coverage radius is
 10 km, and both Gurobi and HiGHS reach the same covered population.
+The notebook reproduces this optimization path without requiring a solver by
+enumerating the small demonstration instance: it first derives \(N(i)\) from the
+10 km sparse matrix, then evaluates feasible source subsets, and finally reports
+the selected sources and covered population.  For the production case, the same
+neighborhood table is the direct input to a MILP solver such as HiGHS or Gurobi.
 
 \begin{figure}[h]
 \centering
 \includegraphics[width=0.78\linewidth]{figures/timor_leste_network_sources_targets.png}
 \caption{Illustrative Timor-Leste data objects used in the notebook: a road
 network with kilometre-scale edge lengths, health-related source locations,
-candidate sites, and weighted population demand.  The sparse matrix turns these
-objects into coverage neighborhoods for the maximum-covering model.}
+candidate sites, weighted population demand, and schematic 10 km coverage-radius
+guides.  The sparse matrix turns these objects into coverage neighborhoods for
+the maximum-covering model; as in the Luxembourg figure, the plotted radii are
+visual guides and the model uses network distances.}
 \label{fig:timor-leste-network}
 \end{figure}
 
