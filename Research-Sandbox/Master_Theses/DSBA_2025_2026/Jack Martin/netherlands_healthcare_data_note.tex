@@ -1,0 +1,94 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+
+\title{Netherlands Healthcare Facility Data and Distance Matrix Note}
+\author{Jack Martin thesis sandbox}
+\date{26 May 2026}
+
+\begin{document}
+\maketitle
+
+\section*{Purpose}
+This note documents the current Netherlands healthcare facility dataset prepared for the distance-analysis pipeline. The data are intended for descriptive access analytics and later optimization experiments using existing facility locations only. No generated candidate sites were included in the distance matrix run.
+
+\section*{Current preferred dataset}
+The preferred pipeline input is:
+\begin{quote}
+\texttt{best\_healthcare\_csvs/netherlands\_health\_service\_locations\_study\_layers\_european\_nl.csv}
+\end{quote}
+It contains 2,541 geocoded healthcare service locations in the European Netherlands:
+\begin{itemize}[leftmargin=*]
+  \item 76 hospital emergency locations from the official RIVM/VZinfo 24/7 SEH layer;
+  \item 103 huisartsenspoedposten / huisartsenpost locations from the official RIVM/VZinfo layer;
+  \item 2,362 general-practitioner locations from OpenStreetMap GP/huisarts-oriented tags.
+\end{itemize}
+The original broader Netherlands study layer contained 2,647 rows. A cleaned European-Netherlands version was created because 106 OpenStreetMap records had Caribbean or overseas coordinates that distorted the road-network extent. These rows were excluded from the preferred pipeline input.
+
+\section*{Layer interpretation}
+For descriptive analytics the notebook maps the Dutch layers as follows:
+\begin{center}
+\begin{tabular}{ll}
+\toprule
+Analysis layer & Facility layer in CSV \\
+\midrule
+Layer 1 & \texttt{hospital} \\
+Layer 2 & \texttt{huisartsenpost} \\
+Layer 3 & \texttt{general\_practitioner} \\
+\bottomrule
+\end{tabular}
+\end{center}
+Layer 1 is used for hospital catchment summaries. Layer 2 represents urgent primary-care posts, which are expected to be especially relevant for the Netherlands case. Layer 3 represents GP locations.
+
+\section*{Data sources}
+The emergency-hospital and huisartsenpost layers are preferred because they come from official Dutch public-health sources via RIVM/VZinfo layers. The GP layer is OpenStreetMap-derived and should be treated as the best open point layer currently available, not as a complete register of huisarts practices. Earlier exploration indicated that without paid or restricted data sources, the open GP layer may represent only about half of all GP locations. Vektis/AGB and CBS microdata remain possible validation or replacement sources if access becomes available.
+
+The folder also keeps audit and sensitivity layers:
+\begin{itemize}[leftmargin=*]
+  \item \texttt{netherlands\_hospitals\_seh\_official.csv}: official SEH hospital layer, 79 rows including 76 open 24/7 and 3 limited-opening records;
+  \item \texttt{netherlands\_huisartsenpost.csv}: official huisartsenspoedposten layer, 103 rows;
+  \item \texttt{netherlands\_general\_practitioner.csv}: OSM-derived GP/huisarts layer, 2,465 rows before European-Netherlands cleaning;
+  \item \texttt{netherlands\_hospital\_emergency\_proxy.csv}: OSM emergency-hospital proxy, useful for validation but not preferred;
+  \item \texttt{netherlands\_huisartsenpost\_osm\_proxy.csv}: OSM HAP proxy, useful for comparison but too incomplete to replace the official layer.
+\end{itemize}
+
+\section*{Distance matrix run}
+The completed distance matrix was generated on 25 May 2026 with the shared country pipeline and the following substantive settings:
+\begin{itemize}[leftmargin=*]
+  \item country: Netherlands;
+  \item source mode: custom table only;
+  \item destination mode: population points;
+  \item population aggregation factor: 20;
+  \item maximum retained total distance: 150 km;
+  \item matrix output mode: split;
+  \item network backend: \texttt{osmium};
+  \item no generated candidates;
+  \item no additional OSM amenity extraction beyond the supplied source table.
+\end{itemize}
+The run produced 21,522,195 retained source--target distance rows from 2,541 healthcare source points and 17,781 aggregated population target points.
+
+\section*{Shared analysis files}
+The files needed to run the descriptive notebook were copied to:
+\begin{quote}
+\texttt{C:\textbackslash Users\textbackslash joaqu\textbackslash OneDrive - UvA\textbackslash share\textbackslash Jack Martin\textbackslash healthcare\_access\_analysis}
+\end{quote}
+This share folder contains the curated facility CSVs, source parquet, target parquet, 150 km capped distance matrix, and the Netherlands context figure. The notebook \texttt{descriptive\_healthcare\_access\_analysis.ipynb} now reads from this shared location.
+
+\section*{Descriptive analytics}
+The notebook computes, for each population point:
+\begin{itemize}[leftmargin=*]
+  \item the closest facility overall;
+  \item the closest layer 1 facility;
+  \item the closest layer 2 facility;
+  \item the closest layer 3 facility.
+\end{itemize}
+It then produces population-weighted distance summaries and a per-hospital catchment table reporting the percentage of national population for which each hospital is the closest layer 1 facility.
+
+\section*{Caveats}
+The official emergency and huisartsenpost layers are strong, but the GP layer is incomplete relative to restricted or paid registers. Results using layer 3 should therefore be interpreted as open-data access estimates, not as final official GP coverage estimates. The 150 km cap also means that very remote source--target pairs are intentionally absent from the matrix.
+
+\end{document}
