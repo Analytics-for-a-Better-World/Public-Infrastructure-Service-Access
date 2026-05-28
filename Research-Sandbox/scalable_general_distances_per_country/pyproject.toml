@@ -27,6 +27,10 @@ routing = [
     "networkx>=2.8",
     "pandana",
 ]
+optimization = [
+    "pyomo>=6.7",
+    "highspy>=1.7",
+]
 dev = [
     "pytest>=7.2",
 ]

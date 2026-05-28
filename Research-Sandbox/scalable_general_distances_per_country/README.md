@@ -45,7 +45,7 @@ py -m pip install -e .
 Optional extras:
 
 ```powershell
-py -m pip install -e .[osm,geospatial,routing,dev]
+py -m pip install -e .[osm,geospatial,routing,optimization,dev]
 ```
 
 The `osm` extra declares `npyosmium`, used for fast OSM/PBF parsing compatibility
@@ -160,6 +160,39 @@ py -m scalable_distances.cli run `
 Use `--router pandana` only in deployments where Pandana is installed and
 compatible with the NumPy version. Pandana is never imported by the package
 unless that strategy is selected.
+
+## Optimization Backends
+
+Facility-location optimization is exposed through the package API and uses lazy
+solver imports. The default solver mode is `auto`: try Gurobi first, and if
+Gurobi is missing or not licensed, solve the same MILP through Pyomo's portable
+HiGHS interface.
+
+```python
+from scalable_distances.optimization import (
+    FacilityLocationConfig,
+    solve_facility_location_by_island,
+)
+
+solution = solve_facility_location_by_island(
+    "Sabu",
+    demand_table=facility_inputs,
+    candidate_table=facility_candidates,
+    config=FacilityLocationConfig(solver="auto", setup_km=2.0, mip_gap=0.001),
+)
+print(solution.summary)
+```
+
+Install the open-source fallback with:
+
+```powershell
+py -m pip install -e .[optimization]
+```
+
+The fallback follows the Pyomo/HiGHS stack used in the MO-book TSP notebook:
+`appsi_highs`/HiGHS with `highspy` as the Python backend. The implementation
+uses Pyomo's direct APPsi `Highs` interface so test and notebook output capture
+remain quiet. Use `solver="pyomo-highs"` to force the open-source path.
 
 ## Architecture
 
