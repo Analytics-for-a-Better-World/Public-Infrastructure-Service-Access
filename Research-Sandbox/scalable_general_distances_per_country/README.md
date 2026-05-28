@@ -194,6 +194,31 @@ The fallback follows the Pyomo/HiGHS stack used in the MO-book TSP notebook:
 uses Pyomo's direct APPsi `Highs` interface so test and notebook output capture
 remain quiet. Use `solver="pyomo-highs"` to force the open-source path.
 
+The same optimization module also solves post-assignment TSP routes. The TSP
+input is a complete stop-to-stop distance table, not only facility-to-school
+distances. For each selected facility cluster, build distances among all stops:
+facility to schools, schools to facility, and school to school.
+
+```python
+from scalable_distances.optimization import (
+    TspConfig,
+    build_tsp_distance_table,
+    solve_tsp_from_distance_table,
+)
+
+distances = build_tsp_distance_table(router, stops)
+tour = solve_tsp_from_distance_table(
+    distances,
+    depot_id="Sabu_0033",
+    config=TspConfig(solver="auto", mip_gap=0.001),
+)
+print(tour.summary)
+```
+
+Missing road-network paths are kept visible: `build_tsp_distance_table()` fills
+them with geodesic fallback distances tagged as `distance_source =
+"geodesic_fallback"`, so disconnected legs are diagnosable rather than hidden.
+
 ## Architecture
 
 ```text
