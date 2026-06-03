@@ -4,14 +4,70 @@ Network loading utilities.
 
 from time import perf_counter as pc
 from typing import Literal
+from importlib.metadata import PackageNotFoundError, version
+import sys
 import warnings
 
 import geopandas as gpd
 import pandas as pd
-import pandana as pdna
 from pyproj import Geod
 from pyrosm import OSM
 from shapely.geometry import LineString, Point
+
+
+def _version_numbers(value: str) -> tuple[int, ...]:
+    """Return numeric version components from a package version string."""
+    cleaned = value.split('+', 1)[0].split('-', 1)[0]
+    numbers: list[int] = []
+    for part in cleaned.split('.'):
+        digits = ''.join(ch for ch in part if ch.isdigit())
+        if digits == '':
+            break
+        numbers.append(int(digits))
+    return tuple(numbers)
+
+
+def _version_at_least(value: str, minimum: tuple[int, ...]) -> bool:
+    numbers = _version_numbers(value)
+    width = max(len(numbers), len(minimum))
+    return numbers + (0,) * (width - len(numbers)) >= minimum + (0,) * (width - len(minimum))
+
+
+def _version_at_most(value: str, maximum: tuple[int, ...]) -> bool:
+    numbers = _version_numbers(value)
+    width = max(len(numbers), len(maximum))
+    return numbers + (0,) * (width - len(numbers)) <= maximum + (0,) * (width - len(maximum))
+
+
+def warn_if_pandana_numpy_incompatible() -> None:
+    """Warn before importing Pandana when the installed NumPy is likely incompatible."""
+    try:
+        pandana_version = version('pandana')
+        numpy_version = version('numpy')
+    except PackageNotFoundError:
+        return
+
+    if not (
+        _version_at_most(pandana_version, (0, 7))
+        and _version_at_least(numpy_version, (2, 0))
+    ):
+        return
+
+    message = (
+        'WARNING: Pandana compatibility risk detected. '
+        f'Installed pandana=={pandana_version} is likely to fail with '
+        f'numpy=={numpy_version}. Pandana 0.7 wheels were built against the '
+        'NumPy 1.x C API, so importing or using Pandana under NumPy 2 can raise '
+        'binary-compatibility errors. Use numpy<2, or install a Pandana build '
+        'that explicitly supports NumPy 2, before running this distance pipeline.'
+    )
+    print(message, file=sys.stderr)
+    warnings.warn(message, RuntimeWarning, stacklevel=2)
+
+
+warn_if_pandana_numpy_incompatible()
+
+import pandana as pdna
 
 try:
     import osmium

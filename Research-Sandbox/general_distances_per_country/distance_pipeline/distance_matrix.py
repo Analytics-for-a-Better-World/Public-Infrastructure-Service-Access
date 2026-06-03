@@ -469,6 +469,119 @@ def _sources_to_polars(sources: pd.DataFrame) -> pl.DataFrame:
     return pl.DataFrame(data)
 
 
+def _dense_distance_frame(
+    values: np.ndarray,
+    *,
+    target_ids: np.ndarray,
+    source_ids: np.ndarray,
+) -> pd.DataFrame:
+    '''Return a target-by-source dense matrix with stable axis names.'''
+    frame = pd.DataFrame(values, index=target_ids, columns=source_ids)
+    frame.index.name = 'target_id'
+    frame.columns.name = 'source_id'
+    return frame
+
+
+def compute_dense_distance_matrices(
+    targets: pd.DataFrame,
+    sources: pd.DataFrame,
+    network: object,
+    *,
+    max_total_dist: float | None = None,
+    chunk_size: int = 1_000_000,
+    verbose: bool = False,
+) -> dict[str, pd.DataFrame]:
+    '''
+    Compute dense target-by-source distance matrices.
+
+    Unreachable road paths are represented by ``np.inf``. When
+    ``max_total_dist`` is provided, entries above that total-distance cap are
+    also set to ``np.inf`` in the total matrix.
+    '''
+    targets, sources = _validate_inputs(targets, sources)
+    _validate_node_columns(targets, sources)
+
+    if chunk_size <= 0:
+        raise ValueError('chunk_size must be positive')
+
+    target_ids = targets['ID'].to_numpy(copy=False)
+    source_ids = sources['ID'].to_numpy(copy=False)
+    n_targets = len(targets)
+    n_sources = len(sources)
+    n_pairs = n_targets * n_sources
+
+    if verbose:
+        print(
+            f'computing dense {n_targets:,} x {n_sources:,} matrix '
+            f'({n_pairs:,} paths requested)'
+        )
+
+    target_nodes = targets['nearest_node'].to_numpy(dtype=np.int64, copy=False)
+    source_nodes = sources['nearest_node'].to_numpy(dtype=np.int64, copy=False)
+    road_flat = np.empty(n_pairs, dtype=np.float64)
+
+    t = pc()
+    for start in range(0, n_pairs, chunk_size):
+        stop = min(start + chunk_size, n_pairs)
+        pair_indices = np.arange(start, stop, dtype=np.int64)
+        target_idx = pair_indices // n_sources
+        source_idx = pair_indices % n_sources
+        road_flat[start:stop] = np.asarray(
+            network.shortest_path_lengths(
+                target_nodes[target_idx],
+                source_nodes[source_idx],
+            ),
+            dtype=np.float64,
+        )
+
+    road_flat[road_flat >= NO_PATH_SENTINEL] = np.inf
+    road = road_flat.reshape((n_targets, n_sources))
+
+    target_to_road = targets['dist_snap_target'].to_numpy(
+        dtype=np.float64,
+        copy=False,
+    )[:, None]
+    source_to_road = sources['dist_snap_source'].to_numpy(
+        dtype=np.float64,
+        copy=False,
+    )[None, :]
+    total = target_to_road + road + source_to_road
+
+    if max_total_dist is not None:
+        total = total.copy()
+        total[total > max_total_dist] = np.inf
+
+    if verbose:
+        finite_paths = int(np.isfinite(road).sum())
+        print(
+            f'dense routing found {finite_paths:,} finite road paths '
+            f'in {pc() - t:.2f} seconds'
+        )
+
+    return {
+        'total': _dense_distance_frame(
+            total,
+            target_ids=target_ids,
+            source_ids=source_ids,
+        ),
+        'origin_stitch': _dense_distance_frame(
+            np.broadcast_to(source_to_road, (n_targets, n_sources)).copy(),
+            target_ids=target_ids,
+            source_ids=source_ids,
+        ),
+        'destination_stitch': _dense_distance_frame(
+            np.broadcast_to(target_to_road, (n_targets, n_sources)).copy(),
+            target_ids=target_ids,
+            source_ids=source_ids,
+        ),
+        'road_distance': _dense_distance_frame(
+            road,
+            target_ids=target_ids,
+            source_ids=source_ids,
+        ),
+    }
+
+
 def compute_distances_polars(
     targets: pd.DataFrame,
     sources: pd.DataFrame,

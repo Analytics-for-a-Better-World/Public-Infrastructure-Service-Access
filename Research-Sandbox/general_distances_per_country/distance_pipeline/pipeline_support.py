@@ -112,6 +112,7 @@ def build_output_run_tag(
     return (
         f"pop_{settings.population_threshold:g}_"
         f"sample_{settings.sample_fraction:g}_"
+        f"seed_{settings.random_seed}_"
         f"max_{format_output_value(settings.max_points)}_"
         f"agg_{format_output_value(aggregate_factor)}_"
         f"maxdist_{format_output_value(settings.max_total_dist)}_"

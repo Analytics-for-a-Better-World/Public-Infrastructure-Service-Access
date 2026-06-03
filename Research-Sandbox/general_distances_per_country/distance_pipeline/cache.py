@@ -274,7 +274,8 @@ class CacheManager:
         population_threshold: float,
         sample_fraction: float,
         max_points: int | None,
-        aggregate_factor: int | None,
+        random_seed: int = 42,
+        aggregate_factor: int | None = None,
     ) -> Path:
         max_points_str: str = 'none' if max_points is None else str(max_points)
         aggregate_factor_str: str = 'none' if aggregate_factor is None else str(aggregate_factor)
@@ -284,6 +285,7 @@ class CacheManager:
                 f'{self.worldpop_stem}_population_points_'
                 f'pop_{population_threshold:g}_'
                 f'sample_{sample_fraction:g}_'
+                f'seed_{random_seed}_'
                 f'agg_{aggregate_factor_str}_'
                 f'max_{max_points_str}.pkl'
             )
@@ -295,6 +297,7 @@ class CacheManager:
             population_threshold=None,
             sample_fraction=None,
             max_points=None,
+            random_seed=None,
             aggregate_factor=None,
         )
 
@@ -304,11 +307,13 @@ class CacheManager:
         population_threshold: float | None,
         sample_fraction: float | None,
         max_points: int | None,
-        aggregate_factor: int | None,
+        random_seed: int | None = None,
+        aggregate_factor: int | None = None,
     ) -> Path:
         population_part = (
             f'pop_{_none_or_number(population_threshold)}_'
             f'sample_{_none_or_number(sample_fraction)}_'
+            f'seed_{_none_or_int(random_seed)}_'
             f'agg_{_none_or_int(aggregate_factor)}_'
             f'max_{_none_or_int(max_points)}'
         )
@@ -367,6 +372,7 @@ class CacheManager:
             population_threshold=None,
             sample_fraction=None,
             max_points=None,
+            random_seed=None,
             aggregate_factor=None,
             amenity_values=None,
             candidate_grid_spacing_m=None,
@@ -381,6 +387,7 @@ class CacheManager:
         population_threshold: float | None = None,
         sample_fraction: float | None = None,
         max_points: int | None = None,
+        random_seed: int | None = None,
         aggregate_factor: int | None = None,
         amenity_values: list[str] | None = None,
         candidate_grid_spacing_m: float | None = None,
@@ -392,6 +399,7 @@ class CacheManager:
         population_part = (
             f'pop_{_none_or_number(population_threshold)}_'
             f'sample_{_none_or_number(sample_fraction)}_'
+            f'seed_{_none_or_int(random_seed)}_'
             f'agg_{_none_or_int(aggregate_factor)}_'
             f'max_{_none_or_int(max_points)}'
         )

@@ -9,6 +9,7 @@ class PipelineSettings:
     population_threshold: float = 1.0
     sample_fraction: float = 1.0
     max_points: int | None = None
+    random_seed: int = 42
     max_total_dist: float | None = None
     candidate_grid_spacing_m: float | None = None
     candidate_max_snap_dist_m: float | None = None
@@ -25,4 +26,7 @@ class PipelineSettings:
     context_map_roads: bool = True
     bbox: tuple[float, float, float, float] | None = None
     matrix_output_mode: str = 'combined'
+    matrix_shape: str = 'sparse'
+    dense_component_matrices: bool = False
     network_backend: str = 'pyrosm'
+    diagnose_connectivity: bool = False

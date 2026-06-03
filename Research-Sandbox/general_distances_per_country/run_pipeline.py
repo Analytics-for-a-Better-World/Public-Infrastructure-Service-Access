@@ -8,13 +8,17 @@ from pathlib import Path
 from time import perf_counter as pc
 
 import geopandas as gpd
+import numpy as np
 import pandas as pd
 
 from countries.base import CountryConfig
 from distance_pipeline.cache import CacheManager
 from distance_pipeline.candidate_builder import build_candidate_grid, build_candidate_sites
 from distance_pipeline.config_loader import load_cfg
-from distance_pipeline.distance_matrix import compute_distances_polars
+from distance_pipeline.distance_matrix import (
+    compute_dense_distance_matrices,
+    compute_distances_polars,
+)
 from distance_pipeline.facilities import deduplicate_osm_amenities, load_facilities
 from distance_pipeline.io import download_file
 from distance_pipeline.manifest import build_run_manifest, write_run_manifest
@@ -464,6 +468,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--diagnose-connectivity',
+        choices=('true', 'false'),
+        default='false',
+        help=(
+            'Compute weak connected components of the loaded road graph, log '
+            'component counts, and label snapped sources/destinations with '
+            'component_id.'
+        ),
+    )
+
+    parser.add_argument(
         '--population-threshold',
         type=float,
         default=1.0,
@@ -482,6 +497,13 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help='Maximum number of population points to keep.',
+    )
+
+    parser.add_argument(
+        '--random-seed',
+        type=int,
+        default=42,
+        help='Random seed used for population sampling and max-points capping.',
     )
 
     parser.add_argument(
@@ -722,6 +744,28 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--matrix-shape',
+        choices=('sparse', 'dense'),
+        default='sparse',
+        help=(
+            'Shape of the distance matrix output. sparse writes the usual '
+            'long table of finite paths. dense writes a target-by-source '
+            'matrix with inf for unreachable paths.'
+        ),
+    )
+
+    parser.add_argument(
+        '--dense-component-matrices',
+        choices=('true', 'false'),
+        default='false',
+        help=(
+            'When --matrix-shape dense is used, also write dense matrices for '
+            'origin stitch distance, destination stitch distance, and road '
+            'routing distance.'
+        ),
+    )
+
+    parser.add_argument(
         '--quiet',
         action='store_true',
         help='Reduce console output.',
@@ -740,6 +784,8 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         raise ValueError('--sample-fraction must be in (0, 1].')
     if args.max_points is not None and args.max_points <= 0:
         raise ValueError('--max-points must be positive.')
+    if args.random_seed < 0:
+        raise ValueError('--random-seed must be nonnegative.')
     if args.max_total_dist is not None and args.max_total_dist <= 0:
         raise ValueError('--max-total-dist must be positive.')
     if args.worldpop_year is not None and args.worldpop_year <= 0:
@@ -770,6 +816,7 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         population_threshold=args.population_threshold,
         sample_fraction=args.sample_fraction,
         max_points=args.max_points,
+        random_seed=args.random_seed,
         max_total_dist=args.max_total_dist,
         candidate_grid_spacing_m=args.candidate_grid_spacing_m,
         candidate_max_snap_dist_m=args.candidate_max_snap_dist_m,
@@ -790,7 +837,10 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         context_map_roads=args.map_roads == 'true',
         bbox=parse_bbox(args.bbox),
         matrix_output_mode=args.matrix_output_mode,
+        matrix_shape=args.matrix_shape,
+        dense_component_matrices=args.dense_component_matrices == 'true',
         network_backend=args.network_backend,
+        diagnose_connectivity=args.diagnose_connectivity == 'true',
     )
 
 
@@ -829,6 +879,44 @@ def split_matrix_path(
     )
 
 
+def dense_matrix_output_key(component: str) -> str:
+    '''Return the manifest key for a dense matrix component.'''
+    return f'dense_matrix_{safe_layer_name(component)}'
+
+
+def dense_matrix_path(output_dir: Path, run_tag: str, component: str) -> Path:
+    '''Return the parquet path for one dense matrix component.'''
+    return output_dir / (
+        f'distance_matrix_dense_{safe_layer_name(component)}_{run_tag}.parquet'
+    )
+
+
+def split_dense_matrix_output_key(
+    component: str,
+    source_type: object,
+    target_type: object,
+) -> str:
+    '''Return the manifest key for one split dense matrix component.'''
+    return (
+        f'dense_matrix_{safe_layer_name(component)}_'
+        f'src_{safe_layer_name(source_type)}_dst_{safe_layer_name(target_type)}'
+    )
+
+
+def split_dense_matrix_path(
+    output_dir: Path,
+    run_tag: str,
+    component: str,
+    source_type: object,
+    target_type: object,
+) -> Path:
+    '''Return the parquet path for one split dense matrix component.'''
+    return output_dir / (
+        f'{split_dense_matrix_output_key(component, source_type, target_type)}_'
+        f'{run_tag}.parquet'
+    )
+
+
 def write_parquet_table(table: object, path: Path) -> None:
     '''Write a pandas or Polars table to parquet.'''
     if pl is not None and isinstance(table, pl.DataFrame):
@@ -847,6 +935,99 @@ def table_row_count(table: object) -> int:
 def table_head(table: object) -> object:
     '''Return a small preview for a pandas or Polars table.'''
     return table.head()
+
+
+def compute_network_component_labels(
+    nodes: pd.DataFrame,
+    edges: pd.DataFrame,
+    *,
+    verbose: bool,
+) -> tuple[pd.Series, pd.DataFrame]:
+    '''Compute weak connected-component labels for the loaded road graph.'''
+    t0 = pc()
+    node_ids = nodes.index.to_numpy(dtype='int64', copy=False)
+    n_nodes = len(node_ids)
+    node_pos = pd.Series(range(n_nodes), index=node_ids, dtype='int64')
+
+    edge_nodes = edges[['u', 'v']].copy()
+    edge_nodes = edge_nodes.loc[
+        edge_nodes['u'].isin(node_pos.index) & edge_nodes['v'].isin(node_pos.index)
+    ]
+    u_pos = node_pos.reindex(edge_nodes['u']).to_numpy(dtype='int64', copy=False)
+    v_pos = node_pos.reindex(edge_nodes['v']).to_numpy(dtype='int64', copy=False)
+
+    parent = np.arange(n_nodes, dtype=np.int64)
+    size = np.ones(n_nodes, dtype=np.int64)
+
+    def find(idx: int) -> int:
+        while parent[idx] != idx:
+            parent[idx] = parent[parent[idx]]
+            idx = int(parent[idx])
+        return int(idx)
+
+    for u, v in zip(u_pos, v_pos):
+        root_u = find(int(u))
+        root_v = find(int(v))
+        if root_u == root_v:
+            continue
+        if size[root_u] < size[root_v]:
+            root_u, root_v = root_v, root_u
+        parent[root_v] = root_u
+        size[root_u] += size[root_v]
+
+    roots = np.fromiter((find(i) for i in range(n_nodes)), dtype=np.int64, count=n_nodes)
+    root_counts = pd.Series(roots).value_counts(sort=True)
+    root_to_component = {
+        root: component_id
+        for component_id, root in enumerate(root_counts.index.to_list())
+    }
+    component_ids = pd.Series(
+        [root_to_component[root] for root in roots],
+        index=node_ids,
+        dtype='int64',
+        name='component_id',
+    )
+    component_summary = pd.DataFrame(
+        {
+            'component_id': range(len(root_counts)),
+            'node_count': root_counts.to_numpy(dtype='int64'),
+        }
+    )
+
+    if verbose:
+        top_sizes = ', '.join(
+            f'{row.component_id}:{row.node_count:,}'
+            for row in component_summary.head(10).itertuples(index=False)
+        )
+        logging.info(
+            'Road connectivity diagnostic: %s weak component(s) across %s nodes; '
+            'largest component sizes %s',
+            f'{len(component_summary):,}',
+            f'{n_nodes:,}',
+            top_sizes,
+        )
+        logging.info(
+            'Connectivity diagnostic completed in %.2fs',
+            pc() - t0,
+        )
+
+    return component_ids, component_summary
+
+
+def add_component_labels(
+    table: pd.DataFrame,
+    component_ids: pd.Series,
+    *,
+    nearest_node_col: str = 'nearest_node',
+) -> pd.DataFrame:
+    '''Attach a road-network weak-component ID to a snapped point table.'''
+    result = table.copy()
+    if nearest_node_col not in result.columns:
+        result['component_id'] = -1
+        return result
+    labels = component_ids.reindex(result[nearest_node_col].astype('int64'))
+    result['component_id'] = labels.fillna(-1).to_numpy(dtype='int64')
+    return result
 
 
 def write_matrix_outputs(
@@ -914,6 +1095,73 @@ def write_matrix_outputs(
                         target_type,
                         split_path,
                     )
+
+    return output_paths
+
+
+def write_dense_matrix_outputs(
+    *,
+    dense_matrices: dict[str, pd.DataFrame],
+    output_dir: Path,
+    run_tag: str,
+    include_components: bool,
+    verbose: bool,
+) -> dict[str, Path]:
+    '''Write dense total and optional component matrices.'''
+    components = ['total']
+    if include_components:
+        components.extend(['origin_stitch', 'destination_stitch', 'road_distance'])
+
+    output_paths: dict[str, Path] = {}
+    for component in components:
+        path = dense_matrix_path(output_dir, run_tag, component)
+        write_parquet_table(dense_matrices[component], path)
+        output_paths[dense_matrix_output_key(component)] = path
+        if component == 'total':
+            output_paths['distance_matrix'] = path
+        if verbose:
+            logging.info('Wrote dense %s matrix: %s', component, path)
+
+    return output_paths
+
+
+def write_split_dense_matrix_outputs(
+    *,
+    dense_matrices: dict[str, pd.DataFrame],
+    output_dir: Path,
+    run_tag: str,
+    source_type: object,
+    target_type: object,
+    include_components: bool,
+    verbose: bool,
+) -> dict[str, Path]:
+    '''Write dense matrices for one source/destination layer pair.'''
+    components = ['total']
+    if include_components:
+        components.extend(['origin_stitch', 'destination_stitch', 'road_distance'])
+
+    output_paths: dict[str, Path] = {}
+    for component in components:
+        path = split_dense_matrix_path(
+            output_dir,
+            run_tag,
+            component,
+            source_type,
+            target_type,
+        )
+        write_parquet_table(dense_matrices[component], path)
+        key = split_dense_matrix_output_key(component, source_type, target_type)
+        output_paths[key] = path
+        if component == 'total':
+            output_paths[split_matrix_output_key(source_type, target_type)] = path
+        if verbose:
+            logging.info(
+                'Wrote split dense %s matrix %s -> %s: %s',
+                component,
+                source_type,
+                target_type,
+                path,
+            )
 
     return output_paths
 
@@ -1064,6 +1312,7 @@ def main(
             population_threshold=settings.population_threshold,
             sample_fraction=settings.sample_fraction,
             max_points=settings.max_points,
+            random_seed=settings.random_seed,
             aggregate_factor=agg,
         ),
         builder=lambda: worldpop_to_points(
@@ -1071,6 +1320,7 @@ def main(
             population_threshold=settings.population_threshold,
             sample_fraction=settings.sample_fraction,
             max_points=settings.max_points,
+            random_seed=settings.random_seed,
             aggregate_factor=agg,
             verbose=settings.verbose,
         ),
@@ -1251,6 +1501,7 @@ def main(
                 population_threshold=settings.population_threshold,
                 sample_fraction=settings.sample_fraction,
                 max_points=settings.max_points,
+                random_seed=settings.random_seed,
                 aggregate_factor=agg,
             ),
             builder=lambda: snap_points_to_nodes(
@@ -1276,6 +1527,7 @@ def main(
                 population_threshold=settings.population_threshold,
                 sample_fraction=settings.sample_fraction,
                 max_points=settings.max_points,
+                random_seed=settings.random_seed,
                 aggregate_factor=agg,
             ),
             builder=lambda: snap_points_to_nodes(
@@ -1433,6 +1685,29 @@ def main(
     if population is None:
         population = targets
 
+    component_summary = None
+    if settings.diagnose_connectivity:
+        component_ids, component_summary = compute_network_component_labels(
+            nodes,
+            edges,
+            verbose=settings.verbose,
+        )
+        targets = add_component_labels(targets, component_ids)
+        sources = add_component_labels(sources, component_ids)
+        existing_sources = add_component_labels(existing_sources, component_ids)
+        population = add_component_labels(population, component_ids)
+        if settings.verbose:
+            target_components = targets['component_id'].value_counts().sort_index()
+            source_components = sources['component_id'].value_counts().sort_index()
+            logging.info(
+                'Destination rows by component_id: %s',
+                target_components.to_dict(),
+            )
+            logging.info(
+                'Source rows by component_id: %s',
+                source_components.to_dict(),
+            )
+
     effective_distance_threshold_km = cfg.DISTANCE_THRESHOLD_KM
     if settings.max_total_dist is not None:
         effective_distance_threshold_km = min(
@@ -1456,11 +1731,14 @@ def main(
         candidate_max_snap_dist_m=candidate_max_snap_dist_m,
         has_candidates=candidate_sites_snapped is not None,
     )
+    if settings.diagnose_connectivity:
+        run_tag = f'{run_tag}_connectivity'
 
     population_path = output_dir / f'population_{run_tag}.parquet'
     targets_path = output_dir / f'targets_{run_tag}.parquet'
     existing_sources_path = output_dir / f'existing_sources_{run_tag}.parquet'
     sources_path = output_dir / f'sources_{run_tag}.parquet'
+    connectivity_path = output_dir / f'connectivity_components_{run_tag}.parquet'
     matrix_path = output_dir / f'distance_matrix_{run_tag}.parquet'
     manifest_path = output_dir / f'run_manifest_{run_tag}.yaml'
 
@@ -1470,133 +1748,275 @@ def main(
     distance_matrix_size = 0
     matrix_output_paths: dict[str, Path] = {}
 
-    if settings.matrix_output_mode == 'combined':
-        matrix_df = cache.run(
-            cache_path=cache.distance_matrix_path_for(
-                distance_threshold_largest=effective_distance_threshold_km,
-                max_total_dist=settings.max_total_dist,
-                population_threshold=settings.population_threshold,
-                sample_fraction=settings.sample_fraction,
-                max_points=settings.max_points,
-                aggregate_factor=agg,
-                amenity_values=source_cache_values,
-                candidate_grid_spacing_m=candidate_grid_spacing_m,
-                candidate_max_snap_dist_m=candidate_max_snap_dist_m,
-                has_candidates=candidate_sites_snapped is not None,
-            ),
-            builder=lambda: compute_distances_polars(
-                targets=targets,
-                sources=sources,
-                distance_threshold_largest=effective_distance_threshold_km,
-                network=network,
-                max_total_dist=settings.max_total_dist,
+    if settings.matrix_shape == 'sparse':
+        if settings.matrix_output_mode == 'combined':
+            matrix_df = cache.run(
+                cache_path=cache.distance_matrix_path_for(
+                    distance_threshold_largest=effective_distance_threshold_km,
+                    max_total_dist=settings.max_total_dist,
+                    population_threshold=settings.population_threshold,
+                    sample_fraction=settings.sample_fraction,
+                    max_points=settings.max_points,
+                    random_seed=settings.random_seed,
+                    aggregate_factor=agg,
+                    amenity_values=source_cache_values,
+                    candidate_grid_spacing_m=candidate_grid_spacing_m,
+                    candidate_max_snap_dist_m=candidate_max_snap_dist_m,
+                    has_candidates=candidate_sites_snapped is not None,
+                ),
+                builder=lambda: compute_distances_polars(
+                    targets=targets,
+                    sources=sources,
+                    distance_threshold_largest=effective_distance_threshold_km,
+                    network=network,
+                    max_total_dist=settings.max_total_dist,
+                    verbose=settings.verbose,
+                ),
+            )
+            if pl is None or not isinstance(matrix_df, pl.DataFrame):
+                matrix_df = set_known_categories(matrix_df)
+            matrix_preview = table_head(matrix_df)
+            distance_matrix_size = table_row_count(matrix_df)
+            matrix_output_paths = write_matrix_outputs(
+                matrix_df=matrix_df,
+                output_dir=output_dir,
+                run_tag=run_tag,
+                mode='combined',
+                combined_path=matrix_path,
                 verbose=settings.verbose,
-            ),
-        )
-        if pl is None or not isinstance(matrix_df, pl.DataFrame):
-            matrix_df = set_known_categories(matrix_df)
-        matrix_preview = table_head(matrix_df)
-        distance_matrix_size = table_row_count(matrix_df)
-        matrix_output_paths = write_matrix_outputs(
-            matrix_df=matrix_df,
-            output_dir=output_dir,
-            run_tag=run_tag,
-            mode='combined',
-            combined_path=matrix_path,
-            verbose=settings.verbose,
-        )
-    else:
-        combined_parts: list[object] = []
-        source_types = sorted(sources['source_type'].astype(str).unique())
-        target_types = sorted(targets['target_type'].astype(str).unique())
-        for source_type in source_types:
-            pair_sources = sources[sources['source_type'].astype(str) == source_type]
-            for target_type in target_types:
-                pair_targets = targets[targets['target_type'].astype(str) == target_type]
-                if pair_sources.empty or pair_targets.empty:
-                    continue
-                if settings.verbose:
-                    logging.info(
-                        'Computing split distance matrix %s -> %s (%s x %s)',
+            )
+        else:
+            combined_parts: list[object] = []
+            source_types = sorted(sources['source_type'].astype(str).unique())
+            target_types = sorted(targets['target_type'].astype(str).unique())
+            for source_type in source_types:
+                pair_sources = sources[sources['source_type'].astype(str) == source_type]
+                for target_type in target_types:
+                    pair_targets = targets[
+                        targets['target_type'].astype(str) == target_type
+                    ]
+                    if pair_sources.empty or pair_targets.empty:
+                        continue
+                    if settings.verbose:
+                        logging.info(
+                            'Computing split distance matrix %s -> %s (%s x %s)',
+                            source_type,
+                            target_type,
+                            f'{len(pair_sources):,}',
+                            f'{len(pair_targets):,}',
+                        )
+                    pair_has_candidates = (
+                        source_type == 'candidates' or target_type == 'candidates'
+                    )
+                    pair_cache_values = [
+                        *source_cache_values,
+                        f'src_{source_type}',
+                        f'dst_{target_type}',
+                    ]
+                    split_df = cache.run(
+                        cache_path=cache.distance_matrix_path_for(
+                            distance_threshold_largest=effective_distance_threshold_km,
+                            max_total_dist=settings.max_total_dist,
+                            population_threshold=settings.population_threshold,
+                            sample_fraction=settings.sample_fraction,
+                            max_points=settings.max_points,
+                            random_seed=settings.random_seed,
+                            aggregate_factor=agg,
+                            amenity_values=pair_cache_values,
+                            candidate_grid_spacing_m=candidate_grid_spacing_m,
+                            candidate_max_snap_dist_m=candidate_max_snap_dist_m,
+                            has_candidates=pair_has_candidates,
+                        ),
+                        builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
+                            compute_distances_polars(
+                                targets=pair_targets,
+                                sources=pair_sources,
+                                distance_threshold_largest=effective_distance_threshold_km,
+                                network=network,
+                                max_total_dist=settings.max_total_dist,
+                                verbose=settings.verbose,
+                            )
+                        ),
+                    )
+                    if pl is None or not isinstance(split_df, pl.DataFrame):
+                        split_df = set_known_categories(split_df)
+                    if matrix_preview is None:
+                        matrix_preview = table_head(split_df)
+                    distance_matrix_size += table_row_count(split_df)
+                    split_path = split_matrix_path(
+                        output_dir,
+                        run_tag,
                         source_type,
                         target_type,
-                        f'{len(pair_sources):,}',
-                        f'{len(pair_targets):,}',
                     )
-                pair_has_candidates = (
-                    source_type == 'candidates' or target_type == 'candidates'
-                )
-                pair_cache_values = [
-                    *source_cache_values,
-                    f'src_{source_type}',
-                    f'dst_{target_type}',
-                ]
-                split_df = cache.run(
-                    cache_path=cache.distance_matrix_path_for(
-                        distance_threshold_largest=effective_distance_threshold_km,
-                        max_total_dist=settings.max_total_dist,
-                        population_threshold=settings.population_threshold,
-                        sample_fraction=settings.sample_fraction,
-                        max_points=settings.max_points,
-                        aggregate_factor=agg,
-                        amenity_values=pair_cache_values,
-                        candidate_grid_spacing_m=candidate_grid_spacing_m,
-                        candidate_max_snap_dist_m=candidate_max_snap_dist_m,
-                        has_candidates=pair_has_candidates,
-                    ),
-                    builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
-                        compute_distances_polars(
-                            targets=pair_targets,
-                            sources=pair_sources,
+                    write_parquet_table(split_df, split_path)
+                    matrix_output_paths[
+                        split_matrix_output_key(source_type, target_type)
+                    ] = split_path
+                    if settings.verbose:
+                        logging.info(
+                            'Wrote split distance matrix %s -> %s: %s',
+                            source_type,
+                            target_type,
+                            split_path,
+                        )
+                    if settings.matrix_output_mode == 'both':
+                        combined_parts.append(split_df)
+
+            if settings.matrix_output_mode == 'both':
+                if combined_parts:
+                    if pl is not None and all(
+                        isinstance(part, pl.DataFrame) for part in combined_parts
+                    ):
+                        matrix_df = pl.concat(combined_parts, how='vertical')
+                    else:
+                        matrix_df = pd.concat(combined_parts, axis=0, sort=False)
+                    write_parquet_table(matrix_df, matrix_path)
+                    matrix_output_paths = {
+                        'distance_matrix': matrix_path,
+                        **matrix_output_paths,
+                    }
+                else:
+                    matrix_df = sources.iloc[0:0].copy()
+            else:
+                matrix_df = matrix_preview
+    else:
+        if settings.matrix_output_mode == 'combined':
+            dense_matrices = cache.run(
+                cache_path=cache.distance_matrix_path_for(
+                    distance_threshold_largest=effective_distance_threshold_km,
+                    max_total_dist=settings.max_total_dist,
+                    population_threshold=settings.population_threshold,
+                    sample_fraction=settings.sample_fraction,
+                    max_points=settings.max_points,
+                    random_seed=settings.random_seed,
+                    aggregate_factor=agg,
+                    amenity_values=[*source_cache_values, 'matrix_dense'],
+                    candidate_grid_spacing_m=candidate_grid_spacing_m,
+                    candidate_max_snap_dist_m=candidate_max_snap_dist_m,
+                    has_candidates=candidate_sites_snapped is not None,
+                ),
+                builder=lambda: compute_dense_distance_matrices(
+                    targets=targets,
+                    sources=sources,
+                    network=network,
+                    max_total_dist=settings.max_total_dist,
+                    verbose=settings.verbose,
+                ),
+            )
+            matrix_df = dense_matrices['total']
+            matrix_preview = table_head(matrix_df)
+            distance_matrix_size = len(targets) * len(sources)
+            matrix_output_paths = write_dense_matrix_outputs(
+                dense_matrices=dense_matrices,
+                output_dir=output_dir,
+                run_tag=run_tag,
+                include_components=settings.dense_component_matrices,
+                verbose=settings.verbose,
+            )
+        else:
+            source_types = sorted(sources['source_type'].astype(str).unique())
+            target_types = sorted(targets['target_type'].astype(str).unique())
+            dense_blocks: dict[tuple[str, str], dict[str, pd.DataFrame]] = {}
+            for source_type in source_types:
+                pair_sources = sources[sources['source_type'].astype(str) == source_type]
+                for target_type in target_types:
+                    pair_targets = targets[
+                        targets['target_type'].astype(str) == target_type
+                    ]
+                    if pair_sources.empty or pair_targets.empty:
+                        continue
+                    if settings.verbose:
+                        logging.info(
+                            'Computing split dense matrix %s -> %s (%s x %s)',
+                            source_type,
+                            target_type,
+                            f'{len(pair_sources):,}',
+                            f'{len(pair_targets):,}',
+                        )
+                    pair_has_candidates = (
+                        source_type == 'candidates' or target_type == 'candidates'
+                    )
+                    pair_cache_values = [
+                        *source_cache_values,
+                        'matrix_dense',
+                        f'src_{source_type}',
+                        f'dst_{target_type}',
+                    ]
+                    dense_matrices = cache.run(
+                        cache_path=cache.distance_matrix_path_for(
                             distance_threshold_largest=effective_distance_threshold_km,
-                            network=network,
                             max_total_dist=settings.max_total_dist,
+                            population_threshold=settings.population_threshold,
+                            sample_fraction=settings.sample_fraction,
+                            max_points=settings.max_points,
+                            random_seed=settings.random_seed,
+                            aggregate_factor=agg,
+                            amenity_values=pair_cache_values,
+                            candidate_grid_spacing_m=candidate_grid_spacing_m,
+                            candidate_max_snap_dist_m=candidate_max_snap_dist_m,
+                            has_candidates=pair_has_candidates,
+                        ),
+                        builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
+                            compute_dense_distance_matrices(
+                                targets=pair_targets,
+                                sources=pair_sources,
+                                network=network,
+                                max_total_dist=settings.max_total_dist,
+                                verbose=settings.verbose,
+                            )
+                        ),
+                    )
+                    dense_blocks[(target_type, source_type)] = dense_matrices
+                    if matrix_preview is None:
+                        matrix_preview = table_head(dense_matrices['total'])
+                    distance_matrix_size += len(pair_targets) * len(pair_sources)
+                    matrix_output_paths.update(
+                        write_split_dense_matrix_outputs(
+                            dense_matrices=dense_matrices,
+                            output_dir=output_dir,
+                            run_tag=run_tag,
+                            source_type=source_type,
+                            target_type=target_type,
+                            include_components=settings.dense_component_matrices,
                             verbose=settings.verbose,
                         )
-                    ),
-                )
-                if pl is None or not isinstance(split_df, pl.DataFrame):
-                    split_df = set_known_categories(split_df)
-                if matrix_preview is None:
-                    matrix_preview = table_head(split_df)
-                distance_matrix_size += table_row_count(split_df)
-                split_path = split_matrix_path(
-                    output_dir,
-                    run_tag,
-                    source_type,
-                    target_type,
-                )
-                write_parquet_table(split_df, split_path)
-                matrix_output_paths[
-                    split_matrix_output_key(source_type, target_type)
-                ] = split_path
-                if settings.verbose:
-                    logging.info(
-                        'Wrote split distance matrix %s -> %s: %s',
-                        source_type,
-                        target_type,
-                        split_path,
                     )
-                if settings.matrix_output_mode == 'both':
-                    combined_parts.append(split_df)
 
-        if settings.matrix_output_mode == 'both':
-            if combined_parts:
-                if pl is not None and all(
-                    isinstance(part, pl.DataFrame) for part in combined_parts
-                ):
-                    matrix_df = pl.concat(combined_parts, how='vertical')
-                else:
-                    matrix_df = pd.concat(combined_parts, axis=0, sort=False)
-                write_parquet_table(matrix_df, matrix_path)
+            if settings.matrix_output_mode == 'both' and dense_blocks:
+                components = ['total']
+                if settings.dense_component_matrices:
+                    components.extend([
+                        'origin_stitch',
+                        'destination_stitch',
+                        'road_distance',
+                    ])
+                combined_dense: dict[str, pd.DataFrame] = {}
+                for component in components:
+                    target_rows: list[pd.DataFrame] = []
+                    for target_type in target_types:
+                        source_blocks = [
+                            dense_blocks[(target_type, source_type)][component]
+                            for source_type in source_types
+                            if (target_type, source_type) in dense_blocks
+                        ]
+                        if source_blocks:
+                            target_rows.append(pd.concat(source_blocks, axis=1))
+                    if target_rows:
+                        combined_dense[component] = pd.concat(target_rows, axis=0)
+                matrix_df = combined_dense.get('total')
                 matrix_output_paths = {
-                    'distance_matrix': matrix_path,
+                    **write_dense_matrix_outputs(
+                        dense_matrices=combined_dense,
+                        output_dir=output_dir,
+                        run_tag=run_tag,
+                        include_components=settings.dense_component_matrices,
+                        verbose=settings.verbose,
+                    ),
                     **matrix_output_paths,
                 }
             else:
-                matrix_df = sources.iloc[0:0].copy()
-        else:
-            matrix_df = matrix_preview
+                matrix_df = matrix_preview
 
     population_points = filter_to_bbox(population_points, settings.bbox)
 
@@ -1604,6 +2024,8 @@ def main(
     targets.to_parquet(targets_path, index=False)
     existing_sources.to_parquet(existing_sources_path, index=False)
     sources.to_parquet(sources_path, index=False)
+    if component_summary is not None:
+        component_summary.to_parquet(connectivity_path, index=False)
     output_paths = {
         'population': population_path,
         'targets': targets_path,
@@ -1611,6 +2033,8 @@ def main(
         'sources': sources_path,
         **matrix_output_paths,
     }
+    if component_summary is not None:
+        output_paths['connectivity_components'] = connectivity_path
     write_run_manifest(
         build_run_manifest(
             cfg=cfg,
@@ -1641,6 +2065,8 @@ def main(
         logging.info(f'Wrote targets output: {targets_path}')
         logging.info(f'Wrote existing sources output: {existing_sources_path}')
         logging.info(f'Wrote sources output: {sources_path}')
+        if component_summary is not None:
+            logging.info(f'Wrote connectivity components output: {connectivity_path}')
         if 'distance_matrix' in matrix_output_paths:
             logging.info(
                 f'Wrote combined distance matrix output: {matrix_output_paths["distance_matrix"]}'
