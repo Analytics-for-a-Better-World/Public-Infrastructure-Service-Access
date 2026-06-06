@@ -30,14 +30,12 @@ nbclient.exceptions.CellTimeoutError: A cell timed out while it was being execut
 The message was: Cell execution timed out.
 Here is a preview of the cell contents:
 -------------------
-# Suppress user warning about geometry in geographic CRS. Centroid is calculated over a single facility (e.g. a hospital),
-# so distances are very small and projection isn't necessary
-warnings.filterwarnings(
-    "ignore",
-    message="Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect",
-    category=UserWarning,
-)
+from pisa.osm_road_network import OsmRoadNetwork
 
-hospitals_df = Facilities(admin_area_boundaries=baucau).get_existing_facilities()
+road_network = OsmRoadNetwork(
+    admin_area_boundaries=baucau,
+    mode_of_transport=MODE_OF_TRANSPORT,
+    distance_type=DISTANCE_TYPE,
+).get_osm_road_network()
 -------------------
 
