@@ -93,6 +93,46 @@ def parse_bbox(values: list[float] | None) -> tuple[float, float, float, float] 
     return min_lon, min_lat, max_lon, max_lat
 
 
+def parse_snap_components(value: str | None) -> tuple[int, ...] | None:
+    """Parse allowed snap component IDs from comma-separated values/ranges."""
+    if value is None:
+        return None
+    text = value.strip()
+    if not text or text.lower() in {'none', 'all'}:
+        return None
+
+    component_ids: list[int] = []
+    seen: set[int] = set()
+
+    for raw_part in text.split(','):
+        part = raw_part.strip()
+        if not part:
+            raise ValueError('--snap-components contains an empty item.')
+
+        if '-' in part:
+            bounds = [bound.strip() for bound in part.split('-', maxsplit=1)]
+            if len(bounds) != 2 or not bounds[0] or not bounds[1]:
+                raise ValueError(f'Invalid --snap-components range: {part!r}.')
+            start, end = (int(bounds[0]), int(bounds[1]))
+            if start < 0 or end < 0:
+                raise ValueError('--snap-components cannot contain negative IDs.')
+            if start > end:
+                raise ValueError(f'Invalid descending --snap-components range: {part!r}.')
+            values = range(start, end + 1)
+        else:
+            component_id = int(part)
+            if component_id < 0:
+                raise ValueError('--snap-components cannot contain negative IDs.')
+            values = (component_id,)
+
+        for component_id in values:
+            if component_id not in seen:
+                seen.add(component_id)
+                component_ids.append(component_id)
+
+    return tuple(sorted(component_ids))
+
+
 def filter_to_bbox(
     gdf: gpd.GeoDataFrame | pd.DataFrame | None,
     bbox: tuple[float, float, float, float] | None,
@@ -479,6 +519,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--snap-components',
+        type=str,
+        default=None,
+        help=(
+            'Restrict snapping to road-network weak component IDs, ordered by '
+            'component size. Accepts comma-separated IDs and ranges, for '
+            'example 0 or 0,2,5-7. Default: snap to all components.'
+        ),
+    )
+
+    parser.add_argument(
         '--population-threshold',
         type=float,
         default=1.0,
@@ -841,6 +892,7 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         dense_component_matrices=args.dense_component_matrices == 'true',
         network_backend=args.network_backend,
         diagnose_connectivity=args.diagnose_connectivity == 'true',
+        snap_components=parse_snap_components(args.snap_components),
     )
 
 
@@ -1028,6 +1080,36 @@ def add_component_labels(
     labels = component_ids.reindex(result[nearest_node_col].astype('int64'))
     result['component_id'] = labels.fillna(-1).to_numpy(dtype='int64')
     return result
+
+
+def filter_nodes_to_components(
+    nodes: gpd.GeoDataFrame,
+    component_ids: pd.Series,
+    allowed_components: tuple[int, ...],
+    *,
+    verbose: bool,
+) -> gpd.GeoDataFrame:
+    '''Return network nodes whose weak component ID is explicitly allowed.'''
+    allowed = set(allowed_components)
+    allowed_node_ids = component_ids[component_ids.isin(allowed)].index
+    filtered = nodes.loc[nodes.index.intersection(allowed_node_ids)].copy()
+
+    if filtered.empty:
+        allowed_str = ', '.join(str(component_id) for component_id in allowed_components)
+        raise ValueError(
+            'No network nodes remain after --snap-components filtering. '
+            f'Requested component IDs: {allowed_str}.'
+        )
+
+    if verbose:
+        logging.info(
+            'Restricting snapping to component IDs %s: %s of %s nodes retained',
+            ','.join(str(component_id) for component_id in allowed_components),
+            f'{len(filtered):,}',
+            f'{len(nodes):,}',
+        )
+
+    return filtered
 
 
 def write_matrix_outputs(
@@ -1415,6 +1497,27 @@ def main(
                 f'Destination table points: {len(destination_table_points):,}'
             )
 
+    component_ids = None
+    component_summary = None
+    snap_nodes = nodes
+    if not map_only and (
+        settings.diagnose_connectivity or settings.snap_components is not None
+    ):
+        component_ids, computed_component_summary = compute_network_component_labels(
+            nodes,
+            edges,
+            verbose=settings.verbose,
+        )
+        if settings.snap_components is not None:
+            snap_nodes = filter_nodes_to_components(
+                nodes,
+                component_ids,
+                settings.snap_components,
+                verbose=settings.verbose,
+            )
+        if settings.diagnose_connectivity:
+            component_summary = computed_component_summary
+
     if needs_candidates:
         if map_only:
             candidate_sites = build_candidate_grid(
@@ -1429,7 +1532,7 @@ def main(
                 cfg=cfg,
                 settings=settings,
                 cache=cache,
-                nodes=nodes,
+                nodes=snap_nodes,
             )
             candidate_sites = filter_to_bbox(candidate_sites, settings.bbox)
             candidate_sites_snapped = filter_to_bbox(candidate_sites_snapped, settings.bbox)
@@ -1503,10 +1606,11 @@ def main(
                 max_points=settings.max_points,
                 random_seed=settings.random_seed,
                 aggregate_factor=agg,
+                snap_components=settings.snap_components,
             ),
             builder=lambda: snap_points_to_nodes(
                 population_points,
-                nodes,
+                snap_nodes,
                 distance_col='dist_snap_target',
                 projected_epsg=cfg.PROJECTED_EPSG,
                 verbose=settings.verbose,
@@ -1529,10 +1633,11 @@ def main(
                 max_points=settings.max_points,
                 random_seed=settings.random_seed,
                 aggregate_factor=agg,
+                snap_components=settings.snap_components,
             ),
             builder=lambda: snap_points_to_nodes(
                 population_points,
-                nodes,
+                snap_nodes,
                 distance_col='dist_snap_source',
                 projected_epsg=cfg.PROJECTED_EPSG,
                 verbose=settings.verbose,
@@ -1552,10 +1657,11 @@ def main(
             cache_path=cache.sources_snapped_path_for(
                 distance_col='dist_snap_target',
                 amenity_values=['target_amenities', *source_cache_values],
+                snap_components=settings.snap_components,
             ),
             builder=lambda: snap_points_to_nodes(
                 amenity_points,
-                nodes,
+                snap_nodes,
                 distance_col='dist_snap_target',
                 projected_epsg=cfg.PROJECTED_EPSG,
                 verbose=settings.verbose,
@@ -1574,10 +1680,11 @@ def main(
             cache_path=cache.sources_snapped_path_for(
                 distance_col='dist_snap_source',
                 amenity_values=['source_amenities', *source_cache_values],
+                snap_components=settings.snap_components,
             ),
             builder=lambda: snap_points_to_nodes(
                 amenity_points,
-                nodes,
+                snap_nodes,
                 distance_col='dist_snap_source',
                 projected_epsg=cfg.PROJECTED_EPSG,
                 verbose=settings.verbose,
@@ -1601,10 +1708,11 @@ def main(
                     table_descriptor(destination_table_path),
                     *source_cache_values,
                 ],
+                snap_components=settings.snap_components,
             ),
             builder=lambda: snap_points_to_nodes(
                 destination_table_points,
-                nodes,
+                snap_nodes,
                 distance_col='dist_snap_target',
                 projected_epsg=cfg.PROJECTED_EPSG,
                 verbose=settings.verbose,
@@ -1627,10 +1735,11 @@ def main(
                     table_descriptor(source_table_path),
                     *source_cache_values,
                 ],
+                snap_components=settings.snap_components,
             ),
             builder=lambda: snap_points_to_nodes(
                 source_table_points,
-                nodes,
+                snap_nodes,
                 distance_col='dist_snap_source',
                 projected_epsg=cfg.PROJECTED_EPSG,
                 verbose=settings.verbose,
@@ -1685,13 +1794,7 @@ def main(
     if population is None:
         population = targets
 
-    component_summary = None
-    if settings.diagnose_connectivity:
-        component_ids, component_summary = compute_network_component_labels(
-            nodes,
-            edges,
-            verbose=settings.verbose,
-        )
+    if settings.diagnose_connectivity and component_ids is not None:
         targets = add_component_labels(targets, component_ids)
         sources = add_component_labels(sources, component_ids)
         existing_sources = add_component_labels(existing_sources, component_ids)
@@ -1763,6 +1866,7 @@ def main(
                     candidate_grid_spacing_m=candidate_grid_spacing_m,
                     candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                     has_candidates=candidate_sites_snapped is not None,
+                    snap_components=settings.snap_components,
                 ),
                 builder=lambda: compute_distances_polars(
                     targets=targets,
@@ -1826,6 +1930,7 @@ def main(
                             candidate_grid_spacing_m=candidate_grid_spacing_m,
                             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                             has_candidates=pair_has_candidates,
+                            snap_components=settings.snap_components,
                         ),
                         builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
                             compute_distances_polars(
@@ -1895,6 +2000,7 @@ def main(
                     candidate_grid_spacing_m=candidate_grid_spacing_m,
                     candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                     has_candidates=candidate_sites_snapped is not None,
+                    snap_components=settings.snap_components,
                 ),
                 builder=lambda: compute_dense_distance_matrices(
                     targets=targets,
@@ -1956,6 +2062,7 @@ def main(
                             candidate_grid_spacing_m=candidate_grid_spacing_m,
                             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                             has_candidates=pair_has_candidates,
+                            snap_components=settings.snap_components,
                         ),
                         builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
                             compute_dense_distance_matrices(

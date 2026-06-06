@@ -55,6 +55,14 @@ def _backend_part(network_backend: str | None) -> str:
     return f'_backend_{_safe_part(network_backend)}'
 
 
+def _snap_components_part(snap_components: tuple[int, ...] | None) -> str:
+    """Format optional allowed snapping component IDs for cache-key filenames."""
+    if snap_components is None:
+        return ''
+    joined = '-'.join(str(component_id) for component_id in snap_components)
+    return f'_snap_components_{joined}'
+
+
 def _load_pickle[T](cache_path: Path) -> T:
     """Load a pickled object from disk."""
     with cache_path.open('rb') as file:
@@ -193,10 +201,12 @@ class CacheManager:
         include_boundary: bool,
         distance_col: str,
         max_snap_dist_m: float | None,
+        snap_components: tuple[int, ...] | None = None,
     ) -> Path:
         water_part = 'no_water' if exclude_water else 'water_allowed'
         boundary_part = 'include_boundary' if include_boundary else 'strict_interior'
         max_snap_part = 'none' if max_snap_dist_m is None else f'{max_snap_dist_m:g}m'
+        snap_part = _snap_components_part(snap_components)
         return (
             self.cache_dir
             / (
@@ -204,7 +214,7 @@ class CacheManager:
                 f'spacing_{grid_spacing_m:g}m_'
                 f'{water_part}_{boundary_part}_'
                 f'{distance_col}_max_snap_{max_snap_part}_'
-                f'epsg_{self.cfg.PROJECTED_EPSG}.pkl'
+                f'epsg_{self.cfg.PROJECTED_EPSG}{snap_part}.pkl'
             )
         )
 
@@ -309,6 +319,7 @@ class CacheManager:
         max_points: int | None,
         random_seed: int | None = None,
         aggregate_factor: int | None = None,
+        snap_components: tuple[int, ...] | None = None,
     ) -> Path:
         population_part = (
             f'pop_{_none_or_number(population_threshold)}_'
@@ -317,12 +328,13 @@ class CacheManager:
             f'agg_{_none_or_int(aggregate_factor)}_'
             f'max_{_none_or_int(max_points)}'
         )
+        snap_part = _snap_components_part(snap_components)
         return (
             self.cache_dir
             / (
                 f'{self.worldpop_stem}_population_snapped_'
                 f'{population_part}_{distance_col}_'
-                f'epsg_{self.cfg.PROJECTED_EPSG}.pkl'
+                f'epsg_{self.cfg.PROJECTED_EPSG}{snap_part}.pkl'
             )
         )
 
@@ -336,14 +348,16 @@ class CacheManager:
         self,
         distance_col: str,
         amenity_values: list[str] | None,
+        snap_components: tuple[int, ...] | None = None,
     ) -> Path:
         amenity_part = _amenity_part(amenity_values)
+        snap_part = _snap_components_part(snap_components)
         return (
             self.cache_dir
             / (
                 f'{self.pbf_stem}_sources_snapped_'
                 f'{amenity_part}_'
-                f'{distance_col}_epsg_{self.cfg.PROJECTED_EPSG}.pkl'
+                f'{distance_col}_epsg_{self.cfg.PROJECTED_EPSG}{snap_part}.pkl'
             )
         )
 
@@ -394,6 +408,7 @@ class CacheManager:
         candidate_max_snap_dist_m: float | None = None,
         has_candidates: bool = False,
         include_healthcare_tag: bool | None = None,
+        snap_components: tuple[int, ...] | None = None,
     ) -> Path:
         max_total_dist_str = _none_or_number(max_total_dist, 'm')
         population_part = (
@@ -411,6 +426,7 @@ class CacheManager:
             if has_candidates
             else 'no_candidates'
         )
+        snap_part = _snap_components_part(snap_components)
         return (
             self.cache_dir
             / (
@@ -419,7 +435,7 @@ class CacheManager:
                 f'max_total_{max_total_dist_str}_'
                 f'{population_part}_'
                 f'{amenity_part}_'
-                f'{candidate_part}.pkl'
+                f'{candidate_part}{snap_part}.pkl'
             )
         )
 

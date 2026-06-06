@@ -30,3 +30,4 @@ class PipelineSettings:
     dense_component_matrices: bool = False
     network_backend: str = 'pyrosm'
     diagnose_connectivity: bool = False
+    snap_components: tuple[int, ...] | None = None

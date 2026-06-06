@@ -168,6 +168,7 @@ def build_candidate_sites(
             include_boundary=cfg.candidate_include_boundary,
             distance_col='candidate_dist_road_estrada',
             max_snap_dist_m=candidate_max_snap_dist_m,
+            snap_components=settings.snap_components,
         ),
         builder=lambda: filter_snapped_candidates_by_distance(
             snap_points_to_nodes(

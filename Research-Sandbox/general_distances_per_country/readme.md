@@ -402,6 +402,32 @@ Diagnostic runs add a `_connectivity` suffix to the output run tag so the labele
 
 Component IDs are ordered by size, so `component_id = 0` is the largest road-network component. A source and destination being in different weak components means no road path can exist between them. Being in the same weak component is necessary but not always sufficient for directed routing, because one-way restrictions can still affect reachability.
 
+```powershell
+--snap-components COMPONENTS
+```
+
+Restrict snapping to selected weak connected components. Component IDs use the same ordering as the diagnostic output: `0` is the largest component, `1` the second largest, and so on. The option accepts comma-separated component IDs and ranges:
+
+```powershell
+--snap-components 0
+--snap-components 0,2,5
+--snap-components 0-3,7
+```
+
+If omitted, snapping uses all road-network nodes, which preserves the historical behavior. Use this option when small isolated road fragments should not be eligible snap targets, for example:
+
+```powershell
+py run_pipeline.py vietnam `
+  --sources amenities `
+  --destinations population `
+  --amenity hospital clinic `
+  --aggregate-factor 30 `
+  --sample-fraction 0.02 `
+  --snap-components 0
+```
+
+Component-restricted snapping changes snapped nearest nodes, so the selected components are included in snapped-table caches, matrix caches, output filenames, and the run manifest. The full road graph is still used for routing after snapping.
+
 Small diagnostic example:
 
 ```powershell

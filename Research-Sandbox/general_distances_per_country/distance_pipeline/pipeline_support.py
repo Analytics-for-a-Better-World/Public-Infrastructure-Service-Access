@@ -92,6 +92,13 @@ def format_amenity_suffix(amenity_values: list[str] | None) -> str:
     return '-'.join(sorted(amenity_values))
 
 
+def format_snap_components_suffix(snap_components: tuple[int, ...] | None) -> str:
+    """Format optional component-restricted snapping for output filenames."""
+    if snap_components is None:
+        return ''
+    return '_snap_components_' + '-'.join(str(component_id) for component_id in snap_components)
+
+
 def build_output_run_tag(
     *,
     settings: PipelineSettings,
@@ -108,6 +115,7 @@ def build_output_run_tag(
         if has_candidates
         else 'no_candidates'
     )
+    snap_part = format_snap_components_suffix(settings.snap_components)
 
     return (
         f"pop_{settings.population_threshold:g}_"
@@ -117,7 +125,7 @@ def build_output_run_tag(
         f"agg_{format_output_value(aggregate_factor)}_"
         f"maxdist_{format_output_value(settings.max_total_dist)}_"
         f"amenity_{format_amenity_suffix(amenity_values)}_"
-        f"{candidate_part}"
+        f"{candidate_part}{snap_part}"
     )
 
 
