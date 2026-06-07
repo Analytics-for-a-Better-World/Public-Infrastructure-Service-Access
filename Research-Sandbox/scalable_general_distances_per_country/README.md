@@ -153,9 +153,24 @@ py -m scalable_distances.cli run `
   --output-dir C:\local\Download_Depot\luxembourg_data\outputs `
   --run-tag luxembourg_networkx `
   --amenity school `
+  --sources amenities candidates `
+  --destinations population `
+  --bbox 5.72 49.44 6.54 50.19 `
+  --candidate-grid-spacing-m 1000 `
+  --candidate-max-snap-dist-m 500 `
+  --max-total-dist 20000 `
   --router networkx `
-  --matrix-output-mode both
+  --matrix-output-mode both `
+  --matrix-shape sparse
 ```
+
+The production runner accepts the same layer vocabulary as the original script:
+`population`, `amenities`, `table`, and `candidates`. Each layer can be used on
+the source side or destination side. Use `--table`/`--destination-table` with
+CSV, Excel, parquet, GeoJSON, GeoPackage, or shapefile point data; select
+coordinate and id columns with the corresponding `--*-lon-col`, `--*-lat-col`,
+and `--*-id-col` flags. Use `--matrix-shape dense` to write target-by-source
+parquet matrices instead of sparse long-form route rows.
 
 Use `--router pandana` only in deployments where Pandana is installed and
 compatible with the NumPy version. Pandana is never imported by the package
@@ -231,6 +246,7 @@ src/scalable_distances/
   geocoding/     geocoding stage contracts and pipeline
   geospatial/    optional backend version detection
   io/            deterministic source download/reuse helpers
+  layers.py      reusable population/amenity/table/candidate point contracts
   matrix/        combined/split matrix output contracts
   network/       OSM PBF road network parsing
   optimization/  facility-location strategy contracts
@@ -265,7 +281,14 @@ Production-capable:
 - Country source resolution covers current original naming rules and the local
   WorldPop global2/local-path extension.
 - Full runner performs download, network parsing, raster conversion, facility
-  extraction, snapping, routing, and output writing.
+  extraction, candidate-grid generation, table loading, snapping, routing,
+  output writing, and YAML manifest writing.
+- Source and destination layers support `population`, `amenities`, `table`, and
+  `candidates`; OSM amenities include nodes and way centroids.
+- Sparse and dense matrix shapes are available, with combined, split, and both
+  output modes.
+- Candidate snap-distance filtering and retained-distance caps are available for
+  reproducible bounded runs.
 - NetworkX router smoke test does not import Pandana.
 - Split matrix output smoke checks pass for pandas and, when installed, Polars.
 - The promoted folder is a sibling of the original pipeline and no generated
@@ -273,8 +296,12 @@ Production-capable:
 
 Remaining implementation choices:
 
-- Candidate-site generation is still a separate extension point rather than a
-  default stage in the production runner.
+- The scalable network loader exposes the newer `osmium`/`npyosmium` path. The
+  older `pyrosm` backend is intentionally not reintroduced as a hard dependency;
+  it can be added later as another network strategy if a historical comparison
+  needs exact parser parity.
+- Water-body exclusion and publication-map rendering remain notebook-level
+  analysis steps rather than core runner side effects.
 - Full Luxembourg/Timor/Vietnam/Nusa Tenggara real-data benchmark runs should be
   rerun after each source-data refresh because Geofabrik and WorldPop snapshots
   are moving inputs.

@@ -23,6 +23,40 @@ def _nearest_nodes_bruteforce(points: pd.DataFrame, nodes: pd.DataFrame) -> pd.S
     return pd.Series(nearest, index=points.index, name="nearest_node")
 
 
+def _nearest_node_distances(points: pd.DataFrame, nodes: pd.DataFrame, nearest: pd.Series) -> pd.Series:
+    from pyproj import Geod
+
+    geod = Geod(ellps="WGS84")
+    lookup = nodes.set_index("node_id")[["lon", "lat"]]
+    distances: list[float] = []
+    for point, node_id in zip(points.itertuples(index=False), nearest):
+        node = lookup.loc[node_id]
+        _, _, distance = geod.inv(
+            float(getattr(point, "lon")),
+            float(getattr(point, "lat")),
+            float(node["lon"]),
+            float(node["lat"]),
+        )
+        distances.append(float(distance))
+    return pd.Series(distances, index=points.index, name="snap_dist_m")
+
+
+def _route_table(rows: list[dict[str, Any]]) -> pd.DataFrame:
+    return pd.DataFrame(
+        rows,
+        columns=[
+            "source_id",
+            "target_id",
+            "source_type",
+            "target_type",
+            "source_node",
+            "target_node",
+            "network_dist",
+            "total_dist",
+        ],
+    )
+
+
 @dataclass
 class NetworkXRouter:
     """Shortest-path router backed by NetworkX, imported only when selected."""
@@ -54,7 +88,9 @@ class NetworkXRouter:
         if self._nodes is None:
             raise RuntimeError("Router must be prepared before snapping points.")
         result = points.copy()
-        result["nearest_node"] = _nearest_nodes_bruteforce(result, self._nodes)
+        nearest = _nearest_nodes_bruteforce(result, self._nodes)
+        result["nearest_node"] = nearest
+        result["snap_dist_m"] = _nearest_node_distances(result, self._nodes, nearest)
         return result
 
     def route_many(self, origins: pd.DataFrame, destinations: pd.DataFrame) -> pd.DataFrame:
@@ -87,7 +123,7 @@ class NetworkXRouter:
                         "total_dist": float(distance),
                     }
                 )
-        return pd.DataFrame(rows)
+        return _route_table(rows)
 
 
 @dataclass
@@ -121,6 +157,8 @@ class PandanaRouter:
             raise RuntimeError("Router must be prepared before snapping points.")
         result = points.copy()
         result["nearest_node"] = self._network.get_node_ids(result["lon"], result["lat"])
+        if self._nodes is not None:
+            result["snap_dist_m"] = _nearest_node_distances(result, self._nodes, result["nearest_node"])
         return result
 
     def route_many(self, origins: pd.DataFrame, destinations: pd.DataFrame) -> pd.DataFrame:
@@ -149,7 +187,7 @@ class PandanaRouter:
                         "total_dist": float(distance),
                     }
                 )
-        return pd.DataFrame(rows)
+        return _route_table(rows)
 
 
 class R5Router:

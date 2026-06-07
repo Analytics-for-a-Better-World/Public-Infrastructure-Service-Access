@@ -83,10 +83,37 @@ def main(argv: list[str] | None = None) -> int:
     run.add_argument("--output-dir", required=True)
     run.add_argument("--run-tag", required=True)
     run.add_argument("--amenity", action="append", dest="amenities", default=[])
+    run.add_argument(
+        "--sources",
+        nargs="+",
+        default=["amenities"],
+        help="Source layers: population, amenities, table, candidates.",
+    )
+    run.add_argument(
+        "--destinations",
+        nargs="+",
+        default=["population"],
+        help="Destination layers: population, amenities, table, candidates.",
+    )
     run.add_argument("--router", choices=["networkx", "pandana"], default="networkx")
     run.add_argument("--matrix-output-mode", choices=["combined", "split", "both"], default="combined")
+    run.add_argument("--matrix-shape", choices=["sparse", "dense"], default="sparse")
     run.add_argument("--population-threshold", type=float, default=1.0)
     run.add_argument("--aggregate-factor", type=int)
+    run.add_argument("--bbox", nargs=4, type=float, metavar=("MIN_LON", "MIN_LAT", "MAX_LON", "MAX_LAT"))
+    run.add_argument("--max-total-dist", type=float)
+    run.add_argument("--table")
+    run.add_argument("--table-lon-col", default="lon")
+    run.add_argument("--table-lat-col", default="lat")
+    run.add_argument("--table-id-col")
+    run.add_argument("--destination-table")
+    run.add_argument("--destination-table-lon-col", default="lon")
+    run.add_argument("--destination-table-lat-col", default="lat")
+    run.add_argument("--destination-table-id-col")
+    run.add_argument("--candidate-grid-spacing-m", type=float)
+    run.add_argument("--candidate-max-snap-dist-m", type=float)
+    run.add_argument("--no-osm-ways", action="store_true")
+    run.add_argument("--network-backend", choices=["auto", "osmium", "npyosmium"], default="osmium")
     run.add_argument("--worldpop-dataset", choices=["global1", "global2"], default="global1")
     run.add_argument("--worldpop-year", type=int, default=2020)
     run.add_argument("--worldpop-release")
@@ -145,10 +172,29 @@ def main(argv: list[str] | None = None) -> int:
                 output_dir=Path(args.output_dir),
                 run_tag=args.run_tag,
                 amenity_values=tuple(args.amenities or ["school"]),
+                source_layers=tuple(args.sources),
+                destination_layers=tuple(args.destinations),
                 router=args.router,
                 matrix_output_mode=args.matrix_output_mode,
+                matrix_shape=args.matrix_shape,
                 population_threshold=args.population_threshold,
                 aggregate_factor=args.aggregate_factor,
+                bbox=None if args.bbox is None else tuple(args.bbox),
+                max_total_dist=args.max_total_dist,
+                table_path=None if args.table is None else Path(args.table),
+                table_lon_col=args.table_lon_col,
+                table_lat_col=args.table_lat_col,
+                table_id_col=args.table_id_col,
+                destination_table_path=None
+                if args.destination_table is None
+                else Path(args.destination_table),
+                destination_table_lon_col=args.destination_table_lon_col,
+                destination_table_lat_col=args.destination_table_lat_col,
+                destination_table_id_col=args.destination_table_id_col,
+                candidate_grid_spacing_m=args.candidate_grid_spacing_m,
+                candidate_max_snap_dist_m=args.candidate_max_snap_dist_m,
+                include_osm_ways=not args.no_osm_ways,
+                network_backend=args.network_backend,
                 download=not args.no_download,
             )
         )
