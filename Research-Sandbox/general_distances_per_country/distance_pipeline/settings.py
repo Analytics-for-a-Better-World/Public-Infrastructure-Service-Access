@@ -24,6 +24,8 @@ class PipelineSettings:
     context_map_basemap: str | None = None
     context_map_basemap_alpha: float = 0.52
     context_map_roads: bool = True
+    context_map_legend_loc: str = 'center left'
+    context_map_legend_bbox_to_anchor: tuple[float, float] | None = (1.02, 0.5)
     bbox: tuple[float, float, float, float] | None = None
     matrix_output_mode: str = 'combined'
     matrix_shape: str = 'sparse'

@@ -484,6 +484,27 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--map-legend-loc',
+        default='center left',
+        help=(
+            'Matplotlib legend location for context maps. '
+            'Default: center left.'
+        ),
+    )
+
+    parser.add_argument(
+        '--map-legend-bbox-to-anchor',
+        nargs=2,
+        type=float,
+        metavar=('X', 'Y'),
+        default=(1.02, 0.5),
+        help=(
+            'Optional context-map legend anchor as X Y in axes coordinates. '
+            'Default: 1.02 0.5, which places the legend outside on the right.'
+        ),
+    )
+
+    parser.add_argument(
         '--bbox',
         nargs=4,
         type=float,
@@ -886,6 +907,12 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         context_map_basemap=args.map_basemap,
         context_map_basemap_alpha=args.map_basemap_alpha,
         context_map_roads=args.map_roads == 'true',
+        context_map_legend_loc=args.map_legend_loc,
+        context_map_legend_bbox_to_anchor=(
+            None
+            if args.map_legend_bbox_to_anchor is None
+            else tuple(args.map_legend_bbox_to_anchor)
+        ),
         bbox=parse_bbox(args.bbox),
         matrix_output_mode=args.matrix_output_mode,
         matrix_shape=args.matrix_shape,
@@ -1576,6 +1603,8 @@ def main(
             population_points=population_points,
             facilities=map_facilities,
             title=cfg.PLOT_TITLE,
+            legend_loc=settings.context_map_legend_loc,
+            legend_bbox_to_anchor=settings.context_map_legend_bbox_to_anchor,
             basemap_provider=settings.context_map_basemap,
             basemap_alpha=settings.context_map_basemap_alpha,
             output_path=context_map_path if settings.save_context_map else None,

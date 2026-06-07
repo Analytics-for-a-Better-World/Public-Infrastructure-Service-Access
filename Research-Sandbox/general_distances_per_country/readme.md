@@ -349,7 +349,14 @@ Use `split` when several source and destination layers would otherwise create a 
 --map-basemap voyager-no-labels|voyager|positron-no-labels|positron|osm
 --map-basemap-alpha FLOAT
 --map-roads true|false
+--map-legend-loc "center left"
+--map-legend-bbox-to-anchor 1.02 0.5
 ```
+
+By default, the context-map legend is placed outside on the right with
+`--map-legend-loc "center left" --map-legend-bbox-to-anchor 1.02 0.5`.
+Use a standard Matplotlib legend location and anchor pair to move it, for
+example `--map-legend-loc "lower left" --map-legend-bbox-to-anchor 0 0`.
 
 For a fast visual check:
 
