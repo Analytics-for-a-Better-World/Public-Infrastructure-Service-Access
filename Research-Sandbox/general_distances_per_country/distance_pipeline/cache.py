@@ -63,6 +63,21 @@ def _snap_components_part(snap_components: tuple[int, ...] | None) -> str:
     return f'_snap_components_{joined}'
 
 
+def _path_with_short_cache_name(cache_path: Path) -> Path:
+    """Shorten very long cache filenames while preserving deterministic identity."""
+    path_text = str(cache_path)
+    if len(path_text) <= 240 and len(cache_path.name) <= 180:
+        return cache_path
+
+    digest = hashlib.sha1(path_text.encode('utf-8')).hexdigest()[:12]
+    suffix = cache_path.suffix
+    suffix_len = len(suffix)
+    max_name_len = 120
+    stem_limit = max_name_len - suffix_len - len(digest) - 1
+    readable_stem = cache_path.stem[:max(24, stem_limit)]
+    return cache_path.with_name(f'{readable_stem}_{digest}{suffix}')
+
+
 def _load_pickle[T](cache_path: Path) -> T:
     """Load a pickled object from disk."""
     with cache_path.open('rb') as file:
@@ -241,9 +256,17 @@ class CacheManager:
     def facilities_path(
         self,
         amenity_values: list[str] | None = None,
+        bbox: tuple[float, float, float, float] | list[float] | None = None,
+        network_backend: str | None = None,
     ) -> Path:
         amenity_part = _amenity_part(amenity_values)
-        return self.cache_dir / f'{self.pbf_stem}_facilities_{amenity_part}.pkl'
+        return (
+            self.cache_dir
+            / (
+                f'{self.pbf_stem}_facilities_{amenity_part}'
+                f'{_bbox_part(bbox)}{_backend_part(network_backend)}.pkl'
+            )
+        )
 
     def health_facilities_path(
         self,
@@ -258,6 +281,8 @@ class CacheManager:
         self,
         amenity_values: list[str] | None = None,
         deduplicate_amenities: bool = True,
+        bbox: tuple[float, float, float, float] | list[float] | None = None,
+        network_backend: str | None = None,
     ) -> Path:
         amenity_part = _amenity_part(amenity_values)
         dedup_part = 'dedup_v1' if deduplicate_amenities else 'raw'
@@ -265,7 +290,8 @@ class CacheManager:
             self.cache_dir
             / (
                 f'{self.pbf_stem}_facility_points_{amenity_part}_'
-                f'epsg_{self.cfg.PROJECTED_EPSG}_{dedup_part}.pkl'
+                f'epsg_{self.cfg.PROJECTED_EPSG}_{dedup_part}'
+                f'{_bbox_part(bbox)}{_backend_part(network_backend)}.pkl'
             )
         )
 
@@ -320,6 +346,7 @@ class CacheManager:
         random_seed: int | None = None,
         aggregate_factor: int | None = None,
         snap_components: tuple[int, ...] | None = None,
+        network_backend: str | None = None,
     ) -> Path:
         population_part = (
             f'pop_{_none_or_number(population_threshold)}_'
@@ -329,12 +356,13 @@ class CacheManager:
             f'max_{_none_or_int(max_points)}'
         )
         snap_part = _snap_components_part(snap_components)
+        backend_part = _backend_part(network_backend)
         return (
             self.cache_dir
             / (
                 f'{self.worldpop_stem}_population_snapped_'
                 f'{population_part}_{distance_col}_'
-                f'epsg_{self.cfg.PROJECTED_EPSG}{snap_part}.pkl'
+                f'epsg_{self.cfg.PROJECTED_EPSG}{snap_part}{backend_part}.pkl'
             )
         )
 
@@ -349,15 +377,17 @@ class CacheManager:
         distance_col: str,
         amenity_values: list[str] | None,
         snap_components: tuple[int, ...] | None = None,
+        network_backend: str | None = None,
     ) -> Path:
         amenity_part = _amenity_part(amenity_values)
         snap_part = _snap_components_part(snap_components)
+        backend_part = _backend_part(network_backend)
         return (
             self.cache_dir
             / (
                 f'{self.pbf_stem}_sources_snapped_'
                 f'{amenity_part}_'
-                f'{distance_col}_epsg_{self.cfg.PROJECTED_EPSG}{snap_part}.pkl'
+                f'{distance_col}_epsg_{self.cfg.PROJECTED_EPSG}{snap_part}{backend_part}.pkl'
             )
         )
 
@@ -409,6 +439,7 @@ class CacheManager:
         has_candidates: bool = False,
         include_healthcare_tag: bool | None = None,
         snap_components: tuple[int, ...] | None = None,
+        network_backend: str | None = None,
     ) -> Path:
         max_total_dist_str = _none_or_number(max_total_dist, 'm')
         population_part = (
@@ -427,6 +458,7 @@ class CacheManager:
             else 'no_candidates'
         )
         snap_part = _snap_components_part(snap_components)
+        backend_part = _backend_part(network_backend)
         return (
             self.cache_dir
             / (
@@ -435,8 +467,24 @@ class CacheManager:
                 f'max_total_{max_total_dist_str}_'
                 f'{population_part}_'
                 f'{amenity_part}_'
-                f'{candidate_part}{snap_part}.pkl'
+                f'{candidate_part}{snap_part}{backend_part}.pkl'
             )
+        )
+
+    def node_pair_distances_dir(
+        self,
+        bbox: tuple[float, float, float, float] | list[float] | None = None,
+        network_backend: str | None = None,
+        cost_profile: str = 'length',
+    ) -> Path:
+        """Return the reusable road-node-pair distance cache directory."""
+        network_part = (
+            f'{self.pbf_stem}{_bbox_part(bbox)}{_backend_part(network_backend)}'
+        )
+        return (
+            self.cache_dir
+            / 'node_pair_distances'
+            / f'{network_part}_cost_{_safe_part(cost_profile)}'
         )
 
     def context_map_path(self, suffix: str = 'context_map', ext: str = 'png') -> Path:
@@ -448,6 +496,13 @@ class CacheManager:
         cache_path: Path,
         builder: Callable[[], T],
     ) -> T:
+        original_cache_path = cache_path
+        cache_path = _path_with_short_cache_name(cache_path)
+        if self.verbose and cache_path != original_cache_path:
+            print(
+                'Shortened cache filename for Windows path limit: '
+                f'{original_cache_path.name} -> {cache_path.name}'
+            )
         return _timed_cached_call(
             cache_path=cache_path,
             builder=builder,

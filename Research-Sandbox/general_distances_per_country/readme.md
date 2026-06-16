@@ -43,7 +43,7 @@ For a configured country or region, the CLI can:
 6. Generate regular-grid candidate locations.
 7. Optionally remove candidate locations on water.
 8. Snap sources and destinations to the road network.
-9. Compute sparse road-distance matrices.
+9. Compute sparse or dense road-distance matrices.
 10. Write parquet outputs and a YAML run manifest.
 11. Optionally draw a context map.
 
@@ -109,6 +109,8 @@ Common examples include:
 - `portugal`, `prt`, `pt`
 - `laos`, `lao`, `la`
 - `indonesia`, `idn`, `id`
+- `poland`, `pol`, `pl`
+- `switzerland`, `che`, `ch`
 
 If a country module is missing, `load_cfg()` can attempt to generate one through the optional OpenAI helper. Existing country configs do not require an OpenAI key.
 
@@ -386,7 +388,31 @@ Subset geometry layers to a longitude/latitude bounding box. For OSM road-networ
 - `osmium`: optional streaming backend using Python `osmium`.
 - `auto`: use `osmium` when installed, otherwise `pyrosm`.
 
-The `osmium` backend is intended for large PBF extracts where full `pyrosm` extraction is memory intensive. For publication runs, record the backend, bbox, and distance cap in the run notes.
+The `osmium` backend is intended for large PBF extracts where full `pyrosm` extraction is memory intensive. In this version, selecting `--network-backend osmium` also uses a streaming `osmium` path for OSM amenity extraction. Amenity extraction is done in two passes: the first pass finds matching amenity nodes and ways, and the second pass collects only the node coordinates needed to reconstruct those matching ways. This avoids asking pyosmium to keep a full node-location index for the whole country just to extract a small amenity subset. Backend-specific caches are kept separate from the historical `pyrosm` caches. For publication runs, record the backend, bbox, aggregation, and distance cap in the run notes.
+
+Large national extracts should usually avoid random sampling in final runs. Prefer the smallest aggregation that keeps the candidate target/source pair set computationally feasible, and report the retained WorldPop headcount from the log or run manifest. For example, health-facility accessibility capped at 100 km can be run as:
+
+```powershell
+py run_pipeline.py switzerland `
+  --sources amenities `
+  --destinations population `
+  --amenity hospital clinic doctors `
+  --aggregate-factor 10 `
+  --max-total-dist 100000 `
+  --matrix-output-mode split `
+  --network-backend osmium
+```
+
+```powershell
+py run_pipeline.py poland `
+  --sources amenities `
+  --destinations population `
+  --amenity hospital clinic doctors `
+  --aggregate-factor 50 `
+  --max-total-dist 100000 `
+  --matrix-output-mode split `
+  --network-backend osmium
+```
 
 ---
 
@@ -501,6 +527,14 @@ Caches are written below:
 ```
 
 Cache keys include the relevant runtime settings, including population settings, random seed, aggregation, amenity filters, candidate settings, bbox, backend, distance threshold, and maximum total distance.
+
+Sparse matrix construction also maintains a reusable road-node-pair cache below:
+
+```text
+<cfg.BASE_DIR>/cache/node_pair_distances/
+```
+
+This cache stores `(target_nearest_node, source_nearest_node, road_distance)` tuples induced by snapped source and destination layers. The final matrix outputs are unchanged, but later runs with overlapping snapped road-node pairs can reuse the cached road distances and compute only missing pairs. Unreachable road-node pairs are stored as `inf` internally so they are not recomputed; they are still omitted from the usual sparse distance matrix.
 
 Use:
 

@@ -1,6 +1,7 @@
 # Standard library imports
+from pathlib import Path
 import warnings
-from time import perf_counter as pc
+from time import perf_counter as pc, time_ns
 
 # Third-party library imports
 import numpy as np
@@ -17,6 +18,7 @@ warnings.filterwarnings(
 
 NO_PATH_SENTINEL = 4294967.295
 EARTH_RADIUS_KM = 6367.0
+NODE_PAIR_KEY_COLUMNS = ['target_nearest_node', 'source_nearest_node']
 
 
 def _get_target_coordinate_columns(targets: pd.DataFrame) -> tuple[str, str]:
@@ -308,6 +310,142 @@ def _candidate_row_pairs(
     return target_indices, source_indices
 
 
+def _empty_node_pair_distances() -> pl.DataFrame:
+    '''Return an empty node-pair distance table with the canonical schema.'''
+    return pl.DataFrame(
+        schema={
+            'target_nearest_node': pl.Int64,
+            'source_nearest_node': pl.Int64,
+            'road_distance': pl.Float64,
+        }
+    )
+
+
+def _node_pair_cache_files(cache_dir: Path) -> list[Path]:
+    '''Return parquet chunks in a node-pair distance cache directory.'''
+    if not cache_dir.exists():
+        return []
+    return sorted(cache_dir.glob('node_pairs_*.parquet'))
+
+
+def _load_cached_node_pair_distances(
+    cache_dir: Path,
+    required_pairs: pl.DataFrame,
+    *,
+    verbose: bool = False,
+) -> pl.DataFrame:
+    '''Load cached distances for the required road-node pairs.'''
+    cache_files = _node_pair_cache_files(cache_dir)
+    if not cache_files or required_pairs.height == 0:
+        return _empty_node_pair_distances()
+
+    t = pc()
+    cached = (
+        required_pairs.lazy()
+        .join(
+            pl.scan_parquet([str(path) for path in cache_files])
+            .select([*NODE_PAIR_KEY_COLUMNS, 'road_distance'])
+            .unique(subset=NODE_PAIR_KEY_COLUMNS, keep='last'),
+            on=NODE_PAIR_KEY_COLUMNS,
+            how='inner',
+        )
+        .collect()
+    )
+
+    if verbose:
+        print(
+            f'loaded {cached.height:,} cached road-node pair distances '
+            f'from {len(cache_files):,} chunk(s) in {pc() - t:.2f} seconds'
+        )
+
+    return cached
+
+
+def _write_node_pair_cache_chunk(
+    cache_dir: Path,
+    distances: pl.DataFrame,
+    *,
+    verbose: bool = False,
+) -> Path | None:
+    '''Append one parquet chunk to the reusable node-pair distance cache.'''
+    if distances.height == 0:
+        return None
+
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    chunk_path = cache_dir / (
+        f'node_pairs_{time_ns()}_{distances.height}.parquet'
+    )
+    tmp_path = chunk_path.with_suffix('.tmp.parquet')
+
+    t = pc()
+    distances.write_parquet(tmp_path)
+    tmp_path.replace(chunk_path)
+
+    if verbose:
+        print(
+            f'wrote {distances.height:,} road-node pair distances to '
+            f'{chunk_path.name} in {pc() - t:.2f} seconds'
+        )
+
+    return chunk_path
+
+
+def _compute_node_pair_distances_from_arrays(
+    target_nodes: np.ndarray,
+    source_nodes: np.ndarray,
+    network: object,
+    *,
+    keep_unreachable: bool,
+    verbose: bool = False,
+) -> pl.DataFrame:
+    '''Compute Pandana road distances for aligned unique road-node arrays.'''
+    target_nodes = np.asarray(target_nodes, dtype=np.int64)
+    source_nodes = np.asarray(source_nodes, dtype=np.int64)
+
+    if target_nodes.dtype.kind != 'i' or source_nodes.dtype.kind != 'i':
+        raise TypeError(
+            'Pandana node ids must be integer dtype, got '
+            f'{target_nodes.dtype} and {source_nodes.dtype}'
+        )
+
+    if target_nodes.size == 0:
+        return _empty_node_pair_distances()
+
+    t = pc()
+    road_distance = np.asarray(
+        network.shortest_path_lengths(target_nodes, source_nodes),
+        dtype=np.float64,
+    )
+    elapsed = pc() - t
+
+    valid = road_distance < NO_PATH_SENTINEL
+
+    if verbose:
+        print(
+            f'{len(road_distance):,} shortest paths of which {int(valid.sum()):,} exist '
+            f'found in {elapsed:.2f} seconds'
+        )
+
+    if keep_unreachable:
+        stored_distance = road_distance.copy()
+        stored_distance[~valid] = np.inf
+        return pl.DataFrame(
+            {
+                'target_nearest_node': target_nodes,
+                'source_nearest_node': source_nodes,
+                'road_distance': stored_distance,
+            }
+        )
+
+    return pl.DataFrame(
+        {
+            'target_nearest_node': target_nodes[valid],
+            'source_nearest_node': source_nodes[valid],
+            'road_distance': road_distance[valid],
+        }
+    )
+
+
 def _compute_unique_node_pair_distances(
     targets: pd.DataFrame,
     sources: pd.DataFrame,
@@ -315,6 +453,7 @@ def _compute_unique_node_pair_distances(
     source_indices: np.ndarray,
     network: object,
     *,
+    node_pair_cache_dir: Path | None = None,
     verbose: bool = False,
 ) -> pl.DataFrame:
     '''
@@ -359,12 +498,6 @@ def _compute_unique_node_pair_distances(
     unique_target_nodes = np.asarray(unique_target_nodes, dtype=np.int64)
     unique_source_nodes = np.asarray(unique_source_nodes, dtype=np.int64)
 
-    if unique_target_nodes.dtype.kind != 'i' or unique_source_nodes.dtype.kind != 'i':
-        raise TypeError(
-            'Pandana node ids must be integer dtype, got '
-            f'{unique_target_nodes.dtype} and {unique_source_nodes.dtype}'
-        )
-
     if verbose:
         print(
             f'creating {len(unique_target_nodes):,} unique target source '
@@ -372,37 +505,64 @@ def _compute_unique_node_pair_distances(
         )
 
     if unique_target_nodes.size == 0:
-        return pl.DataFrame(
-            {
-                'target_nearest_node': np.empty(0, dtype=np.int64),
-                'source_nearest_node': np.empty(0, dtype=np.int64),
-                'road_distance': np.empty(0, dtype=np.float64),
-            }
+        return _empty_node_pair_distances()
+
+    required_pairs = pl.DataFrame(
+        {
+            'target_nearest_node': unique_target_nodes,
+            'source_nearest_node': unique_source_nodes,
+        }
+    )
+
+    if node_pair_cache_dir is None:
+        return _compute_node_pair_distances_from_arrays(
+            unique_target_nodes,
+            unique_source_nodes,
+            network,
+            keep_unreachable=False,
+            verbose=verbose,
         )
 
-    t = pc()
-
-    road_distance = np.asarray(
-        network.shortest_path_lengths(unique_target_nodes, unique_source_nodes),
-        dtype=np.float64,
+    cached_distances = _load_cached_node_pair_distances(
+        node_pair_cache_dir,
+        required_pairs,
+        verbose=verbose,
     )
-    elapsed = pc() - t
 
-    valid = road_distance < NO_PATH_SENTINEL
+    missing_pairs = required_pairs.join(
+        cached_distances.select(NODE_PAIR_KEY_COLUMNS),
+        on=NODE_PAIR_KEY_COLUMNS,
+        how='anti',
+    )
 
     if verbose:
         print(
-            f'{len(road_distance):,} shortest paths of which {int(valid.sum()):,} exist '
-            f'found in {elapsed:.2f} seconds'
+            f'road-node pair cache hit {cached_distances.height:,} / '
+            f'{required_pairs.height:,}; computing {missing_pairs.height:,} missing'
         )
 
-    return pl.DataFrame(
-        {
-            'target_nearest_node': unique_target_nodes[valid],
-            'source_nearest_node': unique_source_nodes[valid],
-            'road_distance': road_distance[valid],
-        }
-    )
+    if missing_pairs.height:
+        missing_distances = _compute_node_pair_distances_from_arrays(
+            missing_pairs['target_nearest_node'].to_numpy(),
+            missing_pairs['source_nearest_node'].to_numpy(),
+            network,
+            keep_unreachable=True,
+            verbose=verbose,
+        )
+        _write_node_pair_cache_chunk(
+            node_pair_cache_dir,
+            missing_distances,
+            verbose=verbose,
+        )
+        all_distances = (
+            missing_distances
+            if cached_distances.height == 0
+            else pl.concat([cached_distances, missing_distances], how='vertical')
+        )
+    else:
+        all_distances = cached_distances
+
+    return all_distances.filter(pl.col('road_distance').is_finite())
 
 
 def _targets_to_polars(targets: pd.DataFrame) -> pl.DataFrame:
@@ -589,6 +749,7 @@ def compute_distances_polars(
     network: object,
     *,
     max_total_dist: float | None = None,
+    node_pair_cache_dir: str | Path | None = None,
     verbose: bool = False,
 ) -> pl.DataFrame:
     '''
@@ -613,6 +774,9 @@ def compute_distances_polars(
     max_total_dist
         Optional upper bound on total distance. If provided, only rows with
         ``total_dist <= max_total_dist`` are kept.
+    node_pair_cache_dir
+        Optional directory containing reusable road-node-pair distance parquet
+        chunks. Missing node pairs are computed and appended to this cache.
     verbose
         Whether to print progress messages.
 
@@ -640,6 +804,9 @@ def compute_distances_polars(
         target_indices=target_indices,
         source_indices=source_indices,
         network=network,
+        node_pair_cache_dir=(
+            None if node_pair_cache_dir is None else Path(node_pair_cache_dir)
+        ),
         verbose=verbose,
     )
 
@@ -714,6 +881,7 @@ def compute_distances(
     network: object,
     *,
     max_total_dist: float | None = None,
+    node_pair_cache_dir: str | Path | None = None,
     verbose: bool = False,
 ) -> pd.DataFrame:
     '''
@@ -740,6 +908,9 @@ def compute_distances(
     max_total_dist
         Optional upper bound on total distance. If provided, only rows with
         ``total_dist <= max_total_dist`` are kept.
+    node_pair_cache_dir
+        Optional directory containing reusable road-node-pair distance parquet
+        chunks.
     verbose
         Whether to print progress messages.
 
@@ -757,5 +928,6 @@ def compute_distances(
         distance_threshold_largest=distance_threshold_largest,
         network=network,
         max_total_dist=max_total_dist,
+        node_pair_cache_dir=node_pair_cache_dir,
         verbose=verbose,
     ).to_pandas()

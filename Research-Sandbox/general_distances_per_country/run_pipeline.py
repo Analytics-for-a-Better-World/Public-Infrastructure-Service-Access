@@ -946,6 +946,19 @@ def split_matrix_output_key(source_type: object, target_type: object) -> str:
     )
 
 
+def short_output_path(path: Path) -> Path:
+    '''Shorten long output filenames deterministically for Windows compatibility.'''
+    if len(str(path)) <= 240 and len(path.name) <= 180:
+        return path
+
+    digest = hashlib.sha1(str(path).encode('utf-8')).hexdigest()[:12]
+    suffix = path.suffix
+    max_name_len = 120
+    stem_limit = max_name_len - len(suffix) - len(digest) - 1
+    readable_stem = path.stem[:max(24, stem_limit)]
+    return path.with_name(f'{readable_stem}_{digest}{suffix}')
+
+
 def split_matrix_path(
     output_dir: Path,
     run_tag: str,
@@ -953,8 +966,8 @@ def split_matrix_path(
     target_type: object,
 ) -> Path:
     '''Return the output parquet path for one source/destination pair.'''
-    return output_dir / (
-        f'{split_matrix_output_key(source_type, target_type)}_{run_tag}.parquet'
+    return short_output_path(
+        output_dir / f'{split_matrix_output_key(source_type, target_type)}_{run_tag}.parquet'
     )
 
 
@@ -965,8 +978,8 @@ def dense_matrix_output_key(component: str) -> str:
 
 def dense_matrix_path(output_dir: Path, run_tag: str, component: str) -> Path:
     '''Return the parquet path for one dense matrix component.'''
-    return output_dir / (
-        f'distance_matrix_dense_{safe_layer_name(component)}_{run_tag}.parquet'
+    return short_output_path(
+        output_dir / f'distance_matrix_dense_{safe_layer_name(component)}_{run_tag}.parquet'
     )
 
 
@@ -990,9 +1003,9 @@ def split_dense_matrix_path(
     target_type: object,
 ) -> Path:
     '''Return the parquet path for one split dense matrix component.'''
-    return output_dir / (
-        f'{split_dense_matrix_output_key(component, source_type, target_type)}_'
-        f'{run_tag}.parquet'
+    return short_output_path(
+        output_dir
+        / f'{split_dense_matrix_output_key(component, source_type, target_type)}_{run_tag}.parquet'
     )
 
 
@@ -1450,10 +1463,14 @@ def main(
         amenity_features = cache.run(
             cache_path=cache.facilities_path(
                 amenity_values=amenity_values,
+                bbox=settings.bbox,
+                network_backend=settings.network_backend,
             ),
             builder=lambda: load_facilities(
                 cfg.PBF_PATH,
                 amenity_values=amenity_values,
+                backend=settings.network_backend,
+                bbox=settings.bbox,
                 verbose=settings.verbose,
             ),
         )
@@ -1462,9 +1479,11 @@ def main(
             cache_path=cache.facility_points_path(
                 amenity_values=amenity_values,
                 deduplicate_amenities=settings.deduplicate_amenities,
+                bbox=settings.bbox,
+                network_backend=settings.network_backend,
             ),
             builder=lambda: (
-                    deduplicate_osm_amenities(
+                deduplicate_osm_amenities(
                         to_point_geometries(
                             amenity_features,
                             projected_epsg=cfg.PROJECTED_EPSG,
@@ -1636,6 +1655,7 @@ def main(
                 random_seed=settings.random_seed,
                 aggregate_factor=agg,
                 snap_components=settings.snap_components,
+                network_backend=settings.network_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 population_points,
@@ -1663,6 +1683,7 @@ def main(
                 random_seed=settings.random_seed,
                 aggregate_factor=agg,
                 snap_components=settings.snap_components,
+                network_backend=settings.network_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 population_points,
@@ -1687,6 +1708,7 @@ def main(
                 distance_col='dist_snap_target',
                 amenity_values=['target_amenities', *source_cache_values],
                 snap_components=settings.snap_components,
+                network_backend=settings.network_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 amenity_points,
@@ -1710,6 +1732,7 @@ def main(
                 distance_col='dist_snap_source',
                 amenity_values=['source_amenities', *source_cache_values],
                 snap_components=settings.snap_components,
+                network_backend=settings.network_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 amenity_points,
@@ -1738,6 +1761,7 @@ def main(
                     *source_cache_values,
                 ],
                 snap_components=settings.snap_components,
+                network_backend=settings.network_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 destination_table_points,
@@ -1765,6 +1789,7 @@ def main(
                     *source_cache_values,
                 ],
                 snap_components=settings.snap_components,
+                network_backend=settings.network_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 source_table_points,
@@ -1866,19 +1891,26 @@ def main(
     if settings.diagnose_connectivity:
         run_tag = f'{run_tag}_connectivity'
 
-    population_path = output_dir / f'population_{run_tag}.parquet'
-    targets_path = output_dir / f'targets_{run_tag}.parquet'
-    existing_sources_path = output_dir / f'existing_sources_{run_tag}.parquet'
-    sources_path = output_dir / f'sources_{run_tag}.parquet'
-    connectivity_path = output_dir / f'connectivity_components_{run_tag}.parquet'
-    matrix_path = output_dir / f'distance_matrix_{run_tag}.parquet'
-    manifest_path = output_dir / f'run_manifest_{run_tag}.yaml'
+    population_path = short_output_path(output_dir / f'population_{run_tag}.parquet')
+    targets_path = short_output_path(output_dir / f'targets_{run_tag}.parquet')
+    existing_sources_path = short_output_path(output_dir / f'existing_sources_{run_tag}.parquet')
+    sources_path = short_output_path(output_dir / f'sources_{run_tag}.parquet')
+    connectivity_path = short_output_path(output_dir / f'connectivity_components_{run_tag}.parquet')
+    matrix_path = short_output_path(output_dir / f'distance_matrix_{run_tag}.parquet')
+    manifest_path = short_output_path(output_dir / f'run_manifest_{run_tag}.yaml')
 
     t_dist = pc()
     matrix_df: object | None = None
     matrix_preview: object | None = None
     distance_matrix_size = 0
     matrix_output_paths: dict[str, Path] = {}
+    node_pair_cache_dir = cache.node_pair_distances_dir(
+        bbox=settings.bbox,
+        network_backend=settings.network_backend,
+        cost_profile='length',
+    )
+    if settings.verbose and settings.matrix_shape == 'sparse':
+        logging.info(f'Node-pair distance cache: {node_pair_cache_dir}')
 
     if settings.matrix_shape == 'sparse':
         if settings.matrix_output_mode == 'combined':
@@ -1896,6 +1928,7 @@ def main(
                     candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                     has_candidates=candidate_sites_snapped is not None,
                     snap_components=settings.snap_components,
+                    network_backend=settings.network_backend,
                 ),
                 builder=lambda: compute_distances_polars(
                     targets=targets,
@@ -1903,6 +1936,7 @@ def main(
                     distance_threshold_largest=effective_distance_threshold_km,
                     network=network,
                     max_total_dist=settings.max_total_dist,
+                    node_pair_cache_dir=node_pair_cache_dir,
                     verbose=settings.verbose,
                 ),
             )
@@ -1960,6 +1994,7 @@ def main(
                             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                             has_candidates=pair_has_candidates,
                             snap_components=settings.snap_components,
+                            network_backend=settings.network_backend,
                         ),
                         builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
                             compute_distances_polars(
@@ -1968,6 +2003,7 @@ def main(
                                 distance_threshold_largest=effective_distance_threshold_km,
                                 network=network,
                                 max_total_dist=settings.max_total_dist,
+                                node_pair_cache_dir=node_pair_cache_dir,
                                 verbose=settings.verbose,
                             )
                         ),
@@ -2030,6 +2066,7 @@ def main(
                     candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                     has_candidates=candidate_sites_snapped is not None,
                     snap_components=settings.snap_components,
+                    network_backend=settings.network_backend,
                 ),
                 builder=lambda: compute_dense_distance_matrices(
                     targets=targets,
@@ -2092,6 +2129,7 @@ def main(
                             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                             has_candidates=pair_has_candidates,
                             snap_components=settings.snap_components,
+                            network_backend=settings.network_backend,
                         ),
                         builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
                             compute_dense_distance_matrices(
