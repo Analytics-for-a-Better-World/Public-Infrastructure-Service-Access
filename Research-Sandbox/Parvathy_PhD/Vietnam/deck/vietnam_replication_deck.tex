@@ -1,0 +1,196 @@
+\documentclass[10pt,aspectratio=169]{beamer}
+\usetheme{Madrid}
+\usecolortheme{default}
+\setbeamertemplate{navigation symbols}{}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\definecolor{abwlink}{RGB}{0,84,159}
+\hypersetup{colorlinks=true,urlcolor=abwlink,linkcolor=abwlink}
+\title[Vietnam Fresh Replication]{Vietnam Stroke Facility Allocation}
+\subtitle{Fresh PISA data, scalable greedy/local search, GRASP, and path relinking}
+\author{Parvathy PhD reproducibility work}
+\date{7 June 2026}
+\newcommand{\code}[1]{\texttt{#1}}
+\begin{document}
+\begin{frame}\titlepage\end{frame}
+\begin{frame}{Correction}
+  \begin{block}{Data rule}
+    The replication runs use fresh PISA outputs only. Fleur's old \code{npy} and pickle data are not inputs.
+  \end{block}
+  \begin{itemize}
+    \item The Fleur material is algorithmic inspiration.
+    \item The PISA pipeline supplies population, sources, candidate grids, and distances.
+    \item The max-cover instances are rebuilt from current parquet outputs.
+  \end{itemize}
+\end{frame}
+\begin{frame}{Computational Shape}
+  \small
+  \begin{tabular}{p{0.31\textwidth}p{0.58\textwidth}}
+    \toprule
+    Component & Choice \\
+    \midrule
+    Pipeline & \code{general\_distances\_per\_country} Vietnam run \\
+    Existing facilities & Current 130-row stroke table, source type \code{table} \\
+    Candidate facilities & PISA generated candidate grid, source type \code{candidates} \\
+    Instance format & CSR-style \code{MaxCoverInstance} from \code{approximated\_tradeoff} \\
+    Objective & Existing covered population plus incremental candidate coverage \\
+    \bottomrule
+  \end{tabular}
+\end{frame}
+\begin{frame}{Heuristic Stack}
+  \begin{enumerate}
+    \item Budgeted greedy construction using in-place marginal-gain updates.
+    \item Sparse first-improvement 1-for-1 swap local search for Vietnam runs.
+    \item GRASP construction with randomized restricted candidate lists.
+    \item Elite pool of high-quality diverse solutions.
+    \item Cached forward/backward path relinking between the current solution and an elite guide.
+  \end{enumerate}
+\end{frame}
+\begin{frame}{Fresh Pipeline Run}
+  \small
+  \begin{itemize}
+    \item Sources: \code{table candidates}.
+    \item Destination: \code{population}.
+    \item Candidate grid: start at 10 km spacing with 5 km snap cap.
+    \item Matrix retention: 150 km, enough to derive 20/50/100 km threshold instances.
+    \item Matrix output: split sparse parquets.
+  \end{itemize}
+\end{frame}
+\begin{frame}[fragile]{Build Instance}
+  \scriptsize
+\begin{verbatim}
+py scripts\build_pisa_instance.py ^
+  --outputs-dir C:\local\Parvathy\Vietnam\fresh_downloads\vietnam_data\outputs ^
+  --run-tag-marker candidates_spacing_10000_maxsnap_5000 ^
+  --threshold-m 100000 ^
+  --output-npz C:\local\Parvathy\Vietnam\optimization\vietnam_10kmgrid_100km_threshold.npz
+\end{verbatim}
+\end{frame}
+\begin{frame}[fragile]{Run GRASP}
+  \scriptsize
+\begin{verbatim}
+py scripts\run_vietnam_grasp_experiments.py ^
+  --instance-npz C:\local\Parvathy\Vietnam\optimization\vietnam_10kmgrid_100km_threshold.npz ^
+  --budget 20 ^
+  --time-limit-seconds 300 ^
+  --constructor randomized ^
+  --rcl-size 25 ^
+  --local-search first_sparse ^
+  --path-relinking true ^
+  --path-relinking-method fast
+\end{verbatim}
+\end{frame}
+\begin{frame}{Experiment Matrix}
+  \begin{itemize}
+    \item Thresholds: 20 km, 50 km, 100 km.
+    \item Budgets: 20, 40, 60, 80, 100, 200.
+    \item Candidate grids: 10 km first, 5 km next if runtime permits.
+    \item Seeds: at least 42, 43, 44 for randomized runs.
+  \end{itemize}
+\end{frame}
+\begin{frame}{Fresh Pipeline Completed}
+  \small
+  \begin{itemize}
+    \item Successful rerun omitted context-map plotting and wrote split sparse matrices.
+    \item Population points: 408,838.
+    \item Candidate sites after snapping/filtering: 3,131.
+    \item Candidate-to-population matrix: 61,729,130 rows.
+    \item Table-to-population matrix: 3,334,738 rows.
+  \end{itemize}
+\end{frame}
+\begin{frame}{First Budget-20 Results}
+  \small
+  \begin{tabular}{r r r r}
+    \toprule
+    Threshold & Existing covered & Incremental & Total covered \\
+    \midrule
+    20 km & 54.289M & 8.990M & 63.278M \\
+    50 km & 83.477M & 6.909M & 90.387M \\
+    100 km & 93.923M & 3.510M & 97.433M \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.4cm}
+
+  \small Greedy construction plus first-improvement local search, 10 km candidate grid, 20 new candidates.
+\end{frame}
+\begin{frame}{Fast Replication Run}
+  \small
+  \begin{itemize}
+    \item Output: \code{C:\textbackslash local\textbackslash Parvathy\textbackslash Vietnam\textbackslash fleur\_style\_fast\_replication}.
+    \item Local search: \code{first\_sparse} for p=20/40/60/80/100/200.
+    \item Randomized GRASP+PR: p=20/40/60/80, 3 repeats, 5 iterations.
+    \item Baseline coverage: 54.62\% at 20 km, 83.99\% at 50 km, 94.50\% at 100 km.
+    \item Fresh data only; no Fleur \code{npy} or pickle inputs.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Mimicking Fleur's Analysis}
+  \small
+  \begin{itemize}
+    \item Reproduce baseline coverage, greedy marginal gains, local-search traces, randomized repeats, and coverage-by-budget tables.
+    \item Use fresh PISA CSR instances instead of historical row/column pickle dictionaries.
+    \item Write analysis artifacts to \code{C:\textbackslash local\textbackslash Parvathy\textbackslash Vietnam\textbackslash fleur\_style\_fast\_replication}.
+    \item Keep exact Gurobi-style gap tables as the next optional extension for smaller or restricted instances.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Fast Fleur-Style Replication}
+  \small
+  \begin{tabular}{r r r r}
+    \toprule
+    Threshold & Best p=20 & Best p=80 & Best p=200 \\
+    \midrule
+    20 km & 63.289M & 74.191M & 83.760M \\
+    50 km & 90.387M & 95.841M & 97.658M \\
+    100 km & 97.476M & 97.844M & 97.896M \\
+    \bottomrule
+  \end{tabular}
+  \vspace{0.35cm}
+
+  Fast run: local search to p=200; randomized GRASP+PR for p=20/40/60/80, 3 repeats and 5 iterations.
+\end{frame}
+
+\begin{frame}{Line Profiling}
+  \small
+  \begin{itemize}
+    \item Profiled greedy, randomized, sample, random-plus, first-swap local search, sparse local search, path relinking, and full GRASP.
+    \item Reports: \code{C:\textbackslash local\textbackslash Parvathy\textbackslash Vietnam\textbackslash line\_profiles}.
+    \item Construction hotspot: marginal-gain update loop over newly covered households.
+    \item Local-search hotspot: collecting candidate swaps from newly uncovered households.
+    \item Follow-up speed work added sparse local search and cached path relinking.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Sparse Local Search Default}
+  \small
+  \begin{itemize}
+    \item Vietnam runners now default to \code{first\_sparse}; \code{first} remains available for validation.
+    \item It keeps first-improvement swap semantics but uses SciPy CSR row sums for candidate collection.
+    \item p=20 benchmark matched the original objective and solution on 20/50/100 km instances.
+    \item 100 km local-search wall time: 35.86s original vs 1.42s sparse, including setup.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Speed Audit}
+  \small
+  \begin{itemize}
+    \item Construction is already small: roughly 0.04--2.54s across tested thresholds and budgets.
+    \item \code{first\_sparse} makes local search practical for 50 km and 100 km sweeps.
+    \item \code{path\_relink\_fast} keeps the same trace as the original relinker on validation cases.
+    \item Larger fast relinks completed: 50 km p=200 in 26.00s; 100 km p=200 in 6.25s.
+    \item Remaining speed risk: dense candidate grids and high-budget 50 km local-search/relinking runs.
+  \end{itemize}
+\end{frame}
+
+\begin{frame}{Validation}
+  \begin{itemize}
+    \item Instance metadata matches the PISA manifest and threshold.
+    \item Greedy and local search run on the same CSR instance.
+    \item Local search never lowers the objective.
+    \item Path relinking reports trace values and selected source IDs.
+    \item Outputs include baseline, incremental, and total covered population.
+  \end{itemize}
+\end{frame}
+\end{document}
