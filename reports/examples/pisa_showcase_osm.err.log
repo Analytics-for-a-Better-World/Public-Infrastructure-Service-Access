@@ -30,10 +30,14 @@ nbclient.exceptions.CellTimeoutError: A cell timed out while it was being execut
 The message was: Cell execution timed out.
 Here is a preview of the cell contents:
 -------------------
-timor_leste = AdministrativeArea(country_name="Timor-Leste", admin_level=1)
+# Suppress user warning about geometry in geographic CRS. Centroid is calculated over a single facility (e.g. a hospital),
+# so distances are very small and projection isn't necessary
+warnings.filterwarnings(
+    "ignore",
+    message="Geometry is in a geographic CRS. Results from 'centroid' are likely incorrect",
+    category=UserWarning,
+)
 
-# these are the boundaries of Baucau
-# type: Polygon
-baucau = timor_leste.get_admin_area_boundaries("Baucau")
+hospitals_df = Facilities(admin_area_boundaries=baucau).get_existing_facilities()
 -------------------
 
