@@ -30,6 +30,7 @@ class CountryConfig:
     worldpop_url: str | None = None
     worldpop_path: Path | None = None
     pbf_filename: str | None = None
+    pbf_url: str | None = None
     plot_title_suffix: str = 'roads, population, and service facilities'
     boundary_source: str = 'natural_earth'
     candidate_grid_spacing_m: float | None = None
@@ -77,6 +78,9 @@ class CountryConfig:
     @property
     def PBF_URL(self) -> str:
         '''Return the OSM PBF download URL.'''
+        if self.pbf_url is not None:
+            return self.pbf_url
+
         return (
             f'https://download.geofabrik.de/'
             f'{self.geofabrik_region}/{self.resolved_pbf_filename}'
@@ -154,6 +158,7 @@ DEFAULTS: dict[str, ConfigValue] = {
     'worldpop_url': None,
     'worldpop_path': None,
     'pbf_filename': None,
+    'pbf_url': None,
     'plot_title_suffix': 'roads, population, and service facilities',
     'boundary_source': 'natural_earth',
     'candidate_grid_spacing_m': None,
@@ -246,6 +251,11 @@ def build_config(
             None
             if merged['pbf_filename'] is None
             else str(merged['pbf_filename'])
+        ),
+        pbf_url=(
+            None
+            if merged['pbf_url'] is None
+            else str(merged['pbf_url'])
         ),
         plot_title_suffix=str(merged['plot_title_suffix']),
         boundary_source=str(boundary_source),

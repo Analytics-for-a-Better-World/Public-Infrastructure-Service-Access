@@ -99,6 +99,27 @@ def format_snap_components_suffix(snap_components: tuple[int, ...] | None) -> st
     return '_snap_components_' + '-'.join(str(component_id) for component_id in snap_components)
 
 
+def format_filename_part(value: str) -> str:
+    """Format a free-form value for output filenames."""
+    text = value.strip().lower()
+    if not text:
+        return 'custom'
+    return ''.join(ch if ch.isalnum() else '-' for ch in text).strip('-') or 'custom'
+
+
+def format_pbf_suffix(pbf_filename: str | None) -> str:
+    """Format an optional OSM PBF identifier for output filenames."""
+    if pbf_filename is None:
+        return ''
+
+    name = Path(pbf_filename).name
+    if name.lower().endswith('.osm.pbf'):
+        stem = name[:-len('.osm.pbf')]
+    else:
+        stem = Path(name).stem
+    return f'_pbf_{format_filename_part(stem)}'
+
+
 def build_output_run_tag(
     *,
     settings: PipelineSettings,
@@ -107,6 +128,7 @@ def build_output_run_tag(
     candidate_grid_spacing_m: float | None,
     candidate_max_snap_dist_m: float | None,
     has_candidates: bool,
+    pbf_filename: str | None = None,
 ) -> str:
     """Build a filename-safe tag describing the pipeline output settings."""
     candidate_part = (
@@ -116,6 +138,7 @@ def build_output_run_tag(
         else 'no_candidates'
     )
     snap_part = format_snap_components_suffix(settings.snap_components)
+    pbf_part = format_pbf_suffix(pbf_filename)
 
     return (
         f"pop_{settings.population_threshold:g}_"
@@ -125,7 +148,7 @@ def build_output_run_tag(
         f"agg_{format_output_value(aggregate_factor)}_"
         f"maxdist_{format_output_value(settings.max_total_dist)}_"
         f"amenity_{format_amenity_suffix(amenity_values)}_"
-        f"{candidate_part}{snap_part}"
+        f"{candidate_part}{snap_part}{pbf_part}"
     )
 
 

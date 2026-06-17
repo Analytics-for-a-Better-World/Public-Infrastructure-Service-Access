@@ -248,6 +248,17 @@ WorldPop can be overridden with:
 
 The strongest reproducibility option is `--worldpop-path`, because it points to a local raster whose exact bytes are recorded in the run manifest.
 
+OSM PBF extracts can be overridden with:
+
+```powershell
+--pbf-filename FILENAME
+--pbf-url URL
+```
+
+By default the pipeline keeps the country config behavior, usually the Geofabrik `*-latest.osm.pbf` extract. Use `--pbf-filename` for a known Geofabrik filename in the configured region, for example `east-timor-260613.osm.pbf`. Use `--pbf-url` for an explicit mirror or dated extract URL; when `--pbf-filename` is omitted, the cache filename is derived from the URL path. If a mirror URL does not contain a useful filename, provide both options.
+
+When the resolved PBF differs from the country config default, output filenames include a `pbf_<filename-stem>` suffix so dated or mirrored OSM inputs do not overwrite normal `latest` runs. The run manifest records the exact PBF URL, local path, size, and SHA256 hash and should be treated as the source of truth for the bytes used.
+
 ---
 
 # Amenity Options

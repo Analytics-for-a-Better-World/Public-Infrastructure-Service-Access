@@ -6,6 +6,7 @@ import logging
 from dataclasses import replace
 from pathlib import Path
 from time import perf_counter as pc
+from urllib.parse import unquote, urlparse
 
 import geopandas as gpd
 import numpy as np
@@ -303,12 +304,34 @@ def candidate_layer_for_role(
     return with_prefixed_ids(result, id_prefix)
 
 
-def resolve_worldpop_config(
+def validate_pbf_filename(value: str) -> str:
+    """Validate and normalize an OSM PBF cache filename."""
+    filename = str(value).strip()
+    if not filename:
+        raise ValueError('--pbf-filename cannot be empty.')
+    if Path(filename).name != filename:
+        raise ValueError('--pbf-filename must be a filename, not a path.')
+    if not filename.lower().endswith('.osm.pbf'):
+        raise ValueError('--pbf-filename must end with .osm.pbf.')
+    return filename
+
+
+def pbf_filename_from_url(pbf_url: str) -> str:
+    """Derive an OSM PBF filename from a download URL path."""
+    filename = Path(unquote(urlparse(pbf_url).path)).name
+    if not filename:
+        raise ValueError('--pbf-url must include a filename, or use --pbf-filename.')
+    return validate_pbf_filename(filename)
+
+
+def resolve_input_config(
     cfg: CountryConfig,
     args: argparse.Namespace,
 ) -> CountryConfig:
-    """Apply runtime WorldPop dataset/version overrides to a country config."""
+    """Apply runtime input dataset/version overrides to a country config."""
     overrides: dict[str, object] = {}
+    pbf_url = getattr(args, 'pbf_url', None)
+    pbf_filename = getattr(args, 'pbf_filename', None)
 
     if args.worldpop_year is not None:
         overrides['worldpop_year'] = args.worldpop_year
@@ -330,6 +353,12 @@ def resolve_worldpop_config(
         overrides['worldpop_url'] = args.worldpop_url
     if args.worldpop_path is not None:
         overrides['worldpop_path'] = Path(args.worldpop_path)
+    if pbf_url is not None:
+        overrides['pbf_url'] = pbf_url
+    if pbf_filename is not None:
+        overrides['pbf_filename'] = validate_pbf_filename(pbf_filename)
+    elif pbf_url is not None:
+        overrides['pbf_filename'] = pbf_filename_from_url(pbf_url)
 
     if not overrides:
         return cfg
@@ -338,6 +367,37 @@ def resolve_worldpop_config(
     if resolved.worldpop_dataset == 'global2' and not 2015 <= resolved.worldpop_year <= 2030:
         raise ValueError('WorldPop Global2 years must be between 2015 and 2030.')
     return resolved
+
+
+def resolve_worldpop_config(
+    cfg: CountryConfig,
+    args: argparse.Namespace,
+) -> CountryConfig:
+    """Apply runtime input overrides to a country config.
+
+    Kept for compatibility with notebooks and wrappers that imported the old
+    WorldPop-only helper name.
+    """
+    return resolve_input_config(cfg, args)
+
+
+def pbf_filename_for_output_tag(
+    cfg: CountryConfig,
+    base_cfg: CountryConfig | None = None,
+) -> str | None:
+    """Return the PBF filename to include in output names, if any."""
+    if base_cfg is not None:
+        if (
+            cfg.resolved_pbf_filename == base_cfg.resolved_pbf_filename
+            and cfg.PBF_URL == base_cfg.PBF_URL
+        ):
+            return None
+        return cfg.resolved_pbf_filename
+
+    default_filename = f'{cfg.country_slug}-latest.osm.pbf'
+    if cfg.pbf_url is None and cfg.resolved_pbf_filename == default_filename:
+        return None
+    return cfg.resolved_pbf_filename
 
 
 # ------------------------
@@ -651,6 +711,26 @@ def build_parser() -> argparse.ArgumentParser:
         help='Explicit local WorldPop raster path. If present, download is skipped.',
     )
 
+    parser.add_argument(
+        '--pbf-filename',
+        type=str,
+        default=None,
+        help=(
+            'Explicit OSM PBF cache filename. Defaults to the country Geofabrik '
+            'latest extract filename.'
+        ),
+    )
+
+    parser.add_argument(
+        '--pbf-url',
+        type=str,
+        default=None,
+        help=(
+            'Explicit OSM PBF download URL. If --pbf-filename is omitted, the '
+            'filename is derived from the URL path.'
+        ),
+    )
+
     aggregate_group = parser.add_mutually_exclusive_group()
 
     aggregate_group.add_argument(
@@ -864,6 +944,10 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         raise ValueError('--worldpop-year must be positive.')
     if args.worldpop_url is not None and args.worldpop_path is not None:
         raise ValueError('--worldpop-url and --worldpop-path cannot be combined.')
+    if args.pbf_filename is not None:
+        validate_pbf_filename(args.pbf_filename)
+    if args.pbf_url is not None and args.pbf_filename is None:
+        pbf_filename_from_url(args.pbf_url)
     if args.aggregate_factor is not None and args.aggregate_factor < 2:
         raise ValueError('--aggregate-factor must be at least 2.')
     if args.candidate_grid_spacing_m is not None and args.candidate_grid_spacing_m <= 0:
@@ -955,7 +1039,16 @@ def short_output_path(path: Path) -> Path:
     suffix = path.suffix
     max_name_len = 120
     stem_limit = max_name_len - len(suffix) - len(digest) - 1
-    readable_stem = path.stem[:max(24, stem_limit)]
+    stem = path.stem
+    if '_pbf_' in stem:
+        pbf_tail = stem[stem.rfind('_pbf_'):]
+        head_limit = stem_limit - len(pbf_tail)
+        if head_limit >= 24:
+            readable_stem = f'{stem[:head_limit]}{pbf_tail}'
+        else:
+            readable_stem = stem[:max(24, stem_limit)]
+    else:
+        readable_stem = stem[:max(24, stem_limit)]
     return path.with_name(f'{readable_stem}_{digest}{suffix}')
 
 
@@ -1323,6 +1416,8 @@ def main(
     destination_lon_column: str | None,
     destination_lat_column: str | None,
     destination_id_column: str | None,
+    *,
+    base_cfg: CountryConfig | None = None,
 ) -> None:
     '''Run the pipeline for a given country.'''
     t_total = pc()
@@ -1887,6 +1982,7 @@ def main(
         candidate_grid_spacing_m=candidate_grid_spacing_m,
         candidate_max_snap_dist_m=candidate_max_snap_dist_m,
         has_candidates=candidate_sites_snapped is not None,
+        pbf_filename=pbf_filename_for_output_tag(cfg, base_cfg),
     )
     if settings.diagnose_connectivity:
         run_tag = f'{run_tag}_connectivity'
@@ -2269,7 +2365,8 @@ if __name__ == '__main__':
 
     setup_logging(args.log_file, verbose=not args.quiet)
     settings = settings_from_args(args)
-    cfg = resolve_worldpop_config(load_cfg(args.country_code), args)
+    base_cfg = load_cfg(args.country_code)
+    cfg = resolve_input_config(base_cfg, args)
     source_layers = resolve_source_layers_from_args(args)
     destination_layers = resolve_destination_layers_from_args(args)
 
@@ -2291,4 +2388,5 @@ if __name__ == '__main__':
         args.destination_lon_column,
         args.destination_lat_column,
         args.destination_id_column,
+        base_cfg=base_cfg,
     )
