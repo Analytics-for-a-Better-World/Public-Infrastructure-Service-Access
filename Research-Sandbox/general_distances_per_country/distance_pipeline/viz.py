@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 from matplotlib.lines import Line2D
 from shapely.geometry import box
+from shapely.ops import linemerge, unary_union
 
 
 CONTEXT_BASEMAPS: dict[str, object] = {
@@ -330,6 +331,75 @@ def classify_roads(
     return roads
 
 
+def iter_line_geometries(geometry: object) -> list[object]:
+    """Return LineString parts from a Shapely geometry."""
+    if geometry is None or getattr(geometry, 'is_empty', True):
+        return []
+    if geometry.geom_type == 'LineString':
+        return [geometry]
+    if geometry.geom_type == 'MultiLineString':
+        return list(geometry.geoms)
+    if geometry.geom_type == 'GeometryCollection':
+        lines: list[object] = []
+        for part in geometry.geoms:
+            lines.extend(iter_line_geometries(part))
+        return lines
+    return []
+
+
+def merge_roads_for_plotting(
+    roads: gpd.GeoDataFrame,
+    *,
+    road_class_column: str = 'road_class',
+    verbose: bool = True,
+) -> gpd.GeoDataFrame:
+    """Merge routing-edge fragments into longer road geometries for plotting."""
+    if roads.empty:
+        return roads
+    if road_class_column not in roads.columns:
+        raise ValueError(f"Column '{road_class_column}' not found in roads GeoDataFrame")
+
+    t0 = pc()
+    records: list[dict[str, object]] = []
+    category_dtype = getattr(roads[road_class_column], 'cat', None)
+    categories = list(category_dtype.categories) if category_dtype is not None else None
+
+    for road_class, subset in roads.groupby(road_class_column, observed=True, sort=False):
+        subset = subset.loc[subset.geometry.notna() & ~subset.geometry.is_empty]
+        if subset.empty:
+            continue
+
+        t_class = pc()
+        unioned = unary_union(list(subset.geometry))
+        merged = unioned if unioned.geom_type == 'LineString' else linemerge(unioned)
+        line_parts = iter_line_geometries(merged)
+        records.extend(
+            {road_class_column: road_class, 'geometry': geometry}
+            for geometry in line_parts
+        )
+
+        if verbose:
+            print(
+                f'  Merged {road_class}: {len(subset):,} fragments -> '
+                f'{len(line_parts):,} plotted lines in {pc() - t_class:.2f} seconds'
+            )
+
+    merged_roads = gpd.GeoDataFrame(records, geometry='geometry', crs=roads.crs)
+    if categories is not None and not merged_roads.empty:
+        merged_roads[road_class_column] = pd.Categorical(
+            merged_roads[road_class_column],
+            categories=categories,
+        )
+
+    if verbose:
+        print(
+            f'Merged road fragments for plotting: {len(roads):,} -> '
+            f'{len(merged_roads):,} lines in {pc() - t0:.2f} seconds'
+        )
+
+    return merged_roads
+
+
 def _log_step(message: str, *, start_time: float | None = None) -> None:
     '''Print a verbose pipeline message with optional elapsed time.'''
     if start_time is None:
@@ -478,6 +548,8 @@ def plot_context_map(
     if verbose:
         _log_step('Projected roads', start_time=t_project)
 
+    roads_plot_3857 = merge_roads_for_plotting(roads_3857, verbose=verbose)
+
     t_project_pop = pc()
     pop_3857 = population_points.to_crs(epsg=3857)
     if verbose:
@@ -522,7 +594,7 @@ def plot_context_map(
 
     for road_class in road_order:
         t_class = pc()
-        subset = roads_3857.loc[roads_3857['road_class'] == road_class]
+        subset = roads_plot_3857.loc[roads_plot_3857['road_class'] == road_class]
 
         if subset.empty:
             if verbose:
@@ -530,13 +602,15 @@ def plot_context_map(
             continue
 
         if verbose:
-            print(f'  Plotting {road_class}: {len(subset):,} segments')
+            print(f'  Plotting {road_class}: {len(subset):,} lines')
 
         subset.plot(
             ax=ax,
             color='white',
             linewidth=road_widths[road_class] * 2.8,
             alpha=1.0,
+            capstyle='round',
+            joinstyle='round',
             zorder=1,
         )
         subset.plot(
@@ -544,6 +618,8 @@ def plot_context_map(
             color=road_colors[road_class],
             linewidth=road_widths[road_class] * 1.25,
             alpha=1.0,
+            capstyle='round',
+            joinstyle='round',
             zorder=2,
         )
 
