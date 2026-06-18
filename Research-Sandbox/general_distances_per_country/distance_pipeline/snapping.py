@@ -7,7 +7,68 @@ from time import perf_counter as pc
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+from pyproj import Transformer
 from scipy.spatial import cKDTree
+
+
+def _crs_epsg(gdf: gpd.GeoDataFrame) -> int | None:
+    """Return an EPSG code for a GeoDataFrame CRS when available."""
+    if gdf.crs is None:
+        return None
+    return gdf.crs.to_epsg()
+
+
+def _project_lon_lat(
+    lon: pd.Series,
+    lat: pd.Series,
+    projected_epsg: int,
+) -> np.ndarray:
+    """Project EPSG:4326 lon/lat columns into a metric coordinate array."""
+    transformer = Transformer.from_crs(4326, projected_epsg, always_xy=True)
+    x, y = transformer.transform(
+        lon.to_numpy(dtype='float64', copy=False),
+        lat.to_numpy(dtype='float64', copy=False),
+    )
+    return np.column_stack(
+        [
+            np.asarray(x, dtype='float64'),
+            np.asarray(y, dtype='float64'),
+        ]
+    )
+
+
+def _point_xy(
+    points: gpd.GeoDataFrame,
+    result: gpd.GeoDataFrame,
+    projected_epsg: int,
+) -> np.ndarray:
+    """Return projected point coordinates, preferring numeric lon/lat columns."""
+    if _crs_epsg(points) == 4326:
+        return _project_lon_lat(
+            pd.to_numeric(result['Longitude'], errors='raise'),
+            pd.to_numeric(result['Latitude'], errors='raise'),
+            projected_epsg,
+        )
+
+    points_proj = result.to_crs(epsg=projected_epsg)
+    return np.column_stack(
+        [points_proj.geometry.x.to_numpy(), points_proj.geometry.y.to_numpy()]
+    )
+
+
+def _node_xy(nodes: gpd.GeoDataFrame, projected_epsg: int) -> np.ndarray:
+    """Return projected node coordinates without reprojecting Shapely geometries."""
+    if {'lon', 'lat'}.issubset(nodes.columns):
+        return _project_lon_lat(
+            pd.to_numeric(nodes['lon'], errors='raise'),
+            pd.to_numeric(nodes['lat'], errors='raise'),
+            projected_epsg,
+        )
+
+    nodes_proj = nodes.to_crs(epsg=projected_epsg)
+    return np.column_stack(
+        [nodes_proj.geometry.x.to_numpy(), nodes_proj.geometry.y.to_numpy()]
+    )
 
 
 def snap_points_to_nodes(
@@ -70,15 +131,8 @@ def snap_points_to_nodes(
     # facility IDs. Keep identifiers stable instead of forcing integer IDs.
     result[id_col] = result[id_col].astype(str)
 
-    points_proj = result.to_crs(epsg=projected_epsg)
-    nodes_proj = nodes.to_crs(epsg=projected_epsg)
-
-    point_xy = np.column_stack(
-        [points_proj.geometry.x.to_numpy(), points_proj.geometry.y.to_numpy()]
-    )
-    node_xy = np.column_stack(
-        [nodes_proj.geometry.x.to_numpy(), nodes_proj.geometry.y.to_numpy()]
-    )
+    point_xy = _point_xy(points, result, projected_epsg)
+    node_xy = _node_xy(nodes, projected_epsg)
 
     tree = cKDTree(node_xy)
     distances, idx = tree.query(point_xy, k=1)

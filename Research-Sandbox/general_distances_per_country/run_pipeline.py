@@ -159,6 +159,15 @@ def filter_to_bbox(
     return filtered.to_crs(original_crs)
 
 
+def empty_roads_layer() -> gpd.GeoDataFrame:
+    """Return an empty road layer compatible with context-map plotting."""
+    return gpd.GeoDataFrame(
+        {'road_class': pd.Categorical([])},
+        geometry=gpd.GeoSeries([], crs='EPSG:4326'),
+        crs='EPSG:4326',
+    )
+
+
 def normalize_layers(
     layers: list[str] | None,
     *,
@@ -589,6 +598,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--simplify-network',
+        choices=('true', 'false'),
+        default='false',
+        help=(
+            'For the osmium backend, collapse intermediate OSM way vertices '
+            'before building the routing graph. Default false preserves a '
+            'denser, pyrosm-like graph.'
+        ),
+    )
+
+    parser.add_argument(
         '--diagnose-connectivity',
         choices=('true', 'false'),
         default='false',
@@ -1002,6 +1022,7 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         matrix_shape=args.matrix_shape,
         dense_component_matrices=args.dense_component_matrices == 'true',
         network_backend=args.network_backend,
+        simplify_network=args.simplify_network == 'true',
         diagnose_connectivity=args.diagnose_connectivity == 'true',
         snap_components=parse_snap_components(args.snap_components),
     )
@@ -1433,6 +1454,7 @@ def main(
         force_recompute=settings.force_recompute,
         verbose=settings.verbose,
     )
+    network_cache_backend = settings.network_cache_backend()
 
     ensure_table_arguments(
         source_layers=source_layers,
@@ -1453,6 +1475,10 @@ def main(
         source_table=source_table,
         destination_table=destination_table,
     )
+    needs_context_map = (
+        build_map or settings.save_context_map or settings.show_context_map or map_only
+    )
+    needs_context_roads = needs_context_map and settings.context_map_roads
 
     if settings.verbose:
         logging.info(f'Running pipeline for {cfg.COUNTRY_NAME}')
@@ -1481,12 +1507,8 @@ def main(
 
     nodes = None
     edges = None
-    if map_only and not settings.context_map_roads:
-        roads = gpd.GeoDataFrame(
-            {'road_class': pd.Categorical([])},
-            geometry=gpd.GeoSeries([], crs='EPSG:4326'),
-            crs='EPSG:4326',
-        )
+    if map_only and not needs_context_roads:
+        roads = empty_roads_layer()
     elif map_only:
         roads = cache.run(
             cache_path=cache.roads_path(
@@ -1511,18 +1533,30 @@ def main(
                 verbose=settings.verbose,
                 bbox=settings.bbox,
                 backend=settings.network_backend,
+                simplify=settings.simplify_network,
             ),
             bbox=settings.bbox,
-            network_backend=settings.network_backend,
+            network_backend=network_cache_backend,
         )
-        roads = cache.run(
-            cache_path=cache.roads_path(
-                bbox=settings.bbox,
-                network_backend=settings.network_backend,
-            ),
-            builder=lambda: classify_roads(edges, verbose=settings.verbose),
-        )
-        roads = filter_to_bbox(roads, settings.bbox)
+        if needs_context_roads:
+            roads = cache.run(
+                cache_path=cache.roads_path(
+                    bbox=settings.bbox,
+                    network_backend=settings.network_backend,
+                ),
+                builder=lambda: classify_roads(
+                    load_osm_road_edges(
+                        cfg.PBF_PATH,
+                        verbose=settings.verbose,
+                        bbox=settings.bbox,
+                        backend=settings.network_backend,
+                    ),
+                    verbose=settings.verbose,
+                ),
+            )
+            roads = filter_to_bbox(roads, settings.bbox)
+        else:
+            roads = empty_roads_layer()
 
     population_points = cache.run(
         cache_path=cache.population_points_path(
@@ -1686,7 +1720,7 @@ def main(
         candidate_max_snap_dist_m = None
 
     # -------- MAP (optional) --------
-    if build_map or settings.save_context_map or settings.show_context_map or map_only:
+    if needs_context_map:
         map_base_layers = [
             layer
             for layer in [
@@ -1733,7 +1767,16 @@ def main(
                 logging.info(f'Total runtime: {pc() - t_total:.2f}s')
             return
 
+    if settings.verbose:
+        logging.info(
+            'Building Pandana network from %s nodes and %s edges',
+            f'{len(nodes):,}',
+            f'{len(edges):,}',
+        )
+    t_pandana = pc()
     network = build_pandana_network(nodes, edges)
+    if settings.verbose:
+        logging.info(f'Built Pandana network in {pc() - t_pandana:.2f}s')
 
     source_parts: list[pd.DataFrame] = []
     fixed_source_parts: list[pd.DataFrame] = []
@@ -1750,7 +1793,7 @@ def main(
                 random_seed=settings.random_seed,
                 aggregate_factor=agg,
                 snap_components=settings.snap_components,
-                network_backend=settings.network_backend,
+                network_backend=network_cache_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 population_points,
@@ -1778,7 +1821,7 @@ def main(
                 random_seed=settings.random_seed,
                 aggregate_factor=agg,
                 snap_components=settings.snap_components,
-                network_backend=settings.network_backend,
+                network_backend=network_cache_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 population_points,
@@ -1803,7 +1846,7 @@ def main(
                 distance_col='dist_snap_target',
                 amenity_values=['target_amenities', *source_cache_values],
                 snap_components=settings.snap_components,
-                network_backend=settings.network_backend,
+                network_backend=network_cache_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 amenity_points,
@@ -1827,7 +1870,7 @@ def main(
                 distance_col='dist_snap_source',
                 amenity_values=['source_amenities', *source_cache_values],
                 snap_components=settings.snap_components,
-                network_backend=settings.network_backend,
+                network_backend=network_cache_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 amenity_points,
@@ -1856,7 +1899,7 @@ def main(
                     *source_cache_values,
                 ],
                 snap_components=settings.snap_components,
-                network_backend=settings.network_backend,
+                network_backend=network_cache_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 destination_table_points,
@@ -1884,7 +1927,7 @@ def main(
                     *source_cache_values,
                 ],
                 snap_components=settings.snap_components,
-                network_backend=settings.network_backend,
+                network_backend=network_cache_backend,
             ),
             builder=lambda: snap_points_to_nodes(
                 source_table_points,
@@ -2002,7 +2045,7 @@ def main(
     matrix_output_paths: dict[str, Path] = {}
     node_pair_cache_dir = cache.node_pair_distances_dir(
         bbox=settings.bbox,
-        network_backend=settings.network_backend,
+        network_backend=network_cache_backend,
         cost_profile='length',
     )
     if settings.verbose and settings.matrix_shape == 'sparse':
@@ -2024,7 +2067,7 @@ def main(
                     candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                     has_candidates=candidate_sites_snapped is not None,
                     snap_components=settings.snap_components,
-                    network_backend=settings.network_backend,
+                    network_backend=network_cache_backend,
                 ),
                 builder=lambda: compute_distances_polars(
                     targets=targets,
@@ -2090,7 +2133,7 @@ def main(
                             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                             has_candidates=pair_has_candidates,
                             snap_components=settings.snap_components,
-                            network_backend=settings.network_backend,
+                            network_backend=network_cache_backend,
                         ),
                         builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
                             compute_distances_polars(
@@ -2162,7 +2205,7 @@ def main(
                     candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                     has_candidates=candidate_sites_snapped is not None,
                     snap_components=settings.snap_components,
-                    network_backend=settings.network_backend,
+                    network_backend=network_cache_backend,
                 ),
                 builder=lambda: compute_dense_distance_matrices(
                     targets=targets,
@@ -2225,7 +2268,7 @@ def main(
                             candidate_max_snap_dist_m=candidate_max_snap_dist_m,
                             has_candidates=pair_has_candidates,
                             snap_components=settings.snap_components,
-                            network_backend=settings.network_backend,
+                            network_backend=network_cache_backend,
                         ),
                         builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
                             compute_dense_distance_matrices(

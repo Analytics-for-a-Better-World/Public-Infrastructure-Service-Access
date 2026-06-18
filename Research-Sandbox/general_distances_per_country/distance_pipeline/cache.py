@@ -52,6 +52,10 @@ def _backend_part(network_backend: str | None) -> str:
     """Format an optional OSM network backend for cache-key filenames."""
     if network_backend in (None, '', 'pyrosm'):
         return ''
+    if network_backend == 'osmium':
+        return '_backend_osmium'
+    if network_backend == 'osmium_simplified':
+        return '_backend_osmium_simplified_v2'
     return f'_backend_{_safe_part(network_backend)}'
 
 
@@ -217,11 +221,13 @@ class CacheManager:
         distance_col: str,
         max_snap_dist_m: float | None,
         snap_components: tuple[int, ...] | None = None,
+        network_backend: str | None = None,
     ) -> Path:
         water_part = 'no_water' if exclude_water else 'water_allowed'
         boundary_part = 'include_boundary' if include_boundary else 'strict_interior'
         max_snap_part = 'none' if max_snap_dist_m is None else f'{max_snap_dist_m:g}m'
         snap_part = _snap_components_part(snap_components)
+        backend_part = _backend_part(network_backend)
         return (
             self.cache_dir
             / (
@@ -229,7 +235,7 @@ class CacheManager:
                 f'spacing_{grid_spacing_m:g}m_'
                 f'{water_part}_{boundary_part}_'
                 f'{distance_col}_max_snap_{max_snap_part}_'
-                f'epsg_{self.cfg.PROJECTED_EPSG}{snap_part}.pkl'
+                f'epsg_{self.cfg.PROJECTED_EPSG}{snap_part}{backend_part}.pkl'
             )
         )
 

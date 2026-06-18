@@ -16,18 +16,20 @@ py run_pipeline.py <country> [options]
 
 ---
 
-# Important Pandana And NumPy Warning
+# Pandana And NumPy Compatibility Note
 
-Pandana is currently the routing engine used for road-network shortest paths. Pandana `0.7` and earlier wheels were built against the NumPy 1.x C API. If you install NumPy 2.x with Pandana `<=0.7`, importing or using Pandana can fail with binary-compatibility errors.
+Pandana is currently the routing engine used for road-network shortest paths. Some published Pandana `0.7` and earlier wheels were built against the NumPy 1.x C API, so those wheels can fail under NumPy 2.x even when the Python package installs successfully.
 
-Use a NumPy 1.x environment unless you know that your Pandana build explicitly supports NumPy 2:
+The conservative PyPI setup is still upstream Pandana `0.7` plus NumPy 1.x:
 
 ```powershell
 py -m pip install "numpy<2"
 py -m pip install pandana
 ```
 
-At startup, the pipeline checks the installed package versions. If it detects `pandana<=0.7` with `numpy>=2`, it writes a clear warning to the console before the Pandana import is used by the pipeline.
+That constraint matters for Python itself: Pandana `0.7` effectively forces `numpy<2`, and NumPy 1.x does not support the newest Python lines. In practice, the upstream/PyPI Pandana `0.7` stack tops out at Python 3.12. Use Python 3.12 for the conservative stack.
+
+We are also testing newer local Pandana builds that support NumPy 2. If you are using one of those wheels, do not overwrite it with `pip install pandana` from PyPI during the same test. At startup, the pipeline checks whether the installed Pandana binary extension imports cleanly. If the import succeeds, the pipeline proceeds without treating NumPy 2 as a problem. If it detects an older-looking Pandana/NumPy combination and the binary import check fails, it prints a compatibility warning before routing work begins.
 
 ---
 
@@ -56,7 +58,7 @@ The pipeline caches expensive intermediate stages under each country's configure
 There is no pinned environment file in this folder yet. A practical environment should include:
 
 ```text
-numpy<2
+numpy
 pandas
 geopandas
 shapely
@@ -72,6 +74,8 @@ scipy
 networkx
 openpyxl
 ```
+
+For a conservative PyPI-only environment, use `numpy<2`. For the current modernization work, a locally built NumPy-2-compatible Pandana wheel can be used with newer NumPy and Python versions.
 
 The optional `osmium` package enables the streaming OSM backend:
 
@@ -393,13 +397,24 @@ Subset geometry layers to a longitude/latitude bounding box. For OSM road-networ
 
 ```powershell
 --network-backend pyrosm|osmium|auto
+--simplify-network true|false
 ```
 
 - `pyrosm`: default behavior.
-- `osmium`: optional streaming backend using Python `osmium`.
+- `osmium`: optional streaming backend using Python `osmium`; dense/unsimplified by default.
 - `auto`: use `osmium` when installed, otherwise `pyrosm`.
+- `--simplify-network false`: default. Keep a dense routing graph with ordinary OSM road-segment vertices.
+- `--simplify-network true`: `osmium` only. Collapse intermediate OSM way vertices before building the routing graph. This is a memory-saving mode, not the default.
 
-The `osmium` backend is intended for large PBF extracts where full `pyrosm` extraction is memory intensive. In this version, selecting `--network-backend osmium` also uses a streaming `osmium` path for OSM amenity extraction. Amenity extraction is done in two passes: the first pass finds matching amenity nodes and ways, and the second pass collects only the node coordinates needed to reconstruct those matching ways. This avoids asking pyosmium to keep a full node-location index for the whole country just to extract a small amenity subset. Backend-specific caches are kept separate from the historical `pyrosm` caches. For publication runs, record the backend, bbox, aggregation, and distance cap in the run notes.
+The `osmium` backend is intended for large PBF extracts where full `pyrosm` extraction is memory intensive. By default it keeps the dense OSM road-segment graph for closer comparability with the historical `pyrosm` path, while still storing routing caches without per-edge geometries. Dense osmium caches use the `_backend_osmium` suffix.
+
+With `--simplify-network true`, a first pass identifies drivable-way split/intersection nodes, then a second pass collapses intermediate shape vertices into longer `u`, `v`, `length` edges for snapping, connectivity diagnostics, and Pandana shortest paths. For example, a road encoded as `A -- b -- c -- D` may become one edge `A -- D` with length `A-b + b-c + c-D` when `b` and `c` are only shape vertices.
+
+**Warning:** simplification changes the routing node set. Sources, destinations, and candidates snap to retained graph nodes, so removing intermediate road vertices can increase snap distances and can change the final `total_dist`, even when the underlying road geometry and accumulated edge length are preserved. Simplification can greatly reduce network size and memory use, but it is a comparability tradeoff. Use the default `--simplify-network false` when reproducing or comparing historical outputs; use `--simplify-network true` when a large country extract would otherwise be too large to build or route.
+
+Context-map road geometries are loaded through a separate road-only pass when `--save-map`, `--show-map`, `--build-map`, or `--map-only` actually needs them; ordinary matrix runs no longer materialize road geometries just to classify a map layer that will not be drawn.
+
+Selecting `--network-backend osmium` also uses a streaming `osmium` path for OSM amenity extraction. Amenity extraction is done in two passes: the first pass finds matching amenity nodes and ways, and the second pass collects only the node coordinates needed to reconstruct those matching ways. This avoids asking pyosmium to keep a full node-location index for the whole country just to extract a small amenity subset. Backend-specific caches are kept separate from the historical `pyrosm` caches, and simplified osmium network caches use `_backend_osmium_simplified_v2` instead of the dense `_backend_osmium` suffix. This change means new dense osmium runs will not reuse the earlier simplified osmium caches. For publication runs, record the backend, simplification mode, bbox, aggregation, and distance cap in the run notes.
 
 Large national extracts should usually avoid random sampling in final runs. Prefer the smallest aggregation that keeps the candidate target/source pair set computationally feasible, and report the retained WorldPop headcount from the log or run manifest. For example, health-facility accessibility capped at 100 km can be run as:
 

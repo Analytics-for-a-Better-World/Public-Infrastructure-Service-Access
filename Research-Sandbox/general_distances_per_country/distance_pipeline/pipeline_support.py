@@ -120,6 +120,14 @@ def format_pbf_suffix(pbf_filename: str | None) -> str:
     return f'_pbf_{format_filename_part(stem)}'
 
 
+def format_network_suffix(settings: PipelineSettings) -> str:
+    """Format non-historical network modes for output filenames."""
+    network_backend = settings.network_cache_backend()
+    if network_backend in ('', 'pyrosm'):
+        return ''
+    return f'_network_{format_filename_part(network_backend)}'
+
+
 def build_output_run_tag(
     *,
     settings: PipelineSettings,
@@ -139,6 +147,7 @@ def build_output_run_tag(
     )
     snap_part = format_snap_components_suffix(settings.snap_components)
     pbf_part = format_pbf_suffix(pbf_filename)
+    network_part = format_network_suffix(settings)
 
     return (
         f"pop_{settings.population_threshold:g}_"
@@ -148,7 +157,7 @@ def build_output_run_tag(
         f"agg_{format_output_value(aggregate_factor)}_"
         f"maxdist_{format_output_value(settings.max_total_dist)}_"
         f"amenity_{format_amenity_suffix(amenity_values)}_"
-        f"{candidate_part}{snap_part}{pbf_part}"
+        f"{candidate_part}{snap_part}{pbf_part}{network_part}"
     )
 
 

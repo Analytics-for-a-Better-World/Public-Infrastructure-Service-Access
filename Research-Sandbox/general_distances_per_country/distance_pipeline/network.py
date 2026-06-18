@@ -12,7 +12,7 @@ import geopandas as gpd
 import pandas as pd
 from pyproj import Geod
 from pyrosm import OSM
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString
 
 
 def _version_numbers(value: str) -> tuple[int, ...]:
@@ -53,6 +53,16 @@ def warn_if_pandana_numpy_incompatible() -> None:
     ):
         return
 
+    try:
+        from importlib import import_module
+
+        cyaccess_module = import_module('pandana.cyaccess')
+        getattr(cyaccess_module, 'cyaccess')
+    except Exception as exc:  # pragma: no cover - depends on binary wheel build
+        import_error = f' Local import check failed with {type(exc).__name__}: {exc}'
+    else:
+        return
+
     message = (
         'WARNING: Pandana compatibility risk detected. '
         f'Installed pandana=={pandana_version} is likely to fail with '
@@ -60,6 +70,7 @@ def warn_if_pandana_numpy_incompatible() -> None:
         'NumPy 1.x C API, so importing or using Pandana under NumPy 2 can raise '
         'binary-compatibility errors. Use numpy<2, or install a Pandana build '
         'that explicitly supports NumPy 2, before running this distance pipeline.'
+        f'{import_error}'
     )
     print(message, file=sys.stderr)
     warnings.warn(message, RuntimeWarning, stacklevel=2)
@@ -187,18 +198,63 @@ def _segment_length_m(lon1: float, lat1: float, lon2: float, lat2: float) -> flo
     return float(distance_m)
 
 
+class OsmiumDrivingNodeUseCounter(osmium.SimpleHandler if osmium is not None else object):
+    """First-pass counter for identifying drivable-way split nodes."""
+
+    def __init__(self) -> None:
+        if osmium is None:
+            raise ImportError(
+                "The optional 'osmium' package is required for the osmium backend."
+            )
+        super().__init__()
+        self.node_use_counts: dict[int, int] = {}
+
+    def way(self, way: object) -> None:
+        if not _is_drivable_way(way.tags):
+            return
+
+        for node in way.nodes:
+            node_id = int(node.ref)
+            count = self.node_use_counts.get(node_id, 0)
+            if count < 2:
+                self.node_use_counts[node_id] = count + 1
+
+    def split_node_refs(self) -> set[int]:
+        return {
+            node_id
+            for node_id, count in self.node_use_counts.items()
+            if count > 1
+        }
+
+
 class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None else object):
     '''Streaming OSM PBF handler for a pyrosm-like driving graph.'''
 
-    def __init__(self, bbox: BBox | None = None) -> None:
+    def __init__(
+        self,
+        bbox: BBox | None = None,
+        *,
+        collect_nodes: bool = True,
+        include_geometry: bool = False,
+        directed: bool = True,
+        split_node_refs: set[int] | None = None,
+    ) -> None:
         if osmium is None:
             raise ImportError(
                 "The optional 'osmium' package is required for the osmium backend."
             )
         super().__init__()
         self.bbox = bbox
+        self.collect_nodes = collect_nodes
+        self.include_geometry = include_geometry
+        self.directed = directed
+        self.split_node_refs = split_node_refs
         self.nodes: dict[int, tuple[float, float]] = {}
-        self.edge_records: list[dict[str, object]] = []
+        self.edge_u: list[int] = []
+        self.edge_v: list[int] = []
+        self.edge_length: list[float] = []
+        self.edge_highway: list[str | None] = []
+        self.edge_geometry: list[LineString] | None = [] if include_geometry else None
 
     def way(self, way: object) -> None:
         tags = way.tags
@@ -206,8 +262,6 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
             return
 
         highway = _tag_value(tags, 'highway')
-        name = _tag_value(tags, 'name')
-        ref = _tag_value(tags, 'ref')
         forward, backward = _way_directions(tags)
 
         way_nodes: list[tuple[int, float, float]] = []
@@ -221,6 +275,10 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
         if len(way_nodes) < 2:
             return
 
+        if self.split_node_refs is not None:
+            self._append_simplified_way(way_nodes, highway, forward, backward)
+            return
+
         for (u, lon1, lat1), (v, lon2, lat2) in zip(way_nodes, way_nodes[1:]):
             if u == v:
                 continue
@@ -231,27 +289,156 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
             if length <= 0:
                 continue
 
+            self._append_edge_pair(
+                u,
+                v,
+                length,
+                highway,
+                lon1,
+                lat1,
+                lon2,
+                lat2,
+                forward,
+                backward,
+            )
+
+    def _append_simplified_way(
+        self,
+        way_nodes: list[tuple[int, float, float]],
+        highway: str | None,
+        forward: bool,
+        backward: bool,
+    ) -> None:
+        """Collapse non-intersection shape nodes into longer routing edges."""
+        assert self.split_node_refs is not None
+
+        start_id, start_lon, start_lat = way_nodes[0]
+        prev_id, prev_lon, prev_lat = way_nodes[0]
+        accumulated_length = 0.0
+        has_included_segment = False
+        last_index = len(way_nodes) - 1
+
+        for idx, (node_id, lon, lat) in enumerate(way_nodes[1:], start=1):
+            if node_id == prev_id:
+                prev_id, prev_lon, prev_lat = node_id, lon, lat
+                continue
+
+            length = _segment_length_m(prev_lon, prev_lat, lon, lat)
+            if length <= 0:
+                prev_id, prev_lon, prev_lat = node_id, lon, lat
+                continue
+
+            if not _segment_intersects_bbox(prev_lon, prev_lat, lon, lat, self.bbox):
+                start_id, start_lon, start_lat = node_id, lon, lat
+                prev_id, prev_lon, prev_lat = node_id, lon, lat
+                accumulated_length = 0.0
+                has_included_segment = False
+                continue
+
+            accumulated_length += length
+            has_included_segment = True
+
+            is_split_node = idx == last_index or node_id in self.split_node_refs
+            if is_split_node:
+                if start_id != node_id and has_included_segment:
+                    self._append_edge_pair(
+                        start_id,
+                        node_id,
+                        accumulated_length,
+                        highway,
+                        start_lon,
+                        start_lat,
+                        lon,
+                        lat,
+                        forward,
+                        backward,
+                    )
+                start_id, start_lon, start_lat = node_id, lon, lat
+                accumulated_length = 0.0
+                has_included_segment = False
+
+            prev_id, prev_lon, prev_lat = node_id, lon, lat
+
+    def _append_edge_pair(
+        self,
+        u: int,
+        v: int,
+        length: float,
+        highway: str | None,
+        lon1: float,
+        lat1: float,
+        lon2: float,
+        lat2: float,
+        forward: bool,
+        backward: bool,
+    ) -> None:
+        if self.collect_nodes:
             self.nodes[u] = (lon1, lat1)
             self.nodes[v] = (lon2, lat2)
-            geometry = LineString([(lon1, lat1), (lon2, lat2)])
-            base_record = {
-                'length': length,
-                'highway': highway,
-                'name': name,
-                'ref': ref,
-                'oneway': _tag_value(tags, 'oneway'),
-                'geometry': geometry,
-            }
 
+        if self.directed:
             if forward:
-                self.edge_records.append({'u': u, 'v': v, **base_record})
+                self._append_edge(u, v, length, highway, lon1, lat1, lon2, lat2)
             if backward:
-                self.edge_records.append({'u': v, 'v': u, **base_record})
+                self._append_edge(v, u, length, highway, lon2, lat2, lon1, lat1)
+        else:
+            self._append_edge(u, v, length, highway, lon1, lat1, lon2, lat2)
+
+    def _append_edge(
+        self,
+        u: int,
+        v: int,
+        length: float,
+        highway: str | None,
+        lon1: float,
+        lat1: float,
+        lon2: float,
+        lat2: float,
+    ) -> None:
+        self.edge_u.append(u)
+        self.edge_v.append(v)
+        self.edge_length.append(length)
+        self.edge_highway.append(highway)
+        if self.edge_geometry is not None:
+            self.edge_geometry.append(LineString([(lon1, lat1), (lon2, lat2)]))
+
+    def nodes_frame(self) -> gpd.GeoDataFrame:
+        node_ids: list[int] = []
+        lons: list[float] = []
+        lats: list[float] = []
+        for node_id, (lon, lat) in self.nodes.items():
+            node_ids.append(node_id)
+            lons.append(lon)
+            lats.append(lat)
+
+        frame = pd.DataFrame({'id': node_ids, 'lon': lons, 'lat': lats})
+        return gpd.GeoDataFrame(
+            frame,
+            geometry=gpd.points_from_xy(frame['lon'], frame['lat']),
+            crs='EPSG:4326',
+        )
+
+    def edges_frame(self) -> pd.DataFrame | gpd.GeoDataFrame:
+        frame = pd.DataFrame(
+            {
+                'u': self.edge_u,
+                'v': self.edge_v,
+                'length': self.edge_length,
+                'highway': pd.Categorical(self.edge_highway),
+            }
+        )
+        if self.edge_geometry is None:
+            return frame
+        return gpd.GeoDataFrame(
+            frame,
+            geometry=gpd.GeoSeries(self.edge_geometry, crs='EPSG:4326'),
+            crs='EPSG:4326',
+        )
 
 
 def build_pandana_network(
-    nodes: gpd.GeoDataFrame,
-    edges: gpd.GeoDataFrame,
+    nodes: pd.DataFrame,
+    edges: pd.DataFrame,
 ) -> pdna.Network:
     '''Build a Pandana network from prepared nodes and edges.'''
 
@@ -272,9 +459,9 @@ def build_pandana_network(
 
 
 def _prepare_network_data(
-    nodes: gpd.GeoDataFrame,
-    edges: gpd.GeoDataFrame,
-) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    nodes: pd.DataFrame,
+    edges: pd.DataFrame,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     '''Normalize OSM network nodes and edges for routing.'''
     nodes = nodes.copy()
     edges = edges.copy()
@@ -302,7 +489,8 @@ def _load_osm_network_data_osmium(
     pbf_path: str,
     verbose: bool = True,
     bbox: BBox | None = None,
-) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    simplify: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     '''Load a driving network by streaming an OSM PBF with pyosmium.'''
     if osmium is None:
         raise ImportError(
@@ -310,40 +498,77 @@ def _load_osm_network_data_osmium(
         )
 
     t0 = pc()
-    handler = OsmiumDrivingNetworkHandler(bbox=bbox)
-    handler.apply_file(str(pbf_path), locations=True)
+    split_node_refs = None
+    if simplify:
+        t_count = pc()
+        counter = OsmiumDrivingNodeUseCounter()
+        counter.apply_file(str(pbf_path), locations=False)
+        split_node_refs = counter.split_node_refs()
+        referenced_node_count = len(counter.node_use_counts)
+        del counter
 
-    nodes = gpd.GeoDataFrame(
-        [
-            {
-                'id': node_id,
-                'lon': lon,
-                'lat': lat,
-                'geometry': Point(lon, lat),
-            }
-            for node_id, (lon, lat) in handler.nodes.items()
-        ],
-        columns=['id', 'lon', 'lat', 'geometry'],
-        geometry='geometry',
-        crs='EPSG:4326',
+        if verbose:
+            print(
+                f'Counted drivable OSM node uses with osmium in {pc() - t_count:.2f} seconds, '
+                f'{referenced_node_count:,} referenced nodes, {len(split_node_refs):,} split nodes'
+            )
+
+    handler = OsmiumDrivingNetworkHandler(
+        bbox=bbox,
+        collect_nodes=True,
+        include_geometry=False,
+        directed=simplify,
+        split_node_refs=split_node_refs,
     )
-    edges = gpd.GeoDataFrame(
-        handler.edge_records,
-        columns=['u', 'v', 'length', 'highway', 'name', 'ref', 'oneway', 'geometry'],
-        geometry='geometry',
-        crs='EPSG:4326',
-    )
+    handler.apply_file(str(pbf_path), locations=True)
+    if split_node_refs is not None:
+        del split_node_refs
+
+    nodes = handler.nodes_frame()
+    edges = handler.edges_frame()
 
     nodes, edges = _prepare_network_data(nodes, edges)
 
     if verbose:
         area = 'bbox extract' if bbox is not None else 'full extract'
+        mode = 'simplified' if simplify else 'unsimplified'
         print(
-            f'Loaded network data with osmium ({area}) in {pc() - t0:.2f} seconds, '
+            f'Loaded {mode} network data with osmium ({area}) in {pc() - t0:.2f} seconds, '
             f'{len(nodes):,} nodes, {len(edges):,} edges'
         )
 
     return nodes, edges
+
+
+def _load_osm_road_edges_osmium(
+    pbf_path: str,
+    verbose: bool = True,
+    bbox: BBox | None = None,
+) -> gpd.GeoDataFrame:
+    '''Load one geometry-bearing road segment per OSM segment for map rendering.'''
+    if osmium is None:
+        raise ImportError(
+            "The optional 'osmium' package is required for --network-backend osmium."
+        )
+
+    t0 = pc()
+    handler = OsmiumDrivingNetworkHandler(
+        bbox=bbox,
+        collect_nodes=False,
+        include_geometry=True,
+        directed=False,
+    )
+    handler.apply_file(str(pbf_path), locations=True)
+    edges = handler.edges_frame()
+
+    if verbose:
+        area = 'bbox extract' if bbox is not None else 'full extract'
+        print(
+            f'Loaded road edges for map with osmium ({area}) in {pc() - t0:.2f} seconds, '
+            f'{len(edges):,} edges'
+        )
+
+    return edges
 
 
 def load_osm_network_data(
@@ -351,7 +576,8 @@ def load_osm_network_data(
     verbose: bool = True,
     bbox: BBox | None = None,
     backend: NetworkBackend = 'pyrosm',
-) -> tuple[gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    simplify: bool = False,
+) -> tuple[pd.DataFrame, pd.DataFrame]:
     '''
     Load OSM driving network nodes and edges without building Pandana.
     '''
@@ -363,6 +589,7 @@ def load_osm_network_data(
             pbf_path,
             verbose=verbose,
             bbox=bbox,
+            simplify=simplify,
         )
 
     osm = OSM(str(pbf_path), bounding_box=_pyrosm_bbox(bbox))
@@ -394,12 +621,11 @@ def load_osm_road_edges(
     resolved_backend = _resolve_network_backend(backend)
 
     if resolved_backend == 'osmium':
-        _, edges = _load_osm_network_data_osmium(
+        return _load_osm_road_edges_osmium(
             pbf_path,
             verbose=verbose,
             bbox=bbox,
         )
-        return edges
 
     osm = OSM(str(pbf_path), bounding_box=_pyrosm_bbox(bbox))
     edges = osm.get_network(network_type='driving', nodes=False).copy()
@@ -419,7 +645,8 @@ def load_osm_network(
     verbose: bool = True,
     bbox: BBox | None = None,
     backend: NetworkBackend = 'pyrosm',
-) -> tuple[pdna.Network, gpd.GeoDataFrame, gpd.GeoDataFrame]:
+    simplify: bool = False,
+) -> tuple[pdna.Network, pd.DataFrame, pd.DataFrame]:
     '''
     Load OSM driving network and build Pandana network.
 
@@ -441,6 +668,7 @@ def load_osm_network(
         verbose=False,
         bbox=bbox,
         backend=backend,
+        simplify=simplify,
     )
     network = build_pandana_network(nodes=nodes, edges=edges)
 
