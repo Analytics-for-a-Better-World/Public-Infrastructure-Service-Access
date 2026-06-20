@@ -17,6 +17,13 @@ from distance_pipeline.snapping import snap_points_to_nodes
 from distance_pipeline.water import load_water_bodies
 
 
+def _network_cache_key(settings: PipelineSettings) -> str:
+    """Return the cache key for the network node set used for snapping."""
+    if settings.network_profile == 'driving':
+        return settings.network_backend
+    return f'{settings.network_backend}_{settings.network_profile}'
+
+
 def _resolve_candidate_grid_settings(
     *,
     cfg: CountryConfig,
@@ -36,6 +43,17 @@ def _resolve_candidate_grid_settings(
     return candidate_grid_spacing_m, candidate_max_snap_dist_m
 
 
+def _resolve_candidate_exclude_water(
+    *,
+    cfg: CountryConfig,
+    settings: PipelineSettings,
+) -> bool:
+    """Resolve candidate water exclusion from runtime settings or country config."""
+    if settings.candidate_exclude_water is not None:
+        return settings.candidate_exclude_water
+    return cfg.candidate_exclude_water
+
+
 def build_candidate_grid(
     *,
     cfg: CountryConfig,
@@ -47,11 +65,15 @@ def build_candidate_grid(
         cfg=cfg,
         settings=settings,
     )
+    candidate_exclude_water = _resolve_candidate_exclude_water(
+        cfg=cfg,
+        settings=settings,
+    )
 
     if settings.verbose:
         print(f'candidate_grid_spacing_m = {candidate_grid_spacing_m}')
         print(f'candidate_max_snap_dist_m = {candidate_max_snap_dist_m}')
-        print(f'candidate_exclude_water = {cfg.candidate_exclude_water}')
+        print(f'candidate_exclude_water = {candidate_exclude_water}')
 
     if candidate_grid_spacing_m is None:
         if settings.verbose:
@@ -82,7 +104,7 @@ def build_candidate_grid(
             verbose=settings.verbose,
         )
 
-        if not cfg.candidate_exclude_water:
+        if not candidate_exclude_water:
             if settings.verbose:
                 print('Skipping water body loading because candidate_exclude_water=False.')
             return candidates
@@ -105,7 +127,7 @@ def build_candidate_grid(
     return cache.run(
         cache_path=cache.candidate_sites_path(
             grid_spacing_m=candidate_grid_spacing_m,
-            exclude_water=cfg.candidate_exclude_water,
+            exclude_water=candidate_exclude_water,
             include_boundary=cfg.candidate_include_boundary,
         ),
         builder=build_candidates,
@@ -144,11 +166,15 @@ def build_candidate_sites(
         cfg=cfg,
         settings=settings,
     )
+    candidate_exclude_water = _resolve_candidate_exclude_water(
+        cfg=cfg,
+        settings=settings,
+    )
 
     if settings.verbose:
         print(f'candidate_grid_spacing_m = {candidate_grid_spacing_m}')
         print(f'candidate_max_snap_dist_m = {candidate_max_snap_dist_m}')
-        print(f'candidate_exclude_water = {cfg.candidate_exclude_water}')
+        print(f'candidate_exclude_water = {candidate_exclude_water}')
 
     if candidate_grid_spacing_m is None:
         if settings.verbose:
@@ -164,7 +190,7 @@ def build_candidate_sites(
     candidate_sites_snapped = cache.run(
         cache_path=cache.candidate_sites_snapped_path(
             grid_spacing_m=candidate_grid_spacing_m,
-            exclude_water=cfg.candidate_exclude_water,
+            exclude_water=candidate_exclude_water,
             include_boundary=cfg.candidate_include_boundary,
             distance_col='candidate_dist_road_estrada',
             max_snap_dist_m=candidate_max_snap_dist_m,

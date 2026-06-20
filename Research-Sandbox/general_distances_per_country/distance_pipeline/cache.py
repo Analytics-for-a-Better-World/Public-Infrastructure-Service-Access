@@ -446,6 +446,7 @@ class CacheManager:
         include_healthcare_tag: bool | None = None,
         snap_components: tuple[int, ...] | None = None,
         network_backend: str | None = None,
+        cost_profile: str | None = None,
     ) -> Path:
         max_total_dist_str = _none_or_number(max_total_dist, 'm')
         population_part = (
@@ -465,6 +466,11 @@ class CacheManager:
         )
         snap_part = _snap_components_part(snap_components)
         backend_part = _backend_part(network_backend)
+        cost_part = (
+            ''
+            if cost_profile in (None, '', 'length')
+            else f'_cost_{_safe_part(cost_profile)}'
+        )
         return (
             self.cache_dir
             / (
@@ -473,7 +479,7 @@ class CacheManager:
                 f'max_total_{max_total_dist_str}_'
                 f'{population_part}_'
                 f'{amenity_part}_'
-                f'{candidate_part}{snap_part}{backend_part}.pkl'
+                f'{candidate_part}{snap_part}{backend_part}{cost_part}.pkl'
             )
         )
 

@@ -21,6 +21,45 @@ EARTH_RADIUS_KM = 6367.0
 NODE_PAIR_KEY_COLUMNS = ['target_nearest_node', 'source_nearest_node']
 
 
+def _safe_impedance_name(imp_name: str) -> str:
+    '''Return a filesystem-friendly impedance name for cache subfolders.'''
+    return ''.join(char if char.isalnum() else '_' for char in imp_name).strip('_')
+
+
+def _node_pair_cache_dir_for_impedance(
+    cache_dir: Path,
+    imp_name: str | None,
+) -> Path:
+    '''
+    Keep the historical distance cache path for the default impedance, and use
+    subfolders for named non-default impedances such as travel_time_s.
+    '''
+    if imp_name in (None, '', 'length'):
+        return cache_dir
+
+    safe_name = _safe_impedance_name(imp_name)
+    if not safe_name:
+        raise ValueError(f'Invalid Pandana impedance name: {imp_name!r}')
+    return cache_dir / f'impedance_{safe_name}'
+
+
+def _shortest_path_lengths(
+    network: object,
+    target_nodes: np.ndarray,
+    source_nodes: np.ndarray,
+    *,
+    imp_name: str | None,
+) -> np.ndarray:
+    '''Call Pandana shortest paths with an optional named impedance.'''
+    if imp_name is None:
+        return network.shortest_path_lengths(target_nodes, source_nodes)
+    return network.shortest_path_lengths(
+        target_nodes,
+        source_nodes,
+        imp_name=imp_name,
+    )
+
+
 def _get_target_coordinate_columns(targets: pd.DataFrame) -> tuple[str, str]:
     '''
     Return the target longitude and latitude column names.
@@ -396,9 +435,10 @@ def _compute_node_pair_distances_from_arrays(
     network: object,
     *,
     keep_unreachable: bool,
+    imp_name: str | None = None,
     verbose: bool = False,
 ) -> pl.DataFrame:
-    '''Compute Pandana road distances for aligned unique road-node arrays.'''
+    '''Compute Pandana impedances for aligned unique road-node arrays.'''
     target_nodes = np.asarray(target_nodes, dtype=np.int64)
     source_nodes = np.asarray(source_nodes, dtype=np.int64)
 
@@ -413,7 +453,12 @@ def _compute_node_pair_distances_from_arrays(
 
     t = pc()
     road_distance = np.asarray(
-        network.shortest_path_lengths(target_nodes, source_nodes),
+        _shortest_path_lengths(
+            network,
+            target_nodes,
+            source_nodes,
+            imp_name=imp_name,
+        ),
         dtype=np.float64,
     )
     elapsed = pc() - t
@@ -454,6 +499,7 @@ def _compute_unique_node_pair_distances(
     network: object,
     *,
     node_pair_cache_dir: Path | None = None,
+    imp_name: str | None = None,
     verbose: bool = False,
 ) -> pl.DataFrame:
     '''
@@ -520,8 +566,14 @@ def _compute_unique_node_pair_distances(
             unique_source_nodes,
             network,
             keep_unreachable=False,
+            imp_name=imp_name,
             verbose=verbose,
         )
+
+    node_pair_cache_dir = _node_pair_cache_dir_for_impedance(
+        node_pair_cache_dir,
+        imp_name,
+    )
 
     cached_distances = _load_cached_node_pair_distances(
         node_pair_cache_dir,
@@ -547,6 +599,7 @@ def _compute_unique_node_pair_distances(
             missing_pairs['source_nearest_node'].to_numpy(),
             network,
             keep_unreachable=True,
+            imp_name=imp_name,
             verbose=verbose,
         )
         _write_node_pair_cache_chunk(
@@ -648,13 +701,18 @@ def compute_dense_distance_matrices(
     network: object,
     *,
     max_total_dist: float | None = None,
+    imp_name: str | None = None,
+    road_matrix_name: str = 'road_distance',
+    stitch_cost_factor: float = 1.0,
     chunk_size: int = 1_000_000,
     verbose: bool = False,
 ) -> dict[str, pd.DataFrame]:
     '''
     Compute dense target-by-source distance matrices.
 
-    Unreachable road paths are represented by ``np.inf``. When
+    Unreachable road paths are represented by ``np.inf``. ``imp_name`` can be
+    used to request a named Pandana impedance, for example ``travel_time_s``.
+    When
     ``max_total_dist`` is provided, entries above that total-distance cap are
     also set to ``np.inf`` in the total matrix.
     '''
@@ -663,6 +721,13 @@ def compute_dense_distance_matrices(
 
     if chunk_size <= 0:
         raise ValueError('chunk_size must be positive')
+    if stitch_cost_factor <= 0:
+        raise ValueError('stitch_cost_factor must be positive')
+    if road_matrix_name in {'total', 'origin_stitch', 'destination_stitch'}:
+        raise ValueError(
+            'road_matrix_name must not be one of '
+            "'total', 'origin_stitch', or 'destination_stitch'"
+        )
 
     target_ids = targets['ID'].to_numpy(copy=False)
     source_ids = sources['ID'].to_numpy(copy=False)
@@ -687,9 +752,11 @@ def compute_dense_distance_matrices(
         target_idx = pair_indices // n_sources
         source_idx = pair_indices % n_sources
         road_flat[start:stop] = np.asarray(
-            network.shortest_path_lengths(
+            _shortest_path_lengths(
+                network,
                 target_nodes[target_idx],
                 source_nodes[source_idx],
+                imp_name=imp_name,
             ),
             dtype=np.float64,
         )
@@ -705,7 +772,7 @@ def compute_dense_distance_matrices(
         dtype=np.float64,
         copy=False,
     )[None, :]
-    total = target_to_road + road + source_to_road
+    total = target_to_road * stitch_cost_factor + road + source_to_road * stitch_cost_factor
 
     if max_total_dist is not None:
         total = total.copy()
@@ -734,7 +801,7 @@ def compute_dense_distance_matrices(
             target_ids=target_ids,
             source_ids=source_ids,
         ),
-        'road_distance': _dense_distance_frame(
+        road_matrix_name: _dense_distance_frame(
             road,
             target_ids=target_ids,
             source_ids=source_ids,
@@ -750,6 +817,10 @@ def compute_distances_polars(
     *,
     max_total_dist: float | None = None,
     node_pair_cache_dir: str | Path | None = None,
+    imp_name: str | None = None,
+    road_cost_col: str = 'road_distance',
+    total_cost_col: str = 'total_dist',
+    stitch_cost_factor: float = 1.0,
     verbose: bool = False,
 ) -> pl.DataFrame:
     '''
@@ -777,6 +848,22 @@ def compute_distances_polars(
     node_pair_cache_dir
         Optional directory containing reusable road-node-pair distance parquet
         chunks. Missing node pairs are computed and appended to this cache.
+    imp_name
+        Optional Pandana impedance name. ``None`` preserves the historical
+        shortest-distance behavior. Use values such as ``travel_time_s`` or
+        ``calibrated_time_s`` with a network built with those edge weights.
+    road_cost_col
+        Output column name for the road-network impedance value. The default
+        preserves the historical ``road_distance`` schema.
+    total_cost_col
+        Output column name for the total impedance plus source and target
+        stitch distances. The default preserves the historical ``total_dist``
+        schema.
+    stitch_cost_factor
+        Multiplier applied to source and target stitch distances before adding
+        them to the road-network impedance. The default ``1.0`` preserves the
+        historical meter-based total. For travel-time impedances, use seconds
+        per meter, for example ``3.6 / speed_kph``.
     verbose
         Whether to print progress messages.
 
@@ -790,6 +877,31 @@ def compute_distances_polars(
     '''
     targets, sources = _validate_inputs(targets, sources)
     _validate_node_columns(targets, sources)
+
+    if stitch_cost_factor <= 0:
+        raise ValueError('stitch_cost_factor must be positive')
+    if road_cost_col == total_cost_col:
+        raise ValueError('road_cost_col and total_cost_col must be different')
+
+    if road_cost_col in {
+        'target_id',
+        'source_id',
+        'source_nearest_node',
+        'target_nearest_node',
+        'target_to_road_dist',
+        'source_to_road_dist',
+    }:
+        raise ValueError(f'road_cost_col conflicts with a required column: {road_cost_col}')
+    if total_cost_col in {
+        'target_id',
+        'source_id',
+        'source_nearest_node',
+        'target_nearest_node',
+        'target_to_road_dist',
+        'road_distance',
+        'source_to_road_dist',
+    }:
+        raise ValueError(f'total_cost_col conflicts with a required column: {total_cost_col}')
 
     target_indices, source_indices = _candidate_row_pairs(
         targets=targets,
@@ -807,6 +919,7 @@ def compute_distances_polars(
         node_pair_cache_dir=(
             None if node_pair_cache_dir is None else Path(node_pair_cache_dir)
         ),
+        imp_name=imp_name,
         verbose=verbose,
     )
 
@@ -817,9 +930,9 @@ def compute_distances_polars(
             'source_nearest_node': pl.Int64,
             'target_nearest_node': pl.Int64,
             'target_to_road_dist': pl.Float64,
-            'road_distance': pl.Float64,
+            road_cost_col: pl.Float64,
             'source_to_road_dist': pl.Float64,
-            'total_dist': pl.Float64,
+            total_cost_col: pl.Float64,
         }
         if 'target_type' in targets.columns:
             schema['target_type'] = pl.Utf8
@@ -838,15 +951,18 @@ def compute_distances_polars(
         .join(sources_pl.lazy(), on='source_nearest_node', how='inner')
         .with_columns(
             (
-                pl.col('target_to_road_dist')
+                pl.col('target_to_road_dist') * stitch_cost_factor
                 + pl.col('road_distance')
-                + pl.col('source_to_road_dist')
-            ).alias('total_dist')
+                + pl.col('source_to_road_dist') * stitch_cost_factor
+            ).alias(total_cost_col)
         )
     )
 
+    if road_cost_col != 'road_distance':
+        result = result.with_columns(pl.col('road_distance').alias(road_cost_col))
+
     if max_total_dist is not None:
-        result = result.filter(pl.col('total_dist') <= max_total_dist)
+        result = result.filter(pl.col(total_cost_col) <= max_total_dist)
 
     output_columns = [
         'target_id',
@@ -854,9 +970,9 @@ def compute_distances_polars(
         'source_nearest_node',
         'target_nearest_node',
         'target_to_road_dist',
-        'road_distance',
+        road_cost_col,
         'source_to_road_dist',
-        'total_dist',
+        total_cost_col,
     ]
     if 'target_type' in targets.columns:
         output_columns.append('target_type')
@@ -882,6 +998,10 @@ def compute_distances(
     *,
     max_total_dist: float | None = None,
     node_pair_cache_dir: str | Path | None = None,
+    imp_name: str | None = None,
+    road_cost_col: str = 'road_distance',
+    total_cost_col: str = 'total_dist',
+    stitch_cost_factor: float = 1.0,
     verbose: bool = False,
 ) -> pd.DataFrame:
     '''
@@ -911,6 +1031,17 @@ def compute_distances(
     node_pair_cache_dir
         Optional directory containing reusable road-node-pair distance parquet
         chunks.
+    imp_name
+        Optional Pandana impedance name. ``None`` preserves historical
+        shortest-distance behavior.
+    road_cost_col
+        Output column name for the road-network impedance value.
+    total_cost_col
+        Output column name for the total impedance plus source and target
+        stitch distances.
+    stitch_cost_factor
+        Multiplier applied to source and target stitch distances before adding
+        them to the road-network impedance.
     verbose
         Whether to print progress messages.
 
@@ -929,5 +1060,9 @@ def compute_distances(
         network=network,
         max_total_dist=max_total_dist,
         node_pair_cache_dir=node_pair_cache_dir,
+        imp_name=imp_name,
+        road_cost_col=road_cost_col,
+        total_cost_col=total_cost_col,
+        stitch_cost_factor=stitch_cost_factor,
         verbose=verbose,
     ).to_pandas()

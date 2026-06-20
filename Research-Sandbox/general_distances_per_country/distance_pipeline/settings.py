@@ -30,13 +30,19 @@ class PipelineSettings:
     matrix_output_mode: str = 'combined'
     matrix_shape: str = 'sparse'
     dense_component_matrices: bool = False
+    network_impedance: str = 'length'
+    stitch_speed_kph: float = 30.0
     network_backend: str = 'pyrosm'
     simplify_network: bool = False
+    network_profile: str = 'driving'
     diagnose_connectivity: bool = False
     snap_components: tuple[int, ...] | None = None
 
     def network_cache_backend(self) -> str:
         """Return the network identity used for graph-derived cache keys."""
+        parts = [self.network_backend]
+        if self.network_profile != 'driving':
+            parts.append(self.network_profile)
         if self.simplify_network and self.network_backend in ('osmium', 'auto'):
-            return f'{self.network_backend}_simplified'
-        return self.network_backend
+            parts.append('simplified')
+        return '_'.join(parts)

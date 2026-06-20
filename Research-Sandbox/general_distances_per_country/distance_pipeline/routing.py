@@ -35,6 +35,47 @@ DEFAULT_SPEEDS_KPH: dict[str, float] = {
 }
 
 
+VIETNAM_STYLE_SPEEDS_KPH: dict[str, float] = {
+    'motorway': 90.0,
+    'motorway_link': 55.0,
+    'trunk': 70.0,
+    'trunk_link': 45.0,
+    'primary': 60.0,
+    'primary_link': 40.0,
+    'secondary': 50.0,
+    'secondary_link': 35.0,
+    'tertiary': 40.0,
+    'tertiary_link': 30.0,
+    'residential': 30.0,
+    'living_street': 10.0,
+    'unclassified': 25.0,
+    'service': 20.0,
+    'track': 15.0,
+    'road': 25.0,
+}
+
+
+DEFAULT_SURFACE_MULTIPLIERS: dict[str, float] = {
+    'asphalt': 1.0,
+    'concrete': 1.0,
+    'concrete:plates': 1.0,
+    'concrete:lanes': 1.0,
+    'paved': 0.9,
+    'sett': 0.85,
+    'paving_stones': 0.85,
+    'cobblestone': 0.75,
+    'compacted': 0.75,
+    'fine_gravel': 0.65,
+    'gravel': 0.6,
+    'unpaved': 0.55,
+    'ground': 0.45,
+    'dirt': 0.4,
+    'earth': 0.4,
+    'sand': 0.35,
+    'mud': 0.25,
+}
+
+
 @dataclass(frozen=True, slots=True)
 class TSPResult:
     """Result of a sparse TSP solve."""
@@ -77,6 +118,15 @@ def parse_maxspeed_kph(value: object) -> float | None:
     return speed
 
 
+def normalize_surface(value: object) -> str | None:
+    """Normalize an OSM surface tag, if present."""
+    value = _first_value(value)
+    if value is None or pd.isna(value):
+        return None
+    text = str(value).strip().casefold()
+    return text or None
+
+
 def _reverse_geometry(geometry: object) -> object:
     """Reverse simple line geometry when adding synthetic reverse edges."""
     if isinstance(geometry, LineString):
@@ -88,7 +138,9 @@ def add_edge_speeds(
     edges: gpd.GeoDataFrame,
     *,
     default_speeds_kph: dict[str, float] | None = None,
+    surface_multipliers: dict[str, float] | None = None,
     fallback_speed_kph: float = 30.0,
+    distance_col: str = 'length_m',
     speed_col: str = 'speed_kph',
     time_col: str = 'travel_time_s',
 ) -> gpd.GeoDataFrame:
@@ -96,15 +148,25 @@ def add_edge_speeds(
 
     Existing ``maxspeed`` tags are used when parseable. Missing speeds fall
     back to the normalized ``highway`` class and then to ``fallback_speed_kph``.
+    Surface multipliers are applied after the road-type/maxspeed speed choice.
     Edge length is interpreted as meters, matching pyrosm network output.
     """
     if 'length' not in edges.columns:
         raise KeyError("edges must contain a 'length' column in meters")
 
     speeds = DEFAULT_SPEEDS_KPH if default_speeds_kph is None else default_speeds_kph
+    surfaces = (
+        DEFAULT_SURFACE_MULTIPLIERS
+        if surface_multipliers is None
+        else surface_multipliers
+    )
     result = edges.copy()
 
-    highway = result['highway'].map(normalize_highway) if 'highway' in result.columns else 'road'
+    highway = (
+        result['highway'].map(normalize_highway)
+        if 'highway' in result.columns
+        else 'road'
+    )
     highway_speed = pd.Series(highway, index=result.index).map(speeds).fillna(
         fallback_speed_kph
     )
@@ -115,13 +177,24 @@ def add_edge_speeds(
     else:
         result[speed_col] = highway_speed
 
+    if 'surface' in result.columns:
+        surface_factor = (
+            result['surface']
+            .map(normalize_surface)
+            .map(surfaces)
+            .fillna(1.0)
+            .astype('float64')
+        )
+        result[speed_col] = result[speed_col] * surface_factor
+
     result[speed_col] = pd.to_numeric(result[speed_col], errors='raise').astype(
         'float64'
     )
     result['length'] = pd.to_numeric(result['length'], errors='raise').astype(
         'float64'
     )
-    result[time_col] = result['length'] / (result[speed_col] * 1000.0 / 3600.0)
+    result[distance_col] = result['length']
+    result[time_col] = result[distance_col] / (result[speed_col] * 1000.0 / 3600.0)
     return result
 
 
@@ -158,6 +231,7 @@ def build_networkx_graph(
         weight: float,
         geometry: object,
         length: float,
+        extra_attrs: dict[str, object],
     ) -> None:
         attrs = {
             'weight': weight,
@@ -165,10 +239,26 @@ def build_networkx_graph(
             'length': length,
             'geometry': geometry,
         }
+        attrs.update(extra_attrs)
 
         if graph.has_edge(u, v) and graph[u][v]['weight'] <= weight:
             return
         graph.add_edge(u, v, **attrs)
+
+    keep_attrs = [
+        col
+        for col in (
+            'highway',
+            'surface',
+            'maxspeed',
+            'length_m',
+            'speed_kph',
+            'travel_time_s',
+            'base_time_s',
+            'calibrated_time_s',
+        )
+        if col in edges.columns and col != weight_col
+    ]
 
     for row in edges.itertuples(index=False):
         u = int(getattr(row, 'u'))
@@ -176,9 +266,17 @@ def build_networkx_graph(
         weight = float(getattr(row, weight_col))
         geometry = getattr(row, 'geometry', None)
         length = float(getattr(row, 'length', weight))
-        add_or_replace_edge(u, v, weight, geometry, length)
+        extra_attrs = {col: getattr(row, col) for col in keep_attrs}
+        add_or_replace_edge(u, v, weight, geometry, length, extra_attrs)
         if bidirectional:
-            add_or_replace_edge(v, u, weight, _reverse_geometry(geometry), length)
+            add_or_replace_edge(
+                v,
+                u,
+                weight,
+                _reverse_geometry(geometry),
+                length,
+                extra_attrs,
+            )
 
     return graph
 

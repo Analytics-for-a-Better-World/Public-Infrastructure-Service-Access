@@ -100,6 +100,54 @@ This keeps only 10 population points and writes a small split matrix. It is usef
 
 ---
 
+# Travel-Time Speed Calibration
+
+The main pipeline computes road-network distance matrices. The companion script `calibrate_speeds.py` prepares a travel-time impedance layer by:
+
+1. sampling population-to-facility origin-destination pairs;
+2. computing shortest-distance paths on the OSM network;
+3. optionally benchmarking those sampled traces with Mapbox Directions;
+4. fitting road-type speed multipliers;
+5. writing calibrated edge travel times that can be propagated to the full Pandana network.
+
+Use `dry-run` first. It makes no web requests and verifies that the local OSM/WorldPop data and graph workflow are usable:
+
+```powershell
+py calibrate_speeds.py timor_leste `
+  --provider dry-run `
+  --sample-size 30 `
+  --nearest-sources 2 `
+  --max-pairs 40 `
+  --aggregate-factor 20 `
+  --amenity hospital clinic doctors `
+  --network-backend osmium
+```
+
+For Mapbox benchmarking, store the token as a user environment variable, not in the repository:
+
+```powershell
+setx MAPBOX_ACCESS_TOKEN "pk.your_token_here"
+```
+
+Open a new PowerShell window after `setx`, then run:
+
+```powershell
+py calibrate_speeds.py timor_leste `
+  --provider mapbox `
+  --sample-size 100 `
+  --nearest-sources 3 `
+  --max-pairs 200 `
+  --aggregate-factor 20 `
+  --amenity hospital clinic doctors `
+  --network-backend osmium
+```
+
+Outputs are written by default to `<country_data>\speed_calibration`, including sampled pair diagnostics, a YAML speed profile, and calibrated edge weights. The Mapbox mode is intended for sampled calibration and validation; full matrices should still be computed locally with Pandana using the calibrated weights.
+
+Backward compatibility is preserved: road distance remains stored in the historical `length` column and is also exposed explicitly as `length_m`. Travel-time weights are added separately as `travel_time_s`, and calibrated runs also write `calibrated_time_s`. Use the distance impedance for shortest-distance matrices and the time impedance for fastest-route experiments.
+
+---
+
 # Countries
 
 Country aliases are resolved by `distance_pipeline/config_loader.py` and the modules in `countries/`.
@@ -398,6 +446,7 @@ Subset geometry layers to a longitude/latitude bounding box. For OSM road-networ
 ```powershell
 --network-backend pyrosm|osmium|auto
 --simplify-network true|false
+--network-profile driving|driving_walk
 ```
 
 - `pyrosm`: default behavior.
@@ -405,6 +454,8 @@ Subset geometry layers to a longitude/latitude bounding box. For OSM road-networ
 - `auto`: use `osmium` when installed, otherwise `pyrosm`.
 - `--simplify-network false`: default. Keep a dense routing graph with ordinary OSM road-segment vertices.
 - `--simplify-network true`: `osmium` only. Collapse intermediate OSM way vertices before building the routing graph. This is a memory-saving mode, not the default.
+- `--network-profile driving`: default. Preserve the historical drivable road graph.
+- `--network-profile driving_walk`: `osmium` or `auto` only. Add pedestrian and cycling trail classes (`footway`, `pedestrian`, `path`, `steps`, and `cycleway`) to the drivable classes.
 
 The `osmium` backend is intended for large PBF extracts where full `pyrosm` extraction is memory intensive. By default it keeps the dense OSM road-segment graph for closer comparability with the historical `pyrosm` path, while still storing routing caches without per-edge geometries. Dense osmium caches use the `_backend_osmium` suffix.
 
@@ -414,7 +465,15 @@ With `--simplify-network true`, a first pass identifies drivable-way split/inter
 
 Context-map road geometries are loaded through a separate road-only pass when `--save-map`, `--show-map`, `--build-map`, or `--map-only` actually needs them; ordinary matrix runs no longer materialize road geometries just to classify a map layer that will not be drawn.
 
-Selecting `--network-backend osmium` also uses a streaming `osmium` path for OSM amenity extraction. Amenity extraction is done in two passes: the first pass finds matching amenity nodes and ways, and the second pass collects only the node coordinates needed to reconstruct those matching ways. This avoids asking pyosmium to keep a full node-location index for the whole country just to extract a small amenity subset. Backend-specific caches are kept separate from the historical `pyrosm` caches, and simplified osmium network caches use `_backend_osmium_simplified_v2` instead of the dense `_backend_osmium` suffix. This change means new dense osmium runs will not reuse the earlier simplified osmium caches. For publication runs, record the backend, simplification mode, bbox, aggregation, and distance cap in the run notes.
+Selecting `--network-backend osmium` also uses a streaming `osmium` path for OSM amenity extraction. Amenity extraction is done in two passes: the first pass finds matching amenity nodes and ways, and the second pass collects only the node coordinates needed to reconstruct those matching ways. This avoids asking pyosmium to keep a full node-location index for the whole country just to extract a small amenity subset. Backend-specific caches are kept separate from the historical `pyrosm` caches. The default simplified osmium network cache uses `_backend_osmium_simplified_v2`; non-default profiles add their profile name to the cache identity.
+
+For example, to build a Netherlands mixed driving-plus-walking context map:
+
+```powershell
+py run_pipeline.py netherlands --network-backend osmium --network-profile driving_walk --map-only --save-map
+```
+
+For publication runs, record the backend, simplification mode, network profile, bbox, aggregation, and distance cap in the run notes.
 
 Large national extracts should usually avoid random sampling in final runs. Prefer the smallest aggregation that keeps the candidate target/source pair set computationally feasible, and report the retained WorldPop headcount from the log or run manifest. For example, health-facility accessibility capped at 100 km can be run as:
 
@@ -552,7 +611,7 @@ Caches are written below:
 <cfg.BASE_DIR>/cache/
 ```
 
-Cache keys include the relevant runtime settings, including population settings, random seed, aggregation, amenity filters, candidate settings, bbox, backend, distance threshold, and maximum total distance.
+Cache keys include the relevant runtime settings, including population settings, random seed, aggregation, amenity filters, candidate settings, bbox, network backend, network profile, distance threshold, and maximum total distance.
 
 Sparse matrix construction also maintains a reusable road-node-pair cache below:
 

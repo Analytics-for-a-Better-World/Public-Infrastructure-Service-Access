@@ -36,6 +36,7 @@ from distance_pipeline.pipeline_support import (
     resolve_candidate_max_snap_dist,
 )
 from distance_pipeline.population import worldpop_to_points
+from distance_pipeline.routing import add_edge_speeds
 from distance_pipeline.settings import PipelineSettings
 from distance_pipeline.snapping import snap_points_to_nodes
 from distance_pipeline.source_tables import (
@@ -609,6 +610,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--network-profile',
+        choices=('driving', 'driving_walk'),
+        default='driving',
+        help=(
+            'OSM network profile. driving preserves the historical drivable '
+            'road network. driving_walk additionally includes pedestrian and '
+            'cycling trail classes and requires --network-backend osmium or auto.'
+        ),
+    )
+
+    parser.add_argument(
         '--diagnose-connectivity',
         choices=('true', 'false'),
         default='false',
@@ -938,6 +950,26 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--network-impedance',
+        default='length',
+        help=(
+            'Pandana edge-weight column used for routing. The default length '
+            'preserves shortest-distance behavior. Use travel_time_s for '
+            'fastest-route experiments with OSM-derived speeds.'
+        ),
+    )
+
+    parser.add_argument(
+        '--stitch-speed-kph',
+        type=float,
+        default=30.0,
+        help=(
+            'Speed used to convert straight-line source/target snap distances '
+            'to seconds when --network-impedance is a time column. Default: 30.'
+        ),
+    )
+
+    parser.add_argument(
         '--quiet',
         action='store_true',
         help='Reduce console output.',
@@ -978,6 +1010,14 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         raise ValueError('--map-dpi must be positive.')
     if not 0 <= args.map_basemap_alpha <= 1:
         raise ValueError('--map-basemap-alpha must be between 0 and 1.')
+    if not args.network_impedance or not args.network_impedance.strip():
+        raise ValueError('--network-impedance must be a non-empty column name.')
+    if args.stitch_speed_kph <= 0:
+        raise ValueError('--stitch-speed-kph must be positive.')
+    if args.network_profile != 'driving' and args.network_backend == 'pyrosm':
+        raise ValueError(
+            '--network-profile driving_walk requires --network-backend osmium or auto.'
+        )
 
     source_layers = resolve_source_layers_from_args(args)
     destination_layers = resolve_destination_layers_from_args(args)
@@ -1021,8 +1061,11 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         matrix_output_mode=args.matrix_output_mode,
         matrix_shape=args.matrix_shape,
         dense_component_matrices=args.dense_component_matrices == 'true',
+        network_impedance=args.network_impedance.strip(),
+        stitch_speed_kph=args.stitch_speed_kph,
         network_backend=args.network_backend,
         simplify_network=args.simplify_network == 'true',
+        network_profile=args.network_profile,
         diagnose_connectivity=args.diagnose_connectivity == 'true',
         snap_components=parse_snap_components(args.snap_components),
     )
@@ -1041,6 +1084,35 @@ def safe_layer_name(value: object) -> str:
     if not text:
         return 'unknown'
     return ''.join(ch if ch.isalnum() else '_' for ch in text).strip('_') or 'unknown'
+
+
+def matrix_cost_options(settings: PipelineSettings) -> dict[str, object]:
+    '''Return routing impedance and output-column options for matrix builders.'''
+    impedance = settings.network_impedance
+    if impedance in {'length', 'length_m'}:
+        return {
+            'imp_name': None if impedance == 'length' else impedance,
+            'road_cost_col': 'road_distance',
+            'total_cost_col': 'total_dist',
+            'road_matrix_name': 'road_distance',
+            'stitch_cost_factor': 1.0,
+        }
+
+    safe_impedance = safe_layer_name(impedance)
+    return {
+        'imp_name': impedance,
+        'road_cost_col': f'road_{safe_impedance}',
+        'total_cost_col': f'total_{safe_impedance}',
+        'road_matrix_name': f'road_{safe_impedance}',
+        'stitch_cost_factor': 3.6 / settings.stitch_speed_kph,
+    }
+
+
+def network_cache_key(settings: PipelineSettings) -> str:
+    '''Return the cache profile key for network-derived artifacts.'''
+    if settings.network_profile == 'driving':
+        return settings.network_backend
+    return f'{settings.network_backend}_{settings.network_profile}'
 
 
 def split_matrix_output_key(source_type: object, target_type: object) -> str:
@@ -1341,12 +1413,13 @@ def write_dense_matrix_outputs(
     output_dir: Path,
     run_tag: str,
     include_components: bool,
+    road_component: str = 'road_distance',
     verbose: bool,
 ) -> dict[str, Path]:
     '''Write dense total and optional component matrices.'''
     components = ['total']
     if include_components:
-        components.extend(['origin_stitch', 'destination_stitch', 'road_distance'])
+        components.extend(['origin_stitch', 'destination_stitch', road_component])
 
     output_paths: dict[str, Path] = {}
     for component in components:
@@ -1369,12 +1442,13 @@ def write_split_dense_matrix_outputs(
     source_type: object,
     target_type: object,
     include_components: bool,
+    road_component: str = 'road_distance',
     verbose: bool,
 ) -> dict[str, Path]:
     '''Write dense matrices for one source/destination layer pair.'''
     components = ['total']
     if include_components:
-        components.extend(['origin_stitch', 'destination_stitch', 'road_distance'])
+        components.extend(['origin_stitch', 'destination_stitch', road_component])
 
     output_paths: dict[str, Path] = {}
     for component in components:
@@ -1486,6 +1560,8 @@ def main(
         logging.info(f'Source layers: {source_layers}')
         logging.info(f'Destination layers: {destination_layers}')
         logging.info(f'Amenity filter: {amenity_values}')
+        logging.info(f'Network backend: {settings.network_backend}')
+        logging.info(f'Network profile: {settings.network_profile}')
 
     cfg.BASE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -1513,7 +1589,7 @@ def main(
         roads = cache.run(
             cache_path=cache.roads_path(
                 bbox=settings.bbox,
-                network_backend=settings.network_backend,
+                network_backend=network_cache_backend,
             ),
             builder=lambda: classify_roads(
                 load_osm_road_edges(
@@ -1521,6 +1597,7 @@ def main(
                     verbose=settings.verbose,
                     bbox=settings.bbox,
                     backend=settings.network_backend,
+                    network_profile=settings.network_profile,
                 ),
                 verbose=settings.verbose,
             ),
@@ -1534,6 +1611,7 @@ def main(
                 bbox=settings.bbox,
                 backend=settings.network_backend,
                 simplify=settings.simplify_network,
+                network_profile=settings.network_profile,
             ),
             bbox=settings.bbox,
             network_backend=network_cache_backend,
@@ -1542,7 +1620,7 @@ def main(
             roads = cache.run(
                 cache_path=cache.roads_path(
                     bbox=settings.bbox,
-                    network_backend=settings.network_backend,
+                    network_backend=network_cache_backend,
                 ),
                 builder=lambda: classify_roads(
                     load_osm_road_edges(
@@ -1550,6 +1628,7 @@ def main(
                         verbose=settings.verbose,
                         bbox=settings.bbox,
                         backend=settings.network_backend,
+                        network_profile=settings.network_profile,
                     ),
                     verbose=settings.verbose,
                 ),
@@ -1593,7 +1672,7 @@ def main(
             cache_path=cache.facilities_path(
                 amenity_values=amenity_values,
                 bbox=settings.bbox,
-                network_backend=settings.network_backend,
+                network_backend=network_cache_backend,
             ),
             builder=lambda: load_facilities(
                 cfg.PBF_PATH,
@@ -1609,7 +1688,7 @@ def main(
                 amenity_values=amenity_values,
                 deduplicate_amenities=settings.deduplicate_amenities,
                 bbox=settings.bbox,
-                network_backend=settings.network_backend,
+                network_backend=network_cache_backend,
             ),
             builder=lambda: (
                 deduplicate_osm_amenities(
@@ -1746,6 +1825,11 @@ def main(
             settings.context_map_path,
             resolve_candidate_grid_spacing(cfg, settings),
         )
+        if settings.network_profile != 'driving':
+            context_map_path = context_map_path.with_name(
+                f'{context_map_path.stem}_network_{safe_layer_name(settings.network_profile)}'
+                f'{context_map_path.suffix}'
+            )
         plot_context_map(
             roads=roads,
             population_points=population_points,
@@ -1774,7 +1858,25 @@ def main(
             f'{len(edges):,}',
         )
     t_pandana = pc()
-    network = build_pandana_network(nodes, edges)
+    edges = add_edge_speeds(edges)
+    if settings.network_impedance not in edges.columns:
+        raise ValueError(
+            f'--network-impedance {settings.network_impedance!r} is not available '
+            f'on the edge table. Available columns include: {sorted(edges.columns)}'
+        )
+    network_weight_cols = [
+        'length',
+        'length_m',
+        'travel_time_s',
+        settings.network_impedance,
+    ]
+    network_weight_cols = list(dict.fromkeys(network_weight_cols))
+    network = build_pandana_network(
+        nodes,
+        edges,
+        weight_cols=network_weight_cols,
+    )
+    cost_options = matrix_cost_options(settings)
     if settings.verbose:
         logging.info(f'Built Pandana network in {pc() - t_pandana:.2f}s')
 
@@ -2046,7 +2148,7 @@ def main(
     node_pair_cache_dir = cache.node_pair_distances_dir(
         bbox=settings.bbox,
         network_backend=network_cache_backend,
-        cost_profile='length',
+        cost_profile=settings.network_impedance,
     )
     if settings.verbose and settings.matrix_shape == 'sparse':
         logging.info(f'Node-pair distance cache: {node_pair_cache_dir}')
@@ -2068,6 +2170,7 @@ def main(
                     has_candidates=candidate_sites_snapped is not None,
                     snap_components=settings.snap_components,
                     network_backend=network_cache_backend,
+                    cost_profile=settings.network_impedance,
                 ),
                 builder=lambda: compute_distances_polars(
                     targets=targets,
@@ -2076,6 +2179,10 @@ def main(
                     network=network,
                     max_total_dist=settings.max_total_dist,
                     node_pair_cache_dir=node_pair_cache_dir,
+                    imp_name=cost_options['imp_name'],
+                    road_cost_col=cost_options['road_cost_col'],
+                    total_cost_col=cost_options['total_cost_col'],
+                    stitch_cost_factor=cost_options['stitch_cost_factor'],
                     verbose=settings.verbose,
                 ),
             )
@@ -2134,6 +2241,7 @@ def main(
                             has_candidates=pair_has_candidates,
                             snap_components=settings.snap_components,
                             network_backend=network_cache_backend,
+                            cost_profile=settings.network_impedance,
                         ),
                         builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
                             compute_distances_polars(
@@ -2143,6 +2251,10 @@ def main(
                                 network=network,
                                 max_total_dist=settings.max_total_dist,
                                 node_pair_cache_dir=node_pair_cache_dir,
+                                imp_name=cost_options['imp_name'],
+                                road_cost_col=cost_options['road_cost_col'],
+                                total_cost_col=cost_options['total_cost_col'],
+                                stitch_cost_factor=cost_options['stitch_cost_factor'],
                                 verbose=settings.verbose,
                             )
                         ),
@@ -2206,12 +2318,16 @@ def main(
                     has_candidates=candidate_sites_snapped is not None,
                     snap_components=settings.snap_components,
                     network_backend=network_cache_backend,
+                    cost_profile=settings.network_impedance,
                 ),
                 builder=lambda: compute_dense_distance_matrices(
                     targets=targets,
                     sources=sources,
                     network=network,
                     max_total_dist=settings.max_total_dist,
+                    imp_name=cost_options['imp_name'],
+                    road_matrix_name=cost_options['road_matrix_name'],
+                    stitch_cost_factor=cost_options['stitch_cost_factor'],
                     verbose=settings.verbose,
                 ),
             )
@@ -2223,6 +2339,7 @@ def main(
                 output_dir=output_dir,
                 run_tag=run_tag,
                 include_components=settings.dense_component_matrices,
+                road_component=cost_options['road_matrix_name'],
                 verbose=settings.verbose,
             )
         else:
@@ -2269,6 +2386,7 @@ def main(
                             has_candidates=pair_has_candidates,
                             snap_components=settings.snap_components,
                             network_backend=network_cache_backend,
+                            cost_profile=settings.network_impedance,
                         ),
                         builder=lambda pair_targets=pair_targets, pair_sources=pair_sources: (
                             compute_dense_distance_matrices(
@@ -2276,6 +2394,9 @@ def main(
                                 sources=pair_sources,
                                 network=network,
                                 max_total_dist=settings.max_total_dist,
+                                imp_name=cost_options['imp_name'],
+                                road_matrix_name=cost_options['road_matrix_name'],
+                                stitch_cost_factor=cost_options['stitch_cost_factor'],
                                 verbose=settings.verbose,
                             )
                         ),
@@ -2292,6 +2413,7 @@ def main(
                             source_type=source_type,
                             target_type=target_type,
                             include_components=settings.dense_component_matrices,
+                            road_component=cost_options['road_matrix_name'],
                             verbose=settings.verbose,
                         )
                     )
@@ -2302,7 +2424,7 @@ def main(
                     components.extend([
                         'origin_stitch',
                         'destination_stitch',
-                        'road_distance',
+                        cost_options['road_matrix_name'],
                     ])
                 combined_dense: dict[str, pd.DataFrame] = {}
                 for component in components:
@@ -2324,6 +2446,7 @@ def main(
                         output_dir=output_dir,
                         run_tag=run_tag,
                         include_components=settings.dense_component_matrices,
+                        road_component=cost_options['road_matrix_name'],
                         verbose=settings.verbose,
                     ),
                     **matrix_output_paths,

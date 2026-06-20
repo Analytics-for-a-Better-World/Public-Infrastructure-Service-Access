@@ -287,6 +287,12 @@ def classify_roads(
         'living_street': 'living_street',
         'service': 'service',
         'road': 'road',
+        'track': 'trail',
+        'footway': 'trail',
+        'pedestrian': 'trail',
+        'path': 'trail',
+        'steps': 'trail',
+        'cycleway': 'trail',
     }
 
     roads = edges.loc[edges['highway'].isin(road_class_map)].copy()
@@ -297,6 +303,7 @@ def classify_roads(
     roads['road_class'] = pd.Categorical(
         roads['highway'].map(road_class_map),
         categories=[
+            'trail',
             'service',
             'living_street',
             'road',
@@ -496,6 +503,7 @@ def plot_context_map(
             'living_street': '#8c8c8c',
             'service': '#6f6f6f',
             'road': '#b3b3b3',
+            'trail': '#74a889',
         }
 
     if road_widths is None:
@@ -510,10 +518,12 @@ def plot_context_map(
             'living_street': 1.0,
             'service': 0.95,
             'road': 0.95,
+            'trail': 0.65,
         }
 
     if road_order is None:
         road_order = [
+            'trail',
             'service',
             'living_street',
             'road',

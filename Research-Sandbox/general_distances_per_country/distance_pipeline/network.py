@@ -3,7 +3,7 @@ Network loading utilities.
 '''
 
 from time import perf_counter as pc
-from typing import Literal
+from typing import Literal, Sequence
 from importlib.metadata import PackageNotFoundError, version
 import sys
 import warnings
@@ -88,6 +88,7 @@ except ImportError:  # pragma: no cover - optional backend
 
 BBox = tuple[float, float, float, float] | list[float]
 NetworkBackend = Literal['pyrosm', 'osmium', 'auto']
+NetworkProfile = Literal['driving', 'driving_walk']
 
 DRIVABLE_HIGHWAYS: set[str] = {
     'motorway',
@@ -106,6 +107,19 @@ DRIVABLE_HIGHWAYS: set[str] = {
     'service',
     'track',
     'road',
+}
+
+WALKABLE_HIGHWAYS: set[str] = {
+    'footway',
+    'pedestrian',
+    'path',
+    'steps',
+    'cycleway',
+}
+
+NETWORK_PROFILE_HIGHWAYS: dict[str, set[str]] = {
+    'driving': DRIVABLE_HIGHWAYS,
+    'driving_walk': DRIVABLE_HIGHWAYS | WALKABLE_HIGHWAYS,
 }
 
 BLOCKING_ACCESS_VALUES: set[str] = {
@@ -130,9 +144,21 @@ def _pyrosm_bbox(bbox: BBox | None) -> list[float] | None:
     return [min_lon, min_lat, max_lon, max_lat]
 
 
-def _resolve_network_backend(backend: NetworkBackend) -> Literal['pyrosm', 'osmium']:
+def _resolve_network_backend(
+    backend: NetworkBackend,
+    profile: NetworkProfile = 'driving',
+) -> Literal['pyrosm', 'osmium']:
     '''Resolve auto network backend selection.'''
+    if profile != 'driving' and backend == 'pyrosm':
+        raise ValueError(
+            f'Network profile {profile!r} requires --network-backend osmium or auto. '
+            'The pyrosm backend currently exposes the historical driving network only.'
+        )
     if backend == 'auto':
+        if profile != 'driving' and osmium is None:
+            raise ImportError(
+                f"Network profile {profile!r} requires the optional 'osmium' package."
+            )
         return 'osmium' if osmium is not None else 'pyrosm'
     return backend
 
@@ -178,6 +204,34 @@ def _is_drivable_way(tags: object) -> bool:
     return True
 
 
+def _is_walkable_way(tags: object) -> bool:
+    '''Return whether OSM tags describe a pedestrian or bicycle trail segment.'''
+    highway = _tag_value(tags, 'highway')
+    if highway not in WALKABLE_HIGHWAYS:
+        return False
+
+    access = _tag_value(tags, 'access')
+    if access in BLOCKING_ACCESS_VALUES:
+        return False
+
+    if highway == 'cycleway':
+        bicycle = _tag_value(tags, 'bicycle')
+        return bicycle not in BLOCKING_ACCESS_VALUES
+
+    foot = _tag_value(tags, 'foot')
+    return foot not in BLOCKING_ACCESS_VALUES
+
+
+def _is_way_in_profile(tags: object, profile: NetworkProfile) -> bool:
+    '''Return whether OSM tags describe a segment included by a network profile.'''
+    highway = _tag_value(tags, 'highway')
+    if highway not in NETWORK_PROFILE_HIGHWAYS[profile]:
+        return False
+    if _is_drivable_way(tags):
+        return True
+    return profile == 'driving_walk' and _is_walkable_way(tags)
+
+
 def _way_directions(tags: object) -> tuple[bool, bool]:
     '''Return whether a way should be emitted forward and backward.'''
     oneway = (_tag_value(tags, 'oneway') or '').strip().lower()
@@ -199,18 +253,19 @@ def _segment_length_m(lon1: float, lat1: float, lon2: float, lat2: float) -> flo
 
 
 class OsmiumDrivingNodeUseCounter(osmium.SimpleHandler if osmium is not None else object):
-    """First-pass counter for identifying drivable-way split nodes."""
+    """First-pass counter for identifying profile-way split nodes."""
 
-    def __init__(self) -> None:
+    def __init__(self, profile: NetworkProfile = 'driving') -> None:
         if osmium is None:
             raise ImportError(
                 "The optional 'osmium' package is required for the osmium backend."
             )
         super().__init__()
+        self.profile = profile
         self.node_use_counts: dict[int, int] = {}
 
     def way(self, way: object) -> None:
-        if not _is_drivable_way(way.tags):
+        if not _is_way_in_profile(way.tags, self.profile):
             return
 
         for node in way.nodes:
@@ -234,6 +289,7 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
         self,
         bbox: BBox | None = None,
         *,
+        profile: NetworkProfile = 'driving',
         collect_nodes: bool = True,
         include_geometry: bool = False,
         directed: bool = True,
@@ -245,6 +301,7 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
             )
         super().__init__()
         self.bbox = bbox
+        self.profile = profile
         self.collect_nodes = collect_nodes
         self.include_geometry = include_geometry
         self.directed = directed
@@ -254,14 +311,18 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
         self.edge_v: list[int] = []
         self.edge_length: list[float] = []
         self.edge_highway: list[str | None] = []
+        self.edge_maxspeed: list[str | None] = []
+        self.edge_surface: list[str | None] = []
         self.edge_geometry: list[LineString] | None = [] if include_geometry else None
 
     def way(self, way: object) -> None:
         tags = way.tags
-        if not _is_drivable_way(tags):
+        if not _is_way_in_profile(tags, self.profile):
             return
 
         highway = _tag_value(tags, 'highway')
+        maxspeed = _tag_value(tags, 'maxspeed')
+        surface = _tag_value(tags, 'surface')
         forward, backward = _way_directions(tags)
 
         way_nodes: list[tuple[int, float, float]] = []
@@ -276,7 +337,14 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
             return
 
         if self.split_node_refs is not None:
-            self._append_simplified_way(way_nodes, highway, forward, backward)
+            self._append_simplified_way(
+                way_nodes,
+                highway,
+                maxspeed,
+                surface,
+                forward,
+                backward,
+            )
             return
 
         for (u, lon1, lat1), (v, lon2, lat2) in zip(way_nodes, way_nodes[1:]):
@@ -294,6 +362,8 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
                 v,
                 length,
                 highway,
+                maxspeed,
+                surface,
                 lon1,
                 lat1,
                 lon2,
@@ -306,6 +376,8 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
         self,
         way_nodes: list[tuple[int, float, float]],
         highway: str | None,
+        maxspeed: str | None,
+        surface: str | None,
         forward: bool,
         backward: bool,
     ) -> None:
@@ -346,6 +418,8 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
                         node_id,
                         accumulated_length,
                         highway,
+                        maxspeed,
+                        surface,
                         start_lon,
                         start_lat,
                         lon,
@@ -365,6 +439,8 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
         v: int,
         length: float,
         highway: str | None,
+        maxspeed: str | None,
+        surface: str | None,
         lon1: float,
         lat1: float,
         lon2: float,
@@ -378,11 +454,44 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
 
         if self.directed:
             if forward:
-                self._append_edge(u, v, length, highway, lon1, lat1, lon2, lat2)
+                self._append_edge(
+                    u,
+                    v,
+                    length,
+                    highway,
+                    maxspeed,
+                    surface,
+                    lon1,
+                    lat1,
+                    lon2,
+                    lat2,
+                )
             if backward:
-                self._append_edge(v, u, length, highway, lon2, lat2, lon1, lat1)
+                self._append_edge(
+                    v,
+                    u,
+                    length,
+                    highway,
+                    maxspeed,
+                    surface,
+                    lon2,
+                    lat2,
+                    lon1,
+                    lat1,
+                )
         else:
-            self._append_edge(u, v, length, highway, lon1, lat1, lon2, lat2)
+            self._append_edge(
+                u,
+                v,
+                length,
+                highway,
+                maxspeed,
+                surface,
+                lon1,
+                lat1,
+                lon2,
+                lat2,
+            )
 
     def _append_edge(
         self,
@@ -390,6 +499,8 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
         v: int,
         length: float,
         highway: str | None,
+        maxspeed: str | None,
+        surface: str | None,
         lon1: float,
         lat1: float,
         lon2: float,
@@ -399,6 +510,8 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
         self.edge_v.append(v)
         self.edge_length.append(length)
         self.edge_highway.append(highway)
+        self.edge_maxspeed.append(maxspeed)
+        self.edge_surface.append(surface)
         if self.edge_geometry is not None:
             self.edge_geometry.append(LineString([(lon1, lat1), (lon2, lat2)]))
 
@@ -425,6 +538,8 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
                 'v': self.edge_v,
                 'length': self.edge_length,
                 'highway': pd.Categorical(self.edge_highway),
+                'maxspeed': self.edge_maxspeed,
+                'surface': self.edge_surface,
             }
         )
         if self.edge_geometry is None:
@@ -439,8 +554,22 @@ class OsmiumDrivingNetworkHandler(osmium.SimpleHandler if osmium is not None els
 def build_pandana_network(
     nodes: pd.DataFrame,
     edges: pd.DataFrame,
+    *,
+    weight_cols: Sequence[str] | None = None,
 ) -> pdna.Network:
-    '''Build a Pandana network from prepared nodes and edges.'''
+    '''Build a Pandana network from prepared nodes and edges.
+
+    By default this uses the historical ``length`` edge weight, preserving
+    existing distance-matrix behavior. Pass additional columns such as
+    ``travel_time_s`` or ``calibrated_time_s`` to compute travel-time paths via
+    Pandana's ``imp_name`` argument.
+    '''
+    if weight_cols is None:
+        weight_cols = ('length',)
+
+    missing = set(weight_cols).difference(edges.columns)
+    if missing:
+        raise KeyError(f'Missing edge weight columns: {sorted(missing)}')
 
     warnings.filterwarnings(
         'ignore',
@@ -454,7 +583,7 @@ def build_pandana_network(
         node_y=nodes['lat'],
         edge_from=edges['u'],
         edge_to=edges['v'],
-        edge_weights=edges[['length']],
+        edge_weights=edges[list(weight_cols)],
     )
 
 
@@ -490,8 +619,9 @@ def _load_osm_network_data_osmium(
     verbose: bool = True,
     bbox: BBox | None = None,
     simplify: bool = False,
+    profile: NetworkProfile = 'driving',
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
-    '''Load a driving network by streaming an OSM PBF with pyosmium.'''
+    '''Load a profiled network by streaming an OSM PBF with pyosmium.'''
     if osmium is None:
         raise ImportError(
             "The optional 'osmium' package is required for --network-backend osmium."
@@ -501,7 +631,7 @@ def _load_osm_network_data_osmium(
     split_node_refs = None
     if simplify:
         t_count = pc()
-        counter = OsmiumDrivingNodeUseCounter()
+        counter = OsmiumDrivingNodeUseCounter(profile=profile)
         counter.apply_file(str(pbf_path), locations=False)
         split_node_refs = counter.split_node_refs()
         referenced_node_count = len(counter.node_use_counts)
@@ -509,12 +639,13 @@ def _load_osm_network_data_osmium(
 
         if verbose:
             print(
-                f'Counted drivable OSM node uses with osmium in {pc() - t_count:.2f} seconds, '
+                f'Counted {profile} OSM node uses with osmium in {pc() - t_count:.2f} seconds, '
                 f'{referenced_node_count:,} referenced nodes, {len(split_node_refs):,} split nodes'
             )
 
     handler = OsmiumDrivingNetworkHandler(
         bbox=bbox,
+        profile=profile,
         collect_nodes=True,
         include_geometry=False,
         directed=simplify,
@@ -533,7 +664,8 @@ def _load_osm_network_data_osmium(
         area = 'bbox extract' if bbox is not None else 'full extract'
         mode = 'simplified' if simplify else 'unsimplified'
         print(
-            f'Loaded {mode} network data with osmium ({area}) in {pc() - t0:.2f} seconds, '
+            f'Loaded {profile} {mode} network data with osmium ({area}) '
+            f'in {pc() - t0:.2f} seconds, '
             f'{len(nodes):,} nodes, {len(edges):,} edges'
         )
 
@@ -544,6 +676,7 @@ def _load_osm_road_edges_osmium(
     pbf_path: str,
     verbose: bool = True,
     bbox: BBox | None = None,
+    profile: NetworkProfile = 'driving',
 ) -> gpd.GeoDataFrame:
     '''Load one geometry-bearing road segment per OSM segment for map rendering.'''
     if osmium is None:
@@ -554,6 +687,7 @@ def _load_osm_road_edges_osmium(
     t0 = pc()
     handler = OsmiumDrivingNetworkHandler(
         bbox=bbox,
+        profile=profile,
         collect_nodes=False,
         include_geometry=True,
         directed=False,
@@ -564,7 +698,7 @@ def _load_osm_road_edges_osmium(
     if verbose:
         area = 'bbox extract' if bbox is not None else 'full extract'
         print(
-            f'Loaded road edges for map with osmium ({area}) in {pc() - t0:.2f} seconds, '
+            f'Loaded {profile} road edges for map with osmium ({area}) in {pc() - t0:.2f} seconds, '
             f'{len(edges):,} edges'
         )
 
@@ -577,12 +711,13 @@ def load_osm_network_data(
     bbox: BBox | None = None,
     backend: NetworkBackend = 'pyrosm',
     simplify: bool = False,
+    network_profile: NetworkProfile = 'driving',
 ) -> tuple[pd.DataFrame, pd.DataFrame]:
     '''
-    Load OSM driving network nodes and edges without building Pandana.
+    Load OSM network nodes and edges without building Pandana.
     '''
     t0 = pc()
-    resolved_backend = _resolve_network_backend(backend)
+    resolved_backend = _resolve_network_backend(backend, network_profile)
 
     if resolved_backend == 'osmium':
         return _load_osm_network_data_osmium(
@@ -590,6 +725,7 @@ def load_osm_network_data(
             verbose=verbose,
             bbox=bbox,
             simplify=simplify,
+            profile=network_profile,
         )
 
     osm = OSM(str(pbf_path), bounding_box=_pyrosm_bbox(bbox))
@@ -599,7 +735,8 @@ def load_osm_network_data(
     if verbose:
         area = 'bbox extract' if bbox is not None else 'full extract'
         print(
-            f'Loaded network data with pyrosm ({area}) in {pc() - t0:.2f} seconds, '
+            f'Loaded {network_profile} network data with pyrosm ({area}) '
+            f'in {pc() - t0:.2f} seconds, '
             f'{len(nodes):,} nodes, {len(edges):,} edges'
         )
 
@@ -611,6 +748,7 @@ def load_osm_road_edges(
     verbose: bool = True,
     bbox: BBox | None = None,
     backend: NetworkBackend = 'pyrosm',
+    network_profile: NetworkProfile = 'driving',
 ) -> gpd.GeoDataFrame:
     '''
     Load OSM driving road edges for map rendering only.
@@ -618,13 +756,14 @@ def load_osm_road_edges(
     This avoids building Pandana, which is useful for large country context maps.
     '''
     t0 = pc()
-    resolved_backend = _resolve_network_backend(backend)
+    resolved_backend = _resolve_network_backend(backend, network_profile)
 
     if resolved_backend == 'osmium':
         return _load_osm_road_edges_osmium(
             pbf_path,
             verbose=verbose,
             bbox=bbox,
+            profile=network_profile,
         )
 
     osm = OSM(str(pbf_path), bounding_box=_pyrosm_bbox(bbox))
@@ -633,7 +772,8 @@ def load_osm_road_edges(
     if verbose:
         area = 'bbox extract' if bbox is not None else 'full extract'
         print(
-            f'Loaded road edges for map with pyrosm ({area}) in {pc() - t0:.2f} seconds, '
+            f'Loaded {network_profile} road edges for map with pyrosm ({area}) '
+            f'in {pc() - t0:.2f} seconds, '
             f'{len(edges):,} edges'
         )
 
@@ -646,6 +786,7 @@ def load_osm_network(
     bbox: BBox | None = None,
     backend: NetworkBackend = 'pyrosm',
     simplify: bool = False,
+    network_profile: NetworkProfile = 'driving',
 ) -> tuple[pdna.Network, pd.DataFrame, pd.DataFrame]:
     '''
     Load OSM driving network and build Pandana network.
@@ -669,12 +810,13 @@ def load_osm_network(
         bbox=bbox,
         backend=backend,
         simplify=simplify,
+        network_profile=network_profile,
     )
     network = build_pandana_network(nodes=nodes, edges=edges)
 
     if verbose:
         print(
-            f'Loaded network in {pc() - t0:.2f} seconds, '
+            f'Loaded {network_profile} network in {pc() - t0:.2f} seconds, '
             f'{len(nodes):,} nodes, {len(edges):,} edges'
         )
 

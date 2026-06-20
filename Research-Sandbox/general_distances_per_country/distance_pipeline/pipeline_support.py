@@ -85,6 +85,13 @@ def format_output_value(value: float | int | None) -> str:
     return f'{value:g}'
 
 
+def safe_filename_part(value: object) -> str:
+    """Return a compact filename-safe representation of a setting value."""
+    text = str(value).strip().lower()
+    safe = ''.join(char if char.isalnum() else '_' for char in text).strip('_')
+    return safe or 'none'
+
+
 def format_amenity_suffix(amenity_values: list[str] | None) -> str:
     """Format amenity filters for output filenames."""
     if amenity_values is None:
@@ -148,6 +155,11 @@ def build_output_run_tag(
     snap_part = format_snap_components_suffix(settings.snap_components)
     pbf_part = format_pbf_suffix(pbf_filename)
     network_part = format_network_suffix(settings)
+    impedance_part = (
+        ''
+        if settings.network_impedance == 'length'
+        else f'_impedance_{format_filename_part(settings.network_impedance)}'
+    )
 
     return (
         f"pop_{settings.population_threshold:g}_"
@@ -157,7 +169,7 @@ def build_output_run_tag(
         f"agg_{format_output_value(aggregate_factor)}_"
         f"maxdist_{format_output_value(settings.max_total_dist)}_"
         f"amenity_{format_amenity_suffix(amenity_values)}_"
-        f"{candidate_part}{snap_part}{pbf_part}{network_part}"
+        f"{candidate_part}{snap_part}{pbf_part}{network_part}{impedance_part}"
     )
 
 
