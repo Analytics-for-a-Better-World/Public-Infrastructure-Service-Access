@@ -1,0 +1,43 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "abw-maxcover"
+version = "0.1.0"
+description = "Maximum-cover optimization utilities for public infrastructure service access."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Analytics for a Better World"}]
+license = {text = "See repository license"}
+keywords = [
+  "maximum coverage",
+  "facility location",
+  "public infrastructure",
+  "optimization",
+  "heuristics",
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "numpy>=2.0",
+]
+
+[project.optional-dependencies]
+sparse = ["scipy>=1.10"]
+gurobi = ["gurobipy>=10"]
+pyomo = ["pyomo>=6"]
+data = ["pandas>=2"]
+dev = ["pytest>=8", "line_profiler>=4"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+abw_maxcover = ["py.typed", "README.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
