@@ -1091,7 +1091,7 @@ def matrix_cost_options(settings: PipelineSettings) -> dict[str, object]:
     impedance = settings.network_impedance
     if impedance in {'length', 'length_m'}:
         return {
-            'imp_name': None if impedance == 'length' else impedance,
+            'imp_name': impedance,
             'road_cost_col': 'road_distance',
             'total_cost_col': 'total_dist',
             'road_matrix_name': 'road_distance',

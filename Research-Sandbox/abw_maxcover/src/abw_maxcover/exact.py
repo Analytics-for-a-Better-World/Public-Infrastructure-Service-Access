@@ -223,6 +223,8 @@ def _make_pyomo_solver(name: str, *, time_limit_seconds: float, mip_gap: float):
             solver.options["sec"] = int(np.ceil(time_limit_seconds))
         elif "gurobi" in name:
             solver.options["TimeLimit"] = time_limit_seconds
+        elif "highs" in name:
+            solver.options["time_limit"] = time_limit_seconds
     if mip_gap is not None:
         if "cplex" in name:
             solver.options["mipgap"] = mip_gap
@@ -230,6 +232,8 @@ def _make_pyomo_solver(name: str, *, time_limit_seconds: float, mip_gap: float):
             solver.options["allowableGap"] = mip_gap
         elif "gurobi" in name:
             solver.options["MipGap"] = mip_gap
+        elif "highs" in name:
+            solver.options["mip_rel_gap"] = mip_gap
     return solver
 
 
