@@ -8,6 +8,7 @@ from distance_pipeline.pipeline_support import build_output_run_tag
 from distance_pipeline.routing import build_networkx_graph, route_geometry_from_nodes
 from distance_pipeline.settings import PipelineSettings
 from distance_pipeline.snapping import snap_points_to_nodes
+from run_pipeline import pandana_weight_columns
 
 
 def test_prepare_network_data_accepts_geometry_free_edges():
@@ -120,3 +121,14 @@ def test_osmium_simplification_has_distinct_cache_and_output_keys():
 
     assert dense_tag.endswith('_network_osmium')
     assert simplified_tag.endswith('_network_osmium-simplified')
+
+
+def test_pandana_weight_columns_only_include_requested_impedance():
+    assert pandana_weight_columns(PipelineSettings()) == ['length']
+    assert pandana_weight_columns(
+        PipelineSettings(network_impedance='travel_time_s')
+    ) == ['travel_time_s']
+    assert pandana_weight_columns(
+        PipelineSettings(network_impedance='calibrated_time_s')
+    ) == ['calibrated_time_s']
+

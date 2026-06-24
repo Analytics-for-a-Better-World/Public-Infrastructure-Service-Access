@@ -1133,6 +1133,11 @@ def matrix_cost_options(settings: PipelineSettings) -> dict[str, object]:
     }
 
 
+def pandana_weight_columns(settings: PipelineSettings) -> list[str]:
+    '''Return the Pandana impedance columns needed for this pipeline run.'''
+    return list(dict.fromkeys([settings.network_impedance]))
+
+
 def network_cache_key(settings: PipelineSettings) -> str:
     '''Return the cache profile key for network-derived artifacts.'''
     if settings.network_profile == 'driving':
@@ -1896,13 +1901,7 @@ def main(
             f'--network-impedance {settings.network_impedance!r} is not available '
             f'on the edge table. Available columns include: {sorted(edges.columns)}'
         )
-    network_weight_cols = [
-        'length',
-        'length_m',
-        'travel_time_s',
-        settings.network_impedance,
-    ]
-    network_weight_cols = list(dict.fromkeys(network_weight_cols))
+    network_weight_cols = pandana_weight_columns(settings)
     network = build_pandana_network(
         nodes,
         edges,
