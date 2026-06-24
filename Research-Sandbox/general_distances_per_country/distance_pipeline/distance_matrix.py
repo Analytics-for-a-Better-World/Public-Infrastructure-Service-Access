@@ -21,6 +21,7 @@ warnings.filterwarnings(
 NO_PATH_SENTINEL = 4294967.295
 EARTH_RADIUS_KM = 6367.0
 NODE_PAIR_KEY_COLUMNS = ['target_nearest_node', 'source_nearest_node']
+NODE_PAIR_CACHE_BUCKET_COUNT = 256
 
 
 def _safe_impedance_name(imp_name: str) -> str:
@@ -412,11 +413,29 @@ def _empty_node_pair_distances() -> pl.DataFrame:
     )
 
 
+def _node_pair_cache_bucket_id(target_nearest_node: int) -> int:
+    '''Return the cache bucket ID for a target road-node ID.'''
+    return int(target_nearest_node) % NODE_PAIR_CACHE_BUCKET_COUNT
+
+
 def _node_pair_cache_files(cache_dir: Path) -> list[Path]:
-    '''Return parquet chunks in a node-pair distance cache directory.'''
+    '''Return legacy flat parquet chunks in a node-pair distance cache directory.'''
     if not cache_dir.exists():
         return []
     return sorted(cache_dir.glob('node_pairs_*.parquet'))
+
+
+def _node_pair_cache_bucket_dir(cache_dir: Path, bucket_id: int) -> Path:
+    '''Return the directory for one node-pair cache bucket.'''
+    return cache_dir / f'bucket={bucket_id:03d}'
+
+
+def _node_pair_cache_bucket_files(cache_dir: Path, bucket_id: int) -> list[Path]:
+    '''Return parquet chunks for one node-pair distance cache bucket.'''
+    bucket_dir = _node_pair_cache_bucket_dir(cache_dir, bucket_id)
+    if not bucket_dir.exists():
+        return []
+    return sorted(bucket_dir.glob('node_pairs_*.parquet'))
 
 
 def _load_cached_node_pair_distances(
@@ -426,27 +445,68 @@ def _load_cached_node_pair_distances(
     verbose: bool = False,
 ) -> pl.DataFrame:
     '''Load cached distances for the required road-node pairs.'''
-    cache_files = _node_pair_cache_files(cache_dir)
-    if not cache_files or required_pairs.height == 0:
+    if required_pairs.height == 0:
         return _empty_node_pair_distances()
 
     t = pc()
-    cached = (
-        required_pairs.lazy()
-        .join(
-            pl.scan_parquet([str(path) for path in cache_files])
-            .select([*NODE_PAIR_KEY_COLUMNS, 'road_distance'])
-            .unique(subset=NODE_PAIR_KEY_COLUMNS, keep='last'),
-            on=NODE_PAIR_KEY_COLUMNS,
-            how='inner',
+
+    cached_parts: list[pl.DataFrame] = []
+
+    legacy_cache_files = _node_pair_cache_files(cache_dir)
+    if legacy_cache_files:
+        cached_parts.append(
+            required_pairs.lazy()
+            .join(
+                pl.scan_parquet([str(path) for path in legacy_cache_files])
+                .select([*NODE_PAIR_KEY_COLUMNS, 'road_distance'])
+                .unique(subset=NODE_PAIR_KEY_COLUMNS, keep='last'),
+                on=NODE_PAIR_KEY_COLUMNS,
+                how='inner',
+            )
+            .collect()
         )
-        .collect()
+
+    required_with_bucket = required_pairs.with_columns(
+        (
+            pl.col('target_nearest_node') % NODE_PAIR_CACHE_BUCKET_COUNT
+        ).cast(pl.Int64).alias('_cache_bucket')
     )
+    bucket_ids = required_with_bucket['_cache_bucket'].unique().sort().to_list()
+    bucket_file_count = 0
+
+    for bucket_id in bucket_ids:
+        bucket_files = _node_pair_cache_bucket_files(cache_dir, int(bucket_id))
+        if not bucket_files:
+            continue
+        bucket_file_count += len(bucket_files)
+        bucket_required = required_with_bucket.filter(
+            pl.col('_cache_bucket') == bucket_id
+        ).select(NODE_PAIR_KEY_COLUMNS)
+        cached_parts.append(
+            bucket_required.lazy()
+            .join(
+                pl.scan_parquet([str(path) for path in bucket_files])
+                .select([*NODE_PAIR_KEY_COLUMNS, 'road_distance'])
+                .unique(subset=NODE_PAIR_KEY_COLUMNS, keep='last'),
+                on=NODE_PAIR_KEY_COLUMNS,
+                how='inner',
+            )
+            .collect()
+        )
+
+    if cached_parts:
+        cached = (
+            pl.concat(cached_parts, how='vertical')
+            .unique(subset=NODE_PAIR_KEY_COLUMNS, keep='last')
+        )
+    else:
+        cached = _empty_node_pair_distances()
 
     if verbose:
         print(
             f'loaded {cached.height:,} cached road-node pair distances '
-            f'from {len(cache_files):,} chunk(s) in {pc() - t:.2f} seconds'
+            f'from {len(legacy_cache_files) + bucket_file_count:,} chunk(s) '
+            f'in {pc() - t:.2f} seconds'
         )
 
     return cached
@@ -457,28 +517,41 @@ def _write_node_pair_cache_chunk(
     distances: pl.DataFrame,
     *,
     verbose: bool = False,
-) -> Path | None:
-    '''Append one parquet chunk to the reusable node-pair distance cache.'''
+) -> list[Path]:
+    '''Append parquet chunks to the reusable bucketed node-pair distance cache.'''
     if distances.height == 0:
-        return None
+        return []
 
     cache_dir.mkdir(parents=True, exist_ok=True)
-    chunk_path = cache_dir / (
-        f'node_pairs_{time_ns()}_{distances.height}.parquet'
-    )
-    tmp_path = chunk_path.with_suffix('.tmp.parquet')
 
     t = pc()
-    distances.write_parquet(tmp_path)
-    tmp_path.replace(chunk_path)
+    written_paths: list[Path] = []
+    distances = distances.with_columns(
+        (
+            pl.col('target_nearest_node') % NODE_PAIR_CACHE_BUCKET_COUNT
+        ).cast(pl.Int64).alias('_cache_bucket')
+    )
+    for bucket_id in distances['_cache_bucket'].unique().sort().to_list():
+        bucket_distances = distances.filter(
+            pl.col('_cache_bucket') == bucket_id
+        ).drop('_cache_bucket')
+        bucket_dir = _node_pair_cache_bucket_dir(cache_dir, int(bucket_id))
+        bucket_dir.mkdir(parents=True, exist_ok=True)
+        chunk_path = bucket_dir / (
+            f'node_pairs_{time_ns()}_{bucket_distances.height}.parquet'
+        )
+        tmp_path = chunk_path.with_suffix('.tmp.parquet')
+        bucket_distances.write_parquet(tmp_path)
+        tmp_path.replace(chunk_path)
+        written_paths.append(chunk_path)
 
     if verbose:
         print(
             f'wrote {distances.height:,} road-node pair distances to '
-            f'{chunk_path.name} in {pc() - t:.2f} seconds'
+            f'{len(written_paths):,} bucketed chunk(s) in {pc() - t:.2f} seconds'
         )
 
-    return chunk_path
+    return written_paths
 
 
 def _compute_node_pair_distances_from_arrays(

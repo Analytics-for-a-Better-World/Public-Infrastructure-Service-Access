@@ -128,6 +128,54 @@ class DistanceMatrixTests(unittest.TestCase):
         self.assertEqual(result['target_id'].to_list(), [10])
         self.assertEqual(result['source_id'].to_list(), [20])
 
+    def test_node_pair_cache_is_reused_from_bucketed_chunks(self) -> None:
+        targets = pd.DataFrame(
+            {
+                'ID': [10, 11],
+                'xcoord': [0.0, 0.01],
+                'ycoord': [0.0, 0.01],
+                'nearest_node': [100, 101],
+                'dist_snap_target': [1.0, 1.0],
+            }
+        ).set_index('ID', drop=False)
+        sources = pd.DataFrame(
+            {
+                'ID': [20, 21],
+                'Longitude': [0.0, 0.01],
+                'Latitude': [0.0, 0.01],
+                'nearest_node': [90, 91],
+                'dist_snap_source': [1.0, 1.0],
+            }
+        ).set_index('ID', drop=False)
+
+        with tempfile.TemporaryDirectory() as tmp:
+            cache_dir = Path(tmp) / 'node_pair_cache'
+            first_network = CountingNetwork()
+            first = compute_distances_polars(
+                targets=targets,
+                sources=sources,
+                distance_threshold_largest=1000,
+                network=first_network,
+                node_pair_cache_dir=cache_dir,
+            )
+            self.assertGreater(first_network.requested_paths, 0)
+            self.assertTrue(list(cache_dir.glob('bucket=*/node_pairs_*.parquet')))
+
+            second_network = CountingNetwork()
+            second = compute_distances_polars(
+                targets=targets,
+                sources=sources,
+                distance_threshold_largest=1000,
+                network=second_network,
+                node_pair_cache_dir=cache_dir,
+            )
+
+            self.assertEqual(second_network.requested_paths, 0)
+            pd.testing.assert_frame_equal(
+                _sorted_frame(second),
+                _sorted_frame(first),
+            )
+
 
 if __name__ == '__main__':
     unittest.main()

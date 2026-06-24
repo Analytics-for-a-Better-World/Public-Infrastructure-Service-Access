@@ -643,7 +643,7 @@ Sparse matrix construction also maintains a reusable road-node-pair cache below:
 <cfg.BASE_DIR>/cache/node_pair_distances/
 ```
 
-This cache stores `(target_nearest_node, source_nearest_node, road_distance)` tuples induced by snapped source and destination layers. The final matrix outputs are unchanged, but later runs with overlapping snapped road-node pairs can reuse the cached road distances and compute only missing pairs. Unreachable road-node pairs are stored as `inf` internally so they are not recomputed; they are still omitted from the usual sparse distance matrix.
+This cache stores `(target_nearest_node, source_nearest_node, road_distance)` tuples induced by snapped source and destination layers. The final matrix outputs are unchanged, but later runs with overlapping snapped road-node pairs can reuse the cached road distances and compute only missing pairs. New cache chunks are written into target-node buckets such as `bucket=042/`, so chunked matrix runs only scan the cache buckets they need. Older flat `node_pairs_*.parquet` cache chunks remain readable. Unreachable road-node pairs are stored as `inf` internally so they are not recomputed; they are still omitted from the usual sparse distance matrix.
 
 Use:
 
