@@ -22,7 +22,7 @@ NO_PATH_SENTINEL = 4294967.295
 EARTH_RADIUS_KM = 6367.0
 NODE_PAIR_KEY_COLUMNS = ['target_nearest_node', 'source_nearest_node']
 NODE_PAIR_CACHE_BUCKET_COUNT = 256
-DEFAULT_MAX_SPATIAL_PAIRS_PER_CHUNK = 50_000_000
+DEFAULT_MAX_SPATIAL_PAIRS_PER_CHUNK = 25_000_000
 
 
 def _safe_impedance_name(imp_name: str) -> str:
@@ -449,10 +449,10 @@ def _adaptive_target_chunk_stop(
     radius: float,
     max_spatial_pairs_per_chunk: int | None,
     verbose: bool = False,
-) -> int:
+) -> tuple[int, int | None]:
     '''Shrink a target chunk until spatial pair materialization is bounded.'''
     if max_spatial_pairs_per_chunk is None:
-        return requested_chunk_stop
+        return requested_chunk_stop, None
 
     chunk_stop = requested_chunk_stop
     while True:
@@ -471,7 +471,7 @@ def _adaptive_target_chunk_stop(
                     f'{estimate:,} spatial candidate pairs within cap '
                     f'{max_spatial_pairs_per_chunk:,}'
                 )
-            return chunk_stop
+            return chunk_stop, estimate
 
         suggested_len = int(
             chunk_len * (max_spatial_pairs_per_chunk / max(estimate, 1)) * 0.9
@@ -1064,6 +1064,7 @@ def write_distances_polars_partitioned(
     row_count = 0
     part_count = 0
     empty_chunk_count = 0
+    chunk_records: list[dict[str, object]] = []
     preview: pl.DataFrame | None = None
     t_total = pc()
     source_tree, spatial_radius = _source_spatial_tree(
@@ -1074,7 +1075,7 @@ def write_distances_polars_partitioned(
     chunk_start = 0
     while chunk_start < len(targets):
         requested_chunk_stop = min(chunk_start + target_chunk_size, len(targets))
-        chunk_stop = _adaptive_target_chunk_stop(
+        chunk_stop, estimated_spatial_pairs = _adaptive_target_chunk_stop(
             targets,
             chunk_start=chunk_start,
             requested_chunk_stop=requested_chunk_stop,
@@ -1123,6 +1124,20 @@ def write_distances_polars_partitioned(
 
         if result.height == 0:
             empty_chunk_count += 1
+            chunk_records.append(
+                {
+                    'part_name': None,
+                    'target_start': int(chunk_start),
+                    'target_stop': int(chunk_stop),
+                    'target_count': int(chunk_stop - chunk_start),
+                    'requested_target_stop': int(requested_chunk_stop),
+                    'adjusted': bool(chunk_stop < requested_chunk_stop),
+                    'estimated_spatial_candidate_pairs': estimated_spatial_pairs,
+                    'materialized_spatial_candidate_pairs': int(len(target_indices)),
+                    'unique_node_pair_count': int(distances_pl.height),
+                    'sparse_row_count': 0,
+                }
+            )
             chunk_start = chunk_stop
             continue
 
@@ -1132,6 +1147,20 @@ def write_distances_polars_partitioned(
         part_path = output_dir / f'part-{part_count:06d}.parquet'
         result.write_parquet(part_path, compression='zstd')
         row_count += result.height
+        chunk_records.append(
+            {
+                'part_name': part_path.name,
+                'target_start': int(chunk_start),
+                'target_stop': int(chunk_stop),
+                'target_count': int(chunk_stop - chunk_start),
+                'requested_target_stop': int(requested_chunk_stop),
+                'adjusted': bool(chunk_stop < requested_chunk_stop),
+                'estimated_spatial_candidate_pairs': estimated_spatial_pairs,
+                'materialized_spatial_candidate_pairs': int(len(target_indices)),
+                'unique_node_pair_count': int(distances_pl.height),
+                'sparse_row_count': int(result.height),
+            }
+        )
         part_count += 1
 
         if verbose:
@@ -1142,6 +1171,7 @@ def write_distances_polars_partitioned(
 
         chunk_start = chunk_stop
 
+    nonempty_records = [record for record in chunk_records if record['part_name']]
     metadata: dict[str, object] = {
         'path': str(output_dir),
         'row_count': row_count,
@@ -1154,6 +1184,43 @@ def write_distances_polars_partitioned(
         'distance_threshold_km': distance_threshold_largest,
         'max_total_dist': max_total_dist,
         'elapsed_seconds': pc() - t_total,
+        'chunking': {
+            'requested_target_chunk_size': int(target_chunk_size),
+            'max_spatial_pairs_per_chunk': max_spatial_pairs_per_chunk,
+            'chunk_count': len(chunk_records),
+            'adjusted_chunk_count': sum(
+                1 for record in chunk_records if record['adjusted']
+            ),
+            'min_target_count': (
+                min(record['target_count'] for record in chunk_records)
+                if chunk_records else 0
+            ),
+            'max_target_count': (
+                max(record['target_count'] for record in chunk_records)
+                if chunk_records else 0
+            ),
+            'max_estimated_spatial_candidate_pairs': (
+                max(
+                    record['estimated_spatial_candidate_pairs'] or 0
+                    for record in chunk_records
+                ) if chunk_records else 0
+            ),
+            'max_materialized_spatial_candidate_pairs': (
+                max(
+                    record['materialized_spatial_candidate_pairs']
+                    for record in chunk_records
+                ) if chunk_records else 0
+            ),
+            'max_unique_node_pair_count': (
+                max(record['unique_node_pair_count'] for record in chunk_records)
+                if chunk_records else 0
+            ),
+            'max_sparse_row_count': (
+                max(record['sparse_row_count'] for record in nonempty_records)
+                if nonempty_records else 0
+            ),
+        },
+        'chunks': chunk_records,
     }
 
     success_path = output_dir / '_SUCCESS.json'

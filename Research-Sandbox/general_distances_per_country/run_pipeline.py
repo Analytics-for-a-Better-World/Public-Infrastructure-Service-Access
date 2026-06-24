@@ -953,12 +953,13 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         '--sparse-max-spatial-pairs-per-chunk',
         type=int,
-        default=50_000_000,
+        default=25_000_000,
         help=(
-            'Maximum estimated spatial candidate pairs to materialize in '
-            'one streaming sparse-matrix chunk. Large requested target '
-            'chunks are automatically split below this cap. Use 0 to '
-            'disable adaptive splitting.'
+            'Automatic memory-safety cap for streaming sparse matrices: '
+            'the maximum estimated spatial candidate pairs to materialize '
+            'in one subchunk. The requested --sparse-target-chunk-size is '
+            'treated as an upper bound and split as needed. Use 0 only for '
+            'expert benchmarking without adaptive splitting.'
         ),
     )
 

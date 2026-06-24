@@ -224,6 +224,14 @@ class DistanceMatrixTests(unittest.TestCase):
 
             self.assertGreater(summary['part_count'], 1)
             self.assertEqual(summary['max_spatial_pairs_per_chunk'], 8)
+            self.assertIn('chunks', summary)
+            self.assertEqual(summary['chunking']['max_spatial_pairs_per_chunk'], 8)
+            self.assertEqual(summary['chunking']['chunk_count'], len(summary['chunks']))
+            self.assertGreater(summary['chunking']['adjusted_chunk_count'], 0)
+            self.assertLessEqual(
+                summary['chunking']['max_estimated_spatial_candidate_pairs'],
+                8,
+            )
             pd.testing.assert_frame_equal(
                 _sorted_frame(actual),
                 _sorted_frame(expected),
