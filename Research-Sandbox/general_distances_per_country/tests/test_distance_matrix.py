@@ -20,6 +20,15 @@ class FakeNetwork:
         )
 
 
+class CountingNetwork(FakeNetwork):
+    def __init__(self) -> None:
+        self.requested_paths = 0
+
+    def shortest_path_lengths(self, target_nodes, source_nodes, imp_name=None):
+        self.requested_paths += len(target_nodes)
+        return super().shortest_path_lengths(target_nodes, source_nodes, imp_name)
+
+
 def _sorted_frame(frame: pl.DataFrame) -> pd.DataFrame:
     return (
         frame
@@ -80,6 +89,44 @@ class DistanceMatrixTests(unittest.TestCase):
                 _sorted_frame(actual),
                 _sorted_frame(expected),
             )
+
+    def test_sparse_prefilter_prunes_components_and_stitch_only_impossible_pairs(self) -> None:
+        targets = pd.DataFrame(
+            {
+                'ID': [10, 11],
+                'xcoord': [0.0, 0.0],
+                'ycoord': [0.0, 0.0],
+                'nearest_node': [100, 200],
+                'dist_snap_target': [2.0, 90.0],
+                'target_type': ['population'] * 2,
+                'component_id': [0, 1],
+            }
+        ).set_index('ID', drop=False)
+        sources = pd.DataFrame(
+            {
+                'ID': [20, 21],
+                'Longitude': [0.0, 0.0],
+                'Latitude': [0.0, 0.0],
+                'nearest_node': [90, 210],
+                'dist_snap_source': [3.0, 20.0],
+                'source_type': ['amenities'] * 2,
+                'component_id': [0, 1],
+            }
+        ).set_index('ID', drop=False)
+        network = CountingNetwork()
+
+        result = compute_distances_polars(
+            targets=targets,
+            sources=sources,
+            distance_threshold_largest=1000,
+            network=network,
+            max_total_dist=100,
+        )
+
+        self.assertEqual(network.requested_paths, 1)
+        self.assertEqual(result.height, 1)
+        self.assertEqual(result['target_id'].to_list(), [10])
+        self.assertEqual(result['source_id'].to_list(), [20])
 
 
 if __name__ == '__main__':

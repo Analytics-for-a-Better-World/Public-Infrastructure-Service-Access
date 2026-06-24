@@ -359,7 +359,7 @@ Note: `--map-only` draws generated candidates before network snapping, so it is 
 --max-total-dist FLOAT
 ```
 
-In sparse mode, keep only rows whose `total_dist` is less than or equal to this value in meters. The same value also tightens the spatial prefilter used before road routing. In dense mode, entries above this cap are kept in the matrix but set to `inf`.
+In sparse mode, keep only rows whose `total_dist` is less than or equal to this value in meters. The same value also tightens the spatial prefilter used before road routing, and the sparse path now drops candidate pairs before Pandana when the two stitch distances alone already exceed the cap. If snapped sources and destinations carry `component_id`, cross-component pairs are also skipped before routing. In dense mode, entries above this cap are kept in the matrix but set to `inf`.
 
 ```powershell
 --matrix-shape sparse|dense

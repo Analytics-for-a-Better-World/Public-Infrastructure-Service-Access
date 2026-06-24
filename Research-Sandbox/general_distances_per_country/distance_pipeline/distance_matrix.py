@@ -289,6 +289,7 @@ def _candidate_row_pairs(
     sources: pd.DataFrame,
     distance_threshold_largest: float,
     *,
+    max_total_dist: float | None = None,
     verbose: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     '''
@@ -302,6 +303,10 @@ def _candidate_row_pairs(
         Source table.
     distance_threshold_largest
         Maximum crow flies prefilter distance in kilometers.
+    max_total_dist
+        Optional maximum total distance in meters. Candidate pairs whose
+        source and target stitch distances already exceed this value are
+        discarded before road routing.
     verbose
         Whether to print progress messages.
 
@@ -355,6 +360,43 @@ def _candidate_row_pairs(
             f'finding {n_candidate_pairs:,} pairs of spatial nearest neighbors '
             f'in {pc() - t:.2f} seconds'
         )
+
+    if n_candidate_pairs == 0:
+        return target_indices, source_indices
+
+    keep = np.ones(n_candidate_pairs, dtype=bool)
+
+    if max_total_dist is not None:
+        target_snap = targets['dist_snap_target'].to_numpy(
+            dtype=np.float64,
+            copy=False,
+        )[target_indices]
+        source_snap = sources['dist_snap_source'].to_numpy(
+            dtype=np.float64,
+            copy=False,
+        )[source_indices]
+        keep &= (target_snap + source_snap) <= max_total_dist
+
+    if 'component_id' in targets.columns and 'component_id' in sources.columns:
+        target_components = targets['component_id'].to_numpy(
+            dtype=np.int64,
+            copy=False,
+        )[target_indices]
+        source_components = sources['component_id'].to_numpy(
+            dtype=np.int64,
+            copy=False,
+        )[source_indices]
+        keep &= (target_components >= 0) & (target_components == source_components)
+
+    if not keep.all():
+        kept = int(keep.sum())
+        if verbose:
+            print(
+                f'pruned {n_candidate_pairs - kept:,} spatial candidate pairs '
+                f'before routing; {kept:,} remain'
+            )
+        target_indices = target_indices[keep]
+        source_indices = source_indices[keep]
 
     return target_indices, source_indices
 
@@ -880,6 +922,7 @@ def write_distances_polars_partitioned(
             targets=target_chunk,
             sources=sources,
             distance_threshold_largest=distance_threshold_largest,
+            max_total_dist=max_total_dist,
             verbose=verbose,
         )
 
@@ -1187,6 +1230,7 @@ def compute_distances_polars(
         targets=targets,
         sources=sources,
         distance_threshold_largest=distance_threshold_largest,
+        max_total_dist=max_total_dist,
         verbose=verbose,
     )
 
