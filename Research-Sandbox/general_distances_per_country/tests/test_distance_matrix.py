@@ -7,6 +7,7 @@ import pandas as pd
 import polars as pl
 
 from distance_pipeline.distance_matrix import (
+    _compact_node_pair_cache_bucket,
     compute_distances_polars,
     write_distances_polars_partitioned,
 )
@@ -127,6 +128,49 @@ class DistanceMatrixTests(unittest.TestCase):
         self.assertEqual(result.height, 1)
         self.assertEqual(result['target_id'].to_list(), [10])
         self.assertEqual(result['source_id'].to_list(), [20])
+
+    def test_node_pair_cache_compaction_replaces_many_bucket_chunks(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            cache_dir = Path(tmp)
+            bucket_dir = cache_dir / 'bucket=003'
+            bucket_dir.mkdir()
+            frames = [
+                pl.DataFrame(
+                    {
+                        'target_nearest_node': [3, 259],
+                        'source_nearest_node': [10, 20],
+                        'road_distance': [1.0, 2.0],
+                    }
+                ),
+                pl.DataFrame(
+                    {
+                        'target_nearest_node': [515],
+                        'source_nearest_node': [30],
+                        'road_distance': [3.0],
+                    }
+                ),
+                pl.DataFrame(
+                    {
+                        'target_nearest_node': [3],
+                        'source_nearest_node': [10],
+                        'road_distance': [1.0],
+                    }
+                ),
+            ]
+            for i, frame in enumerate(frames):
+                frame.write_parquet(bucket_dir / f'node_pairs_{i}.parquet')
+
+            files = _compact_node_pair_cache_bucket(
+                cache_dir,
+                3,
+                max_files=2,
+            )
+
+            self.assertEqual(len(files), 1)
+            self.assertEqual(len(list(bucket_dir.glob('node_pairs_*.parquet'))), 1)
+            compacted = pl.read_parquet(files[0])
+            self.assertEqual(compacted.height, 3)
+            self.assertFalse(list(bucket_dir.glob('*.tmp')))
 
     def test_node_pair_cache_is_reused_from_bucketed_chunks(self) -> None:
         targets = pd.DataFrame(

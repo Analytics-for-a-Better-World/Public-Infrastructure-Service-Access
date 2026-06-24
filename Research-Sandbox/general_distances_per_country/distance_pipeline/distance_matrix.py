@@ -22,6 +22,7 @@ NO_PATH_SENTINEL = 4294967.295
 EARTH_RADIUS_KM = 6367.0
 NODE_PAIR_KEY_COLUMNS = ['target_nearest_node', 'source_nearest_node']
 NODE_PAIR_CACHE_BUCKET_COUNT = 256
+NODE_PAIR_CACHE_COMPACT_FILE_THRESHOLD = 64
 DEFAULT_MAX_SPATIAL_PAIRS_PER_CHUNK = 25_000_000
 
 
@@ -518,6 +519,51 @@ def _node_pair_cache_bucket_files(cache_dir: Path, bucket_id: int) -> list[Path]
     return sorted(bucket_dir.glob('node_pairs_*.parquet'))
 
 
+def _compact_node_pair_cache_bucket(
+    cache_dir: Path,
+    bucket_id: int,
+    files: list[Path] | None = None,
+    *,
+    max_files: int = NODE_PAIR_CACHE_COMPACT_FILE_THRESHOLD,
+    verbose: bool = False,
+) -> list[Path]:
+    '''Compact one bucket of small node-pair cache chunks when needed.'''
+    bucket_dir = _node_pair_cache_bucket_dir(cache_dir, bucket_id)
+    if files is None:
+        files = _node_pair_cache_bucket_files(cache_dir, bucket_id)
+    if max_files <= 0 or len(files) <= max_files:
+        return files
+
+    t = pc()
+    compacted = (
+        pl.scan_parquet([str(path) for path in files])
+        .select([*NODE_PAIR_KEY_COLUMNS, 'road_distance'])
+        .unique(subset=NODE_PAIR_KEY_COLUMNS, keep='last')
+        .collect()
+    )
+    final_path = bucket_dir / (
+        f'node_pairs_compacted_{time_ns()}_{compacted.height}.parquet'
+    )
+    tmp_path = bucket_dir / f'.{final_path.stem}.tmp'
+    compacted.write_parquet(tmp_path)
+    tmp_path.replace(final_path)
+
+    bucket_root = bucket_dir.resolve()
+    for path in files:
+        resolved = path.resolve()
+        if not str(resolved).lower().startswith(str(bucket_root).lower()):
+            raise RuntimeError(f'Refusing to delete outside bucket: {resolved}')
+        path.unlink()
+
+    if verbose:
+        print(
+            f'compacted node-pair cache bucket {bucket_id:03d}: '
+            f'{len(files):,} chunk(s) -> 1 chunk with '
+            f'{compacted.height:,} row(s) in {pc() - t:.2f} seconds'
+        )
+    return [final_path]
+
+
 def _load_cached_node_pair_distances(
     cache_dir: Path,
     required_pairs: pl.DataFrame,
@@ -558,6 +604,12 @@ def _load_cached_node_pair_distances(
         bucket_files = _node_pair_cache_bucket_files(cache_dir, int(bucket_id))
         if not bucket_files:
             continue
+        bucket_files = _compact_node_pair_cache_bucket(
+            cache_dir,
+            int(bucket_id),
+            bucket_files,
+            verbose=verbose,
+        )
         bucket_file_count += len(bucket_files)
         bucket_required = required_with_bucket.filter(
             pl.col('_cache_bucket') == bucket_id
