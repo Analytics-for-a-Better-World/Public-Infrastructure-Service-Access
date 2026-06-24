@@ -177,5 +177,58 @@ class DistanceMatrixTests(unittest.TestCase):
             )
 
 
+    def test_partitioned_sparse_adapts_requested_chunk_to_pair_cap(self) -> None:
+        targets = pd.DataFrame(
+            {
+                'ID': [10, 11, 12, 13, 14, 15],
+                'xcoord': [0.0, 0.001, 0.002, 0.003, 0.004, 0.005],
+                'ycoord': [0.0, 0.001, 0.002, 0.003, 0.004, 0.005],
+                'nearest_node': [100, 101, 102, 103, 104, 105],
+                'dist_snap_target': [1.0] * 6,
+                'target_type': ['population'] * 6,
+            }
+        ).set_index('ID', drop=False)
+        sources = pd.DataFrame(
+            {
+                'ID': [20, 21, 22, 23],
+                'Longitude': [0.0, 0.001, 0.002, 0.003],
+                'Latitude': [0.0, 0.001, 0.002, 0.003],
+                'nearest_node': [90, 91, 92, 93],
+                'dist_snap_source': [1.0] * 4,
+                'source_type': ['amenities'] * 4,
+            }
+        ).set_index('ID', drop=False)
+
+        expected = compute_distances_polars(
+            targets=targets,
+            sources=sources,
+            distance_threshold_largest=1000,
+            network=FakeNetwork(),
+            max_total_dist=30,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / 'matrix.parquet_parts'
+            summary = write_distances_polars_partitioned(
+                targets=targets,
+                sources=sources,
+                distance_threshold_largest=1000,
+                network=FakeNetwork(),
+                output_dir=output_dir,
+                max_total_dist=30,
+                target_chunk_size=6,
+                max_spatial_pairs_per_chunk=8,
+            )
+            parts = sorted(output_dir.glob('part-*.parquet'))
+            actual = pl.concat([pl.read_parquet(path) for path in parts])
+
+            self.assertGreater(summary['part_count'], 1)
+            self.assertEqual(summary['max_spatial_pairs_per_chunk'], 8)
+            pd.testing.assert_frame_equal(
+                _sorted_frame(actual),
+                _sorted_frame(expected),
+            )
+
+
 if __name__ == '__main__':
     unittest.main()

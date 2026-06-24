@@ -30,6 +30,7 @@ class PipelineSettings:
     matrix_output_mode: str = 'combined'
     matrix_shape: str = 'sparse'
     sparse_target_chunk_size: int | None = None
+    sparse_max_spatial_pairs_per_chunk: int | None = 50_000_000
     dense_component_matrices: bool = False
     network_impedance: str = 'length'
     stitch_speed_kph: float = 30.0

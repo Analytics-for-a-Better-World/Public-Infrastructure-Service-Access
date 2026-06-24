@@ -951,6 +951,18 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--sparse-max-spatial-pairs-per-chunk',
+        type=int,
+        default=50_000_000,
+        help=(
+            'Maximum estimated spatial candidate pairs to materialize in '
+            'one streaming sparse-matrix chunk. Large requested target '
+            'chunks are automatically split below this cap. Use 0 to '
+            'disable adaptive splitting.'
+        ),
+    )
+
+    parser.add_argument(
         '--dense-component-matrices',
         choices=('true', 'false'),
         default='false',
@@ -1030,6 +1042,8 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         raise ValueError(
             '--network-profile driving_walk requires --network-backend osmium or auto.'
         )
+    if args.sparse_max_spatial_pairs_per_chunk < 0:
+        raise ValueError('--sparse-max-spatial-pairs-per-chunk must be non-negative.')
     if args.sparse_target_chunk_size is not None:
         if args.sparse_target_chunk_size <= 0:
             raise ValueError('--sparse-target-chunk-size must be positive.')
@@ -1085,6 +1099,11 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         matrix_output_mode=args.matrix_output_mode,
         matrix_shape=args.matrix_shape,
         sparse_target_chunk_size=args.sparse_target_chunk_size,
+        sparse_max_spatial_pairs_per_chunk=(
+            None
+            if args.sparse_max_spatial_pairs_per_chunk == 0
+            else args.sparse_max_spatial_pairs_per_chunk
+        ),
         dense_component_matrices=args.dense_component_matrices == 'true',
         network_impedance=args.network_impedance.strip(),
         stitch_speed_kph=args.stitch_speed_kph,
@@ -2201,6 +2220,9 @@ def main(
                     total_cost_col=cost_options['total_cost_col'],
                     stitch_cost_factor=cost_options['stitch_cost_factor'],
                     target_chunk_size=settings.sparse_target_chunk_size,
+                    max_spatial_pairs_per_chunk=(
+                        settings.sparse_max_spatial_pairs_per_chunk
+                    ),
                     overwrite=settings.force_recompute,
                     verbose=settings.verbose,
                 )
@@ -2247,6 +2269,9 @@ def main(
                             total_cost_col=cost_options['total_cost_col'],
                             stitch_cost_factor=cost_options['stitch_cost_factor'],
                             target_chunk_size=settings.sparse_target_chunk_size,
+                            max_spatial_pairs_per_chunk=(
+                                settings.sparse_max_spatial_pairs_per_chunk
+                            ),
                             overwrite=settings.force_recompute,
                             verbose=settings.verbose,
                         )

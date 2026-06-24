@@ -22,6 +22,7 @@ NO_PATH_SENTINEL = 4294967.295
 EARTH_RADIUS_KM = 6367.0
 NODE_PAIR_KEY_COLUMNS = ['target_nearest_node', 'source_nearest_node']
 NODE_PAIR_CACHE_BUCKET_COUNT = 256
+DEFAULT_MAX_SPATIAL_PAIRS_PER_CHUNK = 50_000_000
 
 
 def _safe_impedance_name(imp_name: str) -> str:
@@ -400,6 +401,85 @@ def _candidate_row_pairs(
         source_indices = source_indices[keep]
 
     return target_indices, source_indices
+
+
+def _source_spatial_tree(
+    sources: pd.DataFrame,
+    distance_threshold_largest: float,
+) -> tuple[cKDTree, float]:
+    '''Return a KD-tree and angular radius for sparse prefilter estimates.'''
+    source_coords = sources[['Longitude', 'Latitude']].to_numpy(
+        dtype=np.float64,
+        copy=False,
+    )
+    source_coords_rad = np.radians(source_coords)
+    return cKDTree(source_coords_rad), distance_threshold_largest / EARTH_RADIUS_KM
+
+
+def _estimate_spatial_candidate_pairs(
+    targets: pd.DataFrame,
+    *,
+    source_tree: cKDTree,
+    radius: float,
+) -> int:
+    '''Count spatial prefilter pairs without materializing their indices.'''
+    if targets.empty:
+        return 0
+
+    target_x_col, target_y_col = _get_target_coordinate_columns(targets)
+    target_coords = targets[[target_x_col, target_y_col]].to_numpy(
+        dtype=np.float64,
+        copy=False,
+    )
+    target_coords_rad = np.radians(target_coords)
+    lengths = source_tree.query_ball_point(
+        target_coords_rad,
+        r=radius,
+        return_length=True,
+    )
+    return int(np.asarray(lengths, dtype=np.int64).sum())
+
+
+def _adaptive_target_chunk_stop(
+    targets: pd.DataFrame,
+    *,
+    chunk_start: int,
+    requested_chunk_stop: int,
+    source_tree: cKDTree,
+    radius: float,
+    max_spatial_pairs_per_chunk: int | None,
+    verbose: bool = False,
+) -> int:
+    '''Shrink a target chunk until spatial pair materialization is bounded.'''
+    if max_spatial_pairs_per_chunk is None:
+        return requested_chunk_stop
+
+    chunk_stop = requested_chunk_stop
+    while True:
+        estimate = _estimate_spatial_candidate_pairs(
+            targets.iloc[chunk_start:chunk_stop],
+            source_tree=source_tree,
+            radius=radius,
+        )
+        chunk_len = chunk_stop - chunk_start
+        if estimate <= max_spatial_pairs_per_chunk or chunk_len <= 1:
+            if verbose and chunk_stop < requested_chunk_stop:
+                print(
+                    'adjusted sparse matrix target chunk '
+                    f'{chunk_start:,}:{requested_chunk_stop:,} to '
+                    f'{chunk_start:,}:{chunk_stop:,}; estimated '
+                    f'{estimate:,} spatial candidate pairs within cap '
+                    f'{max_spatial_pairs_per_chunk:,}'
+                )
+            return chunk_stop
+
+        suggested_len = int(
+            chunk_len * (max_spatial_pairs_per_chunk / max(estimate, 1)) * 0.9
+        )
+        new_len = max(1, min(chunk_len - 1, suggested_len))
+        if new_len >= chunk_len:
+            new_len = max(1, chunk_len // 2)
+        chunk_stop = chunk_start + new_len
 
 
 def _empty_node_pair_distances() -> pl.DataFrame:
@@ -936,6 +1016,7 @@ def write_distances_polars_partitioned(
     total_cost_col: str = 'total_dist',
     stitch_cost_factor: float = 1.0,
     target_chunk_size: int = 10_000,
+    max_spatial_pairs_per_chunk: int | None = DEFAULT_MAX_SPATIAL_PAIRS_PER_CHUNK,
     overwrite: bool = False,
     verbose: bool = False,
 ) -> dict[str, object]:
@@ -954,6 +1035,11 @@ def write_distances_polars_partitioned(
         raise ValueError('stitch_cost_factor must be positive')
     if target_chunk_size <= 0:
         raise ValueError('target_chunk_size must be positive')
+    if (
+        max_spatial_pairs_per_chunk is not None
+        and max_spatial_pairs_per_chunk <= 0
+    ):
+        raise ValueError('max_spatial_pairs_per_chunk must be positive')
     if road_cost_col == total_cost_col:
         raise ValueError('road_cost_col and total_cost_col must be different')
 
@@ -980,9 +1066,23 @@ def write_distances_polars_partitioned(
     empty_chunk_count = 0
     preview: pl.DataFrame | None = None
     t_total = pc()
+    source_tree, spatial_radius = _source_spatial_tree(
+        sources,
+        distance_threshold_largest,
+    )
 
-    for chunk_start in range(0, len(targets), target_chunk_size):
-        chunk_stop = min(chunk_start + target_chunk_size, len(targets))
+    chunk_start = 0
+    while chunk_start < len(targets):
+        requested_chunk_stop = min(chunk_start + target_chunk_size, len(targets))
+        chunk_stop = _adaptive_target_chunk_stop(
+            targets,
+            chunk_start=chunk_start,
+            requested_chunk_stop=requested_chunk_stop,
+            source_tree=source_tree,
+            radius=spatial_radius,
+            max_spatial_pairs_per_chunk=max_spatial_pairs_per_chunk,
+            verbose=verbose,
+        )
         target_chunk = targets.iloc[chunk_start:chunk_stop]
 
         if verbose:
@@ -1023,6 +1123,7 @@ def write_distances_polars_partitioned(
 
         if result.height == 0:
             empty_chunk_count += 1
+            chunk_start = chunk_stop
             continue
 
         if preview is None:
@@ -1039,12 +1140,15 @@ def write_distances_polars_partitioned(
                 f'{part_path.name}'
             )
 
+        chunk_start = chunk_stop
+
     metadata: dict[str, object] = {
         'path': str(output_dir),
         'row_count': row_count,
         'part_count': part_count,
         'empty_chunk_count': empty_chunk_count,
         'target_chunk_size': target_chunk_size,
+        'max_spatial_pairs_per_chunk': max_spatial_pairs_per_chunk,
         'target_count': len(targets),
         'source_count': len(sources),
         'distance_threshold_km': distance_threshold_largest,
