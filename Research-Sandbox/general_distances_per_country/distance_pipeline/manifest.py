@@ -54,9 +54,30 @@ def file_metadata(path: str | Path) -> dict[str, Any]:
     if not file_path.exists():
         return metadata
 
+    if file_path.is_dir():
+        files = [path for path in file_path.rglob('*') if path.is_file()]
+        size_bytes = sum(path.stat().st_size for path in files)
+        modified = max((path.stat().st_mtime for path in files), default=file_path.stat().st_mtime)
+        metadata.update(
+            {
+                'type': 'directory',
+                'size_bytes': size_bytes,
+                'file_count': len(files),
+                'modified_utc': datetime.fromtimestamp(
+                    modified,
+                    tz=UTC,
+                ).isoformat(),
+            }
+        )
+        success_path = file_path / '_SUCCESS.json'
+        if success_path.exists():
+            metadata['success_file'] = file_metadata(success_path)
+        return metadata
+
     stat = file_path.stat()
     metadata.update(
         {
+            'type': 'file',
             'size_bytes': stat.st_size,
             'modified_utc': datetime.fromtimestamp(
                 stat.st_mtime,

@@ -1,4 +1,6 @@
 # Standard library imports
+import json
+import shutil
 from pathlib import Path
 import warnings
 from time import perf_counter as pc, time_ns
@@ -52,6 +54,14 @@ def _shortest_path_lengths(
 ) -> np.ndarray:
     '''Call Pandana shortest paths with an optional named impedance.'''
     if imp_name is None:
+        impedance_names = getattr(network, 'impedance_names', None)
+        if impedance_names is not None and len(impedance_names) > 1:
+            if 'length' in impedance_names:
+                return network.shortest_path_lengths(
+                    target_nodes,
+                    source_nodes,
+                    imp_name='length',
+                )
         return network.shortest_path_lengths(target_nodes, source_nodes)
     return network.shortest_path_lengths(
         target_nodes,
@@ -682,6 +692,276 @@ def _sources_to_polars(sources: pd.DataFrame) -> pl.DataFrame:
     return pl.DataFrame(data)
 
 
+def _empty_distance_result(
+    targets: pd.DataFrame,
+    sources: pd.DataFrame,
+    *,
+    road_cost_col: str,
+    total_cost_col: str,
+) -> pl.DataFrame:
+    '''Return an empty sparse distance table with the canonical schema.'''
+    schema = {
+        'target_id': pl.Int64,
+        'source_id': pl.Int64,
+        'source_nearest_node': pl.Int64,
+        'target_nearest_node': pl.Int64,
+        'target_to_road_dist': pl.Float64,
+        road_cost_col: pl.Float64,
+        'source_to_road_dist': pl.Float64,
+        total_cost_col: pl.Float64,
+    }
+    if 'target_type' in targets.columns:
+        schema['target_type'] = pl.Utf8
+    if 'source_type' in sources.columns:
+        schema['source_type'] = pl.Utf8
+    return pl.DataFrame(schema=schema)
+
+
+def _assemble_distance_result(
+    distances_pl: pl.DataFrame,
+    targets: pd.DataFrame,
+    sources: pd.DataFrame,
+    *,
+    max_total_dist: float | None,
+    road_cost_col: str,
+    total_cost_col: str,
+    stitch_cost_factor: float,
+    verbose: bool,
+) -> pl.DataFrame:
+    '''Join road-node distances back to source/target rows and filter totals.'''
+    if distances_pl.height == 0:
+        return _empty_distance_result(
+            targets,
+            sources,
+            road_cost_col=road_cost_col,
+            total_cost_col=total_cost_col,
+        )
+
+    targets_pl = _targets_to_polars(targets)
+    sources_pl = _sources_to_polars(sources)
+
+    t = pc()
+
+    result = (
+        distances_pl.lazy()
+        .join(targets_pl.lazy(), on='target_nearest_node', how='inner')
+        .join(sources_pl.lazy(), on='source_nearest_node', how='inner')
+        .with_columns(
+            (
+                pl.col('target_to_road_dist') * stitch_cost_factor
+                + pl.col('road_distance')
+                + pl.col('source_to_road_dist') * stitch_cost_factor
+            ).alias(total_cost_col)
+        )
+    )
+
+    if road_cost_col != 'road_distance':
+        result = result.with_columns(pl.col('road_distance').alias(road_cost_col))
+
+    if max_total_dist is not None:
+        result = result.filter(pl.col(total_cost_col) <= max_total_dist)
+
+    output_columns = [
+        'target_id',
+        'source_id',
+        'source_nearest_node',
+        'target_nearest_node',
+        'target_to_road_dist',
+        road_cost_col,
+        'source_to_road_dist',
+        total_cost_col,
+    ]
+    if 'target_type' in targets.columns:
+        output_columns.append('target_type')
+    if 'source_type' in sources.columns:
+        output_columns.append('source_type')
+
+    result = result.select(output_columns).collect()
+
+    if verbose:
+        print(
+            f'assembling {result.height:,} distances of interest '
+            f'in {pc() - t:.2f} seconds'
+        )
+
+    return result
+
+
+def _read_partitioned_distance_summary(output_dir: Path) -> dict[str, object] | None:
+    '''Load metadata for an existing partitioned sparse matrix, if complete.'''
+    success_path = output_dir / '_SUCCESS.json'
+    if not success_path.exists():
+        return None
+
+    with success_path.open('r', encoding='utf-8') as handle:
+        metadata = json.load(handle)
+
+    part_files = sorted(output_dir.glob('part-*.parquet'))
+    preview = (
+        pl.read_parquet(part_files[0]).head()
+        if part_files
+        else None
+    )
+    metadata['preview'] = preview
+    metadata['path'] = output_dir
+    return metadata
+
+
+def write_distances_polars_partitioned(
+    targets: pd.DataFrame,
+    sources: pd.DataFrame,
+    distance_threshold_largest: float,
+    network: object,
+    output_dir: str | Path,
+    *,
+    max_total_dist: float | None = None,
+    node_pair_cache_dir: str | Path | None = None,
+    imp_name: str | None = None,
+    road_cost_col: str = 'road_distance',
+    total_cost_col: str = 'total_dist',
+    stitch_cost_factor: float = 1.0,
+    target_chunk_size: int = 10_000,
+    overwrite: bool = False,
+    verbose: bool = False,
+) -> dict[str, object]:
+    '''
+    Stream sparse distances to a partitioned Parquet dataset by target chunks.
+
+    This avoids materializing the full source-target candidate universe and the
+    global road-node-pair deduplication arrays in memory. Existing behavior is
+    preserved by ``compute_distances_polars``; this function is intended for
+    large runs that need chunked on-disk output.
+    '''
+    targets, sources = _validate_inputs(targets, sources)
+    _validate_node_columns(targets, sources)
+
+    if stitch_cost_factor <= 0:
+        raise ValueError('stitch_cost_factor must be positive')
+    if target_chunk_size <= 0:
+        raise ValueError('target_chunk_size must be positive')
+    if road_cost_col == total_cost_col:
+        raise ValueError('road_cost_col and total_cost_col must be different')
+
+    output_dir = Path(output_dir)
+    existing = _read_partitioned_distance_summary(output_dir)
+    if existing is not None and not overwrite:
+        if verbose:
+            print(f'using existing partitioned sparse matrix: {output_dir}')
+        return existing
+    if output_dir.exists():
+        if not overwrite:
+            raise FileExistsError(
+                f'Partitioned sparse matrix output exists but is incomplete: {output_dir}'
+            )
+        shutil.rmtree(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    node_pair_cache_path = (
+        None if node_pair_cache_dir is None else Path(node_pair_cache_dir)
+    )
+
+    row_count = 0
+    part_count = 0
+    empty_chunk_count = 0
+    preview: pl.DataFrame | None = None
+    t_total = pc()
+
+    for chunk_start in range(0, len(targets), target_chunk_size):
+        chunk_stop = min(chunk_start + target_chunk_size, len(targets))
+        target_chunk = targets.iloc[chunk_start:chunk_stop]
+
+        if verbose:
+            print(
+                f'computing sparse matrix target chunk '
+                f'{chunk_start:,}:{chunk_stop:,} of {len(targets):,}'
+            )
+
+        target_indices, source_indices = _candidate_row_pairs(
+            targets=target_chunk,
+            sources=sources,
+            distance_threshold_largest=distance_threshold_largest,
+            verbose=verbose,
+        )
+
+        distances_pl = _compute_unique_node_pair_distances(
+            targets=target_chunk,
+            sources=sources,
+            target_indices=target_indices,
+            source_indices=source_indices,
+            network=network,
+            node_pair_cache_dir=node_pair_cache_path,
+            imp_name=imp_name,
+            verbose=verbose,
+        )
+
+        result = _assemble_distance_result(
+            distances_pl=distances_pl,
+            targets=target_chunk,
+            sources=sources,
+            max_total_dist=max_total_dist,
+            road_cost_col=road_cost_col,
+            total_cost_col=total_cost_col,
+            stitch_cost_factor=stitch_cost_factor,
+            verbose=verbose,
+        )
+
+        if result.height == 0:
+            empty_chunk_count += 1
+            continue
+
+        if preview is None:
+            preview = result.head()
+
+        part_path = output_dir / f'part-{part_count:06d}.parquet'
+        result.write_parquet(part_path, compression='zstd')
+        row_count += result.height
+        part_count += 1
+
+        if verbose:
+            print(
+                f'wrote {result.height:,} sparse distance rows to '
+                f'{part_path.name}'
+            )
+
+    metadata: dict[str, object] = {
+        'path': str(output_dir),
+        'row_count': row_count,
+        'part_count': part_count,
+        'empty_chunk_count': empty_chunk_count,
+        'target_chunk_size': target_chunk_size,
+        'target_count': len(targets),
+        'source_count': len(sources),
+        'distance_threshold_km': distance_threshold_largest,
+        'max_total_dist': max_total_dist,
+        'elapsed_seconds': pc() - t_total,
+    }
+
+    success_path = output_dir / '_SUCCESS.json'
+    with success_path.open('w', encoding='utf-8') as handle:
+        json.dump(metadata, handle, indent=2, sort_keys=True)
+
+    metadata['path'] = output_dir
+    metadata['preview'] = (
+        preview
+        if preview is not None
+        else _empty_distance_result(
+            targets,
+            sources,
+            road_cost_col=road_cost_col,
+            total_cost_col=total_cost_col,
+        )
+    )
+
+    if verbose:
+        print(
+            f'wrote partitioned sparse matrix with {row_count:,} row(s) '
+            f'in {part_count:,} part(s) to {output_dir} '
+            f'in {metadata["elapsed_seconds"]:.2f} seconds'
+        )
+
+    return metadata
+
+
 def _dense_distance_frame(
     values: np.ndarray,
     *,
@@ -923,71 +1203,16 @@ def compute_distances_polars(
         verbose=verbose,
     )
 
-    if distances_pl.height == 0:
-        schema = {
-            'target_id': pl.Int64,
-            'source_id': pl.Int64,
-            'source_nearest_node': pl.Int64,
-            'target_nearest_node': pl.Int64,
-            'target_to_road_dist': pl.Float64,
-            road_cost_col: pl.Float64,
-            'source_to_road_dist': pl.Float64,
-            total_cost_col: pl.Float64,
-        }
-        if 'target_type' in targets.columns:
-            schema['target_type'] = pl.Utf8
-        if 'source_type' in sources.columns:
-            schema['source_type'] = pl.Utf8
-        return pl.DataFrame(schema=schema)
-
-    targets_pl = _targets_to_polars(targets)
-    sources_pl = _sources_to_polars(sources)
-
-    t = pc()
-
-    result = (
-        distances_pl.lazy()
-        .join(targets_pl.lazy(), on='target_nearest_node', how='inner')
-        .join(sources_pl.lazy(), on='source_nearest_node', how='inner')
-        .with_columns(
-            (
-                pl.col('target_to_road_dist') * stitch_cost_factor
-                + pl.col('road_distance')
-                + pl.col('source_to_road_dist') * stitch_cost_factor
-            ).alias(total_cost_col)
-        )
+    return _assemble_distance_result(
+        distances_pl=distances_pl,
+        targets=targets,
+        sources=sources,
+        max_total_dist=max_total_dist,
+        road_cost_col=road_cost_col,
+        total_cost_col=total_cost_col,
+        stitch_cost_factor=stitch_cost_factor,
+        verbose=verbose,
     )
-
-    if road_cost_col != 'road_distance':
-        result = result.with_columns(pl.col('road_distance').alias(road_cost_col))
-
-    if max_total_dist is not None:
-        result = result.filter(pl.col(total_cost_col) <= max_total_dist)
-
-    output_columns = [
-        'target_id',
-        'source_id',
-        'source_nearest_node',
-        'target_nearest_node',
-        'target_to_road_dist',
-        road_cost_col,
-        'source_to_road_dist',
-        total_cost_col,
-    ]
-    if 'target_type' in targets.columns:
-        output_columns.append('target_type')
-    if 'source_type' in sources.columns:
-        output_columns.append('source_type')
-
-    result = result.select(output_columns).collect()
-
-    if verbose:
-        print(
-            f'assembling {result.height:,} distances of interest '
-            f'in {pc() - t:.2f} seconds'
-        )
-
-    return result
 
 
 def compute_distances(

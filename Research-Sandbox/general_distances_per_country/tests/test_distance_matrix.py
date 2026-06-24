@@ -1,0 +1,86 @@
+import tempfile
+import unittest
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import polars as pl
+
+from distance_pipeline.distance_matrix import (
+    compute_distances_polars,
+    write_distances_polars_partitioned,
+)
+
+
+class FakeNetwork:
+    def shortest_path_lengths(self, target_nodes, source_nodes, imp_name=None):
+        return np.abs(
+            np.asarray(target_nodes, dtype=np.float64)
+            - np.asarray(source_nodes, dtype=np.float64)
+        )
+
+
+def _sorted_frame(frame: pl.DataFrame) -> pd.DataFrame:
+    return (
+        frame
+        .sort(['target_id', 'source_id'])
+        .to_pandas()
+        .reset_index(drop=True)
+    )
+
+
+class DistanceMatrixTests(unittest.TestCase):
+    def test_partitioned_sparse_matches_single_table_result(self) -> None:
+        targets = pd.DataFrame(
+            {
+                'ID': [10, 11, 12, 13],
+                'xcoord': [0.0, 0.01, 0.02, 0.03],
+                'ycoord': [0.0, 0.01, 0.02, 0.03],
+                'nearest_node': [100, 101, 102, 103],
+                'dist_snap_target': [1.0, 2.0, 3.0, 4.0],
+                'target_type': ['population'] * 4,
+            }
+        ).set_index('ID', drop=False)
+        sources = pd.DataFrame(
+            {
+                'ID': [20, 21, 22],
+                'Longitude': [0.0, 0.02, 0.04],
+                'Latitude': [0.0, 0.02, 0.04],
+                'nearest_node': [90, 105, 110],
+                'dist_snap_source': [5.0, 6.0, 7.0],
+                'source_type': ['amenities'] * 3,
+            }
+        ).set_index('ID', drop=False)
+
+        expected = compute_distances_polars(
+            targets=targets,
+            sources=sources,
+            distance_threshold_largest=1000,
+            network=FakeNetwork(),
+            max_total_dist=30,
+        )
+
+        with tempfile.TemporaryDirectory() as tmp:
+            output_dir = Path(tmp) / 'matrix.parquet_parts'
+            summary = write_distances_polars_partitioned(
+                targets=targets,
+                sources=sources,
+                distance_threshold_largest=1000,
+                network=FakeNetwork(),
+                output_dir=output_dir,
+                max_total_dist=30,
+                target_chunk_size=2,
+            )
+            parts = sorted(output_dir.glob('part-*.parquet'))
+            actual = pl.concat([pl.read_parquet(path) for path in parts])
+
+            self.assertEqual(summary['row_count'], expected.height)
+            self.assertTrue((output_dir / '_SUCCESS.json').exists())
+            pd.testing.assert_frame_equal(
+                _sorted_frame(actual),
+                _sorted_frame(expected),
+            )
+
+
+if __name__ == '__main__':
+    unittest.main()

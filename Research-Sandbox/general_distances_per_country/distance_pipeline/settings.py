@@ -29,6 +29,7 @@ class PipelineSettings:
     bbox: tuple[float, float, float, float] | None = None
     matrix_output_mode: str = 'combined'
     matrix_shape: str = 'sparse'
+    sparse_target_chunk_size: int | None = None
     dense_component_matrices: bool = False
     network_impedance: str = 'length'
     stitch_speed_kph: float = 30.0

@@ -371,6 +371,30 @@ In sparse mode, keep only rows whose `total_dist` is less than or equal to this 
 Dense mode deliberately computes every selected target/source pair. The user is responsible for choosing reasonable sources, destinations, bboxes, population caps, aggregation, and distance caps.
 
 ```powershell
+--sparse-target-chunk-size INT
+```
+
+Optional streaming mode for very large sparse matrices. When this is set, the sparse matrix is computed target chunk by target chunk and written directly to a partitioned Parquet directory ending in `.parquet_parts`, plus a `_SUCCESS.json` summary. This avoids materializing the full source-target candidate universe and the global road-node deduplication arrays in memory.
+
+The default is disabled, preserving the historical single-table sparse computation. Chunked sparse output supports `--matrix-output-mode combined` and `--matrix-output-mode split`; use `split` for large multi-layer runs. For example:
+
+```powershell
+py run_pipeline.py vietnam `
+  --sources table candidates `
+  --destinations population `
+  --source-table "C:\path\facilities.xlsx" `
+  --source-lon-column longitude `
+  --source-lat-column latitude `
+  --source-id-column ID `
+  --aggregate-factor 5 `
+  --candidate-grid-spacing-m 1000 `
+  --candidate-max-snap-dist-m 1000 `
+  --max-total-dist 20000 `
+  --matrix-output-mode split `
+  --sparse-target-chunk-size 10000
+```
+
+```powershell
 --dense-component-matrices true|false
 ```
 

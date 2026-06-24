@@ -19,6 +19,7 @@ from distance_pipeline.config_loader import load_cfg
 from distance_pipeline.distance_matrix import (
     compute_dense_distance_matrices,
     compute_distances_polars,
+    write_distances_polars_partitioned,
 )
 from distance_pipeline.facilities import deduplicate_osm_amenities, load_facilities
 from distance_pipeline.io import download_file
@@ -939,6 +940,17 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
+        '--sparse-target-chunk-size',
+        type=int,
+        default=None,
+        help=(
+            'Optional target chunk size for streaming sparse matrix output to '
+            'a partitioned Parquet directory. Default: disabled, preserving '
+            'the historical single-table sparse computation.'
+        ),
+    )
+
+    parser.add_argument(
         '--dense-component-matrices',
         choices=('true', 'false'),
         default='false',
@@ -1018,6 +1030,18 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         raise ValueError(
             '--network-profile driving_walk requires --network-backend osmium or auto.'
         )
+    if args.sparse_target_chunk_size is not None:
+        if args.sparse_target_chunk_size <= 0:
+            raise ValueError('--sparse-target-chunk-size must be positive.')
+        if args.matrix_shape != 'sparse':
+            raise ValueError(
+                '--sparse-target-chunk-size can only be used with --matrix-shape sparse.'
+            )
+        if args.matrix_output_mode == 'both':
+            raise ValueError(
+                '--sparse-target-chunk-size supports --matrix-output-mode combined '
+                'or split, but not both.'
+            )
 
     source_layers = resolve_source_layers_from_args(args)
     destination_layers = resolve_destination_layers_from_args(args)
@@ -1060,6 +1084,7 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         bbox=parse_bbox(args.bbox),
         matrix_output_mode=args.matrix_output_mode,
         matrix_shape=args.matrix_shape,
+        sparse_target_chunk_size=args.sparse_target_chunk_size,
         dense_component_matrices=args.dense_component_matrices == 'true',
         network_impedance=args.network_impedance.strip(),
         stitch_speed_kph=args.stitch_speed_kph,
@@ -1155,6 +1180,13 @@ def split_matrix_path(
     return short_output_path(
         output_dir / f'{split_matrix_output_key(source_type, target_type)}_{run_tag}.parquet'
     )
+
+
+def partitioned_matrix_path(path: Path) -> Path:
+    '''Return a directory path for chunked sparse matrix parquet parts.'''
+    if path.suffix == '.parquet':
+        return path.with_suffix('.parquet_parts')
+    return path.with_name(f'{path.name}_parts')
 
 
 def dense_matrix_output_key(component: str) -> str:
@@ -2154,7 +2186,86 @@ def main(
         logging.info(f'Node-pair distance cache: {node_pair_cache_dir}')
 
     if settings.matrix_shape == 'sparse':
-        if settings.matrix_output_mode == 'combined':
+        if settings.sparse_target_chunk_size is not None:
+            if settings.matrix_output_mode == 'combined':
+                matrix_dir = partitioned_matrix_path(matrix_path)
+                summary = write_distances_polars_partitioned(
+                    targets=targets,
+                    sources=sources,
+                    distance_threshold_largest=effective_distance_threshold_km,
+                    network=network,
+                    output_dir=matrix_dir,
+                    max_total_dist=settings.max_total_dist,
+                    node_pair_cache_dir=node_pair_cache_dir,
+                    imp_name=cost_options['imp_name'],
+                    road_cost_col=cost_options['road_cost_col'],
+                    total_cost_col=cost_options['total_cost_col'],
+                    stitch_cost_factor=cost_options['stitch_cost_factor'],
+                    target_chunk_size=settings.sparse_target_chunk_size,
+                    overwrite=settings.force_recompute,
+                    verbose=settings.verbose,
+                )
+                matrix_preview = summary.get('preview')
+                distance_matrix_size = int(summary.get('row_count', 0))
+                matrix_output_paths = {'distance_matrix': matrix_dir}
+            else:
+                source_types = sorted(sources['source_type'].astype(str).unique())
+                target_types = sorted(targets['target_type'].astype(str).unique())
+                for source_type in source_types:
+                    pair_sources = sources[sources['source_type'].astype(str) == source_type]
+                    for target_type in target_types:
+                        pair_targets = targets[
+                            targets['target_type'].astype(str) == target_type
+                        ]
+                        if pair_sources.empty or pair_targets.empty:
+                            continue
+                        if settings.verbose:
+                            logging.info(
+                                'Computing chunked split distance matrix %s -> %s (%s x %s)',
+                                source_type,
+                                target_type,
+                                f'{len(pair_sources):,}',
+                                f'{len(pair_targets):,}',
+                            )
+                        split_dir = partitioned_matrix_path(
+                            split_matrix_path(
+                                output_dir,
+                                run_tag,
+                                source_type,
+                                target_type,
+                            )
+                        )
+                        summary = write_distances_polars_partitioned(
+                            targets=pair_targets,
+                            sources=pair_sources,
+                            distance_threshold_largest=effective_distance_threshold_km,
+                            network=network,
+                            output_dir=split_dir,
+                            max_total_dist=settings.max_total_dist,
+                            node_pair_cache_dir=node_pair_cache_dir,
+                            imp_name=cost_options['imp_name'],
+                            road_cost_col=cost_options['road_cost_col'],
+                            total_cost_col=cost_options['total_cost_col'],
+                            stitch_cost_factor=cost_options['stitch_cost_factor'],
+                            target_chunk_size=settings.sparse_target_chunk_size,
+                            overwrite=settings.force_recompute,
+                            verbose=settings.verbose,
+                        )
+                        if matrix_preview is None:
+                            matrix_preview = summary.get('preview')
+                        distance_matrix_size += int(summary.get('row_count', 0))
+                        matrix_output_paths[
+                            split_matrix_output_key(source_type, target_type)
+                        ] = split_dir
+                        if settings.verbose:
+                            logging.info(
+                                'Wrote chunked split distance matrix %s -> %s: %s',
+                                source_type,
+                                target_type,
+                                split_dir,
+                            )
+            matrix_df = matrix_preview
+        elif settings.matrix_output_mode == 'combined':
             matrix_df = cache.run(
                 cache_path=cache.distance_matrix_path_for(
                     distance_threshold_largest=effective_distance_threshold_km,

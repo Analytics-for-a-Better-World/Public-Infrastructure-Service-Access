@@ -160,6 +160,11 @@ def build_output_run_tag(
         if settings.network_impedance == 'length'
         else f'_impedance_{format_filename_part(settings.network_impedance)}'
     )
+    chunk_part = (
+        ''
+        if settings.sparse_target_chunk_size is None
+        else f'_sparse_chunks_{format_output_value(settings.sparse_target_chunk_size)}'
+    )
 
     return (
         f"pop_{settings.population_threshold:g}_"
@@ -169,7 +174,8 @@ def build_output_run_tag(
         f"agg_{format_output_value(aggregate_factor)}_"
         f"maxdist_{format_output_value(settings.max_total_dist)}_"
         f"amenity_{format_amenity_suffix(amenity_values)}_"
-        f"{candidate_part}{snap_part}{pbf_part}{network_part}{impedance_part}"
+        f"{candidate_part}{snap_part}{pbf_part}{network_part}"
+        f"{impedance_part}{chunk_part}"
     )
 
 
