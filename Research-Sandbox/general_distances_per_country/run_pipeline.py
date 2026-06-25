@@ -19,6 +19,7 @@ from distance_pipeline.config_loader import load_cfg
 from distance_pipeline.distance_matrix import (
     compute_dense_distance_matrices,
     compute_distances_polars,
+    reassemble_partitioned_distance_matrix,
     write_distances_polars_partitioned,
 )
 from distance_pipeline.facilities import deduplicate_osm_amenities, load_facilities
@@ -2227,9 +2228,18 @@ def main(
                     overwrite=settings.force_recompute,
                     verbose=settings.verbose,
                 )
+                final_summary = reassemble_partitioned_distance_matrix(
+                    matrix_dir,
+                    matrix_path,
+                    overwrite=settings.force_recompute,
+                    verbose=settings.verbose,
+                )
                 matrix_preview = summary.get('preview')
-                distance_matrix_size = int(summary.get('row_count', 0))
-                matrix_output_paths = {'distance_matrix': matrix_dir}
+                distance_matrix_size = int(final_summary.get('row_count', 0))
+                matrix_output_paths = {
+                    'distance_matrix': matrix_path,
+                    'distance_matrix_parts': matrix_dir,
+                }
             else:
                 source_types = sorted(sources['source_type'].astype(str).unique())
                 target_types = sorted(targets['target_type'].astype(str).unique())
@@ -2249,14 +2259,13 @@ def main(
                                 f'{len(pair_sources):,}',
                                 f'{len(pair_targets):,}',
                             )
-                        split_dir = partitioned_matrix_path(
-                            split_matrix_path(
-                                output_dir,
-                                run_tag,
-                                source_type,
-                                target_type,
-                            )
+                        split_path = split_matrix_path(
+                            output_dir,
+                            run_tag,
+                            source_type,
+                            target_type,
                         )
+                        split_dir = partitioned_matrix_path(split_path)
                         summary = write_distances_polars_partitioned(
                             targets=pair_targets,
                             sources=pair_sources,
@@ -2276,17 +2285,25 @@ def main(
                             overwrite=settings.force_recompute,
                             verbose=settings.verbose,
                         )
+                        final_summary = reassemble_partitioned_distance_matrix(
+                            split_dir,
+                            split_path,
+                            overwrite=settings.force_recompute,
+                            verbose=settings.verbose,
+                        )
                         if matrix_preview is None:
                             matrix_preview = summary.get('preview')
-                        distance_matrix_size += int(summary.get('row_count', 0))
-                        matrix_output_paths[
-                            split_matrix_output_key(source_type, target_type)
-                        ] = split_dir
+                        distance_matrix_size += int(final_summary.get('row_count', 0))
+                        split_key = split_matrix_output_key(source_type, target_type)
+                        matrix_output_paths[split_key] = split_path
+                        matrix_output_paths[f'{split_key}_parts'] = split_dir
                         if settings.verbose:
                             logging.info(
-                                'Wrote chunked split distance matrix %s -> %s: %s',
+                                'Wrote chunked split distance matrix %s -> %s: %s '
+                                '(parts: %s)',
                                 source_type,
                                 target_type,
+                                split_path,
                                 split_dir,
                             )
             matrix_df = matrix_preview

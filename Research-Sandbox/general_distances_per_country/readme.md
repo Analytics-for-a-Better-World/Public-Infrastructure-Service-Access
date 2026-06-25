@@ -374,9 +374,9 @@ Dense mode deliberately computes every selected target/source pair. The user is 
 --sparse-target-chunk-size INT
 ```
 
-Optional streaming mode for very large sparse matrices. When this is set, the sparse matrix is computed target chunk by target chunk and written directly to a partitioned Parquet directory ending in `.parquet_parts`, plus a `_SUCCESS.json` summary. This avoids materializing the full source-target candidate universe and the global road-node deduplication arrays in memory.
+Optional streaming mode for very large sparse matrices. When this is set, the sparse matrix is computed target chunk by target chunk and written directly to a partitioned Parquet directory ending in `.parquet_parts`, plus a `_SUCCESS.json` summary. The pipeline then streams those part files into the canonical single `.parquet` matrix path and writes a `.reassembly.json` sidecar next to the final matrix. This avoids materializing the full source-target candidate universe and the global road-node deduplication arrays in memory while still leaving a complete matrix file at the end of the run.
 
-The default is disabled, preserving the historical single-table sparse computation. Chunked sparse output supports `--matrix-output-mode combined` and `--matrix-output-mode split`; use `split` for large multi-layer runs. For example:
+The default is disabled, preserving the historical single-table sparse computation. In other words, the pipeline does not currently auto-switch from full in-memory sparse computation to chunked computation unless `--sparse-target-chunk-size` is provided. When chunked mode is requested, `--sparse-max-spatial-pairs-per-chunk` controls adaptive subchunking and the requested target chunk size is treated as an upper bound. Chunked sparse output supports `--matrix-output-mode combined` and `--matrix-output-mode split`; use `split` for large multi-layer runs. For example:
 
 ```powershell
 py run_pipeline.py vietnam `

@@ -9,6 +9,7 @@ import polars as pl
 from distance_pipeline.distance_matrix import (
     _compact_node_pair_cache_bucket,
     compute_distances_polars,
+    reassemble_partitioned_distance_matrix,
     write_distances_polars_partitioned,
 )
 
@@ -83,11 +84,23 @@ class DistanceMatrixTests(unittest.TestCase):
             )
             parts = sorted(output_dir.glob('part-*.parquet'))
             actual = pl.concat([pl.read_parquet(path) for path in parts])
+            final_path = Path(tmp) / 'matrix.parquet'
+            final_summary = reassemble_partitioned_distance_matrix(
+                output_dir,
+                final_path,
+            )
+            final = pl.read_parquet(final_path)
 
             self.assertEqual(summary['row_count'], expected.height)
             self.assertTrue((output_dir / '_SUCCESS.json').exists())
+            self.assertEqual(final_summary['row_count'], expected.height)
+            self.assertEqual(final_summary['part_count'], len(parts))
             pd.testing.assert_frame_equal(
                 _sorted_frame(actual),
+                _sorted_frame(expected),
+            )
+            pd.testing.assert_frame_equal(
+                _sorted_frame(final),
                 _sorted_frame(expected),
             )
 

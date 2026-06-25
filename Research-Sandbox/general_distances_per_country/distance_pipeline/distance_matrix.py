@@ -8,6 +8,7 @@ from time import perf_counter as pc, time_ns
 # Third-party library imports
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 import polars as pl
 from scipy.spatial import cKDTree
 
@@ -1052,6 +1053,132 @@ def _read_partitioned_distance_summary(output_dir: Path) -> dict[str, object] | 
     metadata['preview'] = preview
     metadata['path'] = output_dir
     return metadata
+
+
+def reassemble_partitioned_distance_matrix(
+    output_dir: str | Path,
+    output_path: str | Path,
+    *,
+    batch_size: int = 1_000_000,
+    compression: str = 'zstd',
+    overwrite: bool = False,
+    verbose: bool = False,
+) -> dict[str, object]:
+    '''Stream a partitioned sparse matrix into one canonical Parquet file.
+
+    Chunked sparse writes keep the ``.parquet_parts`` directory for audit and
+    restartability. This function creates the final single-file matrix without
+    materializing all rows in memory.
+    '''
+    output_dir = Path(output_dir)
+    output_path = Path(output_path)
+    success_path = output_dir / '_SUCCESS.json'
+    if not success_path.exists():
+        raise FileNotFoundError(f'Partitioned matrix manifest not found: {success_path}')
+    if batch_size <= 0:
+        raise ValueError('batch_size must be positive')
+
+    with success_path.open('r', encoding='utf-8') as handle:
+        metadata = json.load(handle)
+
+    part_files = sorted(output_dir.glob('part-*.parquet'))
+    expected_parts = int(metadata.get('part_count', len(part_files)))
+    if len(part_files) != expected_parts:
+        raise RuntimeError(
+            f'Expected {expected_parts:,} part file(s) from {success_path}, '
+            f'found {len(part_files):,}.'
+        )
+    if not part_files:
+        raise FileNotFoundError(f'No Parquet part files found in {output_dir}')
+
+    expected_rows = int(metadata.get('row_count', 0))
+    if output_path.exists() and not overwrite:
+        existing = pq.ParquetFile(output_path)
+        existing_rows = int(existing.metadata.num_rows)
+        if existing_rows != expected_rows:
+            raise RuntimeError(
+                f'Existing final matrix has {existing_rows:,} row(s), '
+                f'expected {expected_rows:,}: {output_path}'
+            )
+        return {
+            'path': output_path,
+            'parts_path': output_dir,
+            'row_count': existing_rows,
+            'part_count': len(part_files),
+            'row_group_count': int(existing.metadata.num_row_groups),
+            'output_bytes': int(output_path.stat().st_size),
+            'elapsed_seconds': 0.0,
+            'reused_existing': True,
+        }
+
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path = output_path.with_name(f'{output_path.name}.tmp')
+    if tmp_path.exists():
+        tmp_path.unlink()
+
+    t0 = pc()
+    rows_written = 0
+    batches_written = 0
+    input_bytes = 0
+    first = pq.ParquetFile(part_files[0])
+    schema = first.schema_arrow
+
+    try:
+        with pq.ParquetWriter(tmp_path, schema=schema, compression=compression) as writer:
+            for idx, part_path in enumerate(part_files, start=1):
+                part = pq.ParquetFile(part_path)
+                if not part.schema_arrow.equals(schema):
+                    raise RuntimeError(f'Parquet schema mismatch in part file: {part_path}')
+                input_bytes += int(part_path.stat().st_size)
+                part_rows = 0
+                for batch in part.iter_batches(batch_size=batch_size):
+                    writer.write_batch(batch)
+                    rows_written += int(batch.num_rows)
+                    part_rows += int(batch.num_rows)
+                    batches_written += 1
+                if verbose:
+                    print(
+                        f'reassembled part {idx:,}/{len(part_files):,}: '
+                        f'{part_path.name} ({part_rows:,} row(s)); '
+                        f'total {rows_written:,}',
+                    )
+        if rows_written != expected_rows:
+            raise RuntimeError(
+                f'Reassembled {rows_written:,} row(s), expected {expected_rows:,}.'
+            )
+        tmp_path.replace(output_path)
+    except Exception:
+        if tmp_path.exists():
+            tmp_path.unlink()
+        raise
+
+    elapsed = pc() - t0
+    summary = {
+        'path': output_path,
+        'parts_path': output_dir,
+        'row_count': rows_written,
+        'part_count': len(part_files),
+        'batches_written': batches_written,
+        'batch_size': int(batch_size),
+        'compression': compression,
+        'input_bytes': input_bytes,
+        'output_bytes': int(output_path.stat().st_size),
+        'elapsed_seconds': elapsed,
+        'reused_existing': False,
+    }
+    sidecar = output_path.with_suffix(f'{output_path.suffix}.reassembly.json')
+    with sidecar.open('w', encoding='utf-8') as handle:
+        serializable = {
+            key: str(value) if isinstance(value, Path) else value
+            for key, value in summary.items()
+        }
+        json.dump(serializable, handle, indent=2, sort_keys=True)
+    if verbose:
+        print(
+            f'reassembled {rows_written:,} sparse matrix row(s) from '
+            f'{len(part_files):,} part(s) into {output_path} in {elapsed:.2f} seconds'
+        )
+    return summary
 
 
 def write_distances_polars_partitioned(
