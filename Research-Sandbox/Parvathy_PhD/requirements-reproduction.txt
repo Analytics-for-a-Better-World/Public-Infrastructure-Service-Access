@@ -1,0 +1,15 @@
+numpy
+pandas
+pyarrow
+matplotlib
+geopandas
+shapely
+pyproj
+networkx
+osmium
+scipy
+pandana
+contextily
+gurobipy
+pyomo
+highspy
