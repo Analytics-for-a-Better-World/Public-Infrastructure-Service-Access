@@ -2,7 +2,6 @@ from time import perf_counter as pc
 
 import geopandas as gpd
 import pandas as pd
-from pyrosm import OSM
 
 
 WATER_NATURAL_VALUES: tuple[str, ...] = (
@@ -50,7 +49,20 @@ def _subset_values(
     return result
 
 
-def _load_waterway_polygons(osm: OSM) -> gpd.GeoDataFrame:
+def _load_pyrosm_osm(pbf_path: str) -> object:
+    """Construct a pyrosm OSM reader only when water polygons are requested."""
+    try:
+        from pyrosm import OSM
+    except ImportError as exc:  # pragma: no cover - depends on optional binary package
+        raise ImportError(
+            "The optional 'pyrosm' package is required to exclude generated "
+            "candidate sites on water. Use --candidate-exclude-water false to "
+            "avoid importing pyrosm."
+        ) from exc
+    return OSM(str(pbf_path))
+
+
+def _load_waterway_polygons(osm: object) -> gpd.GeoDataFrame:
     '''Load riverbank polygons when the pyrosm helper is available.'''
     try:
         layer = osm.get_data_by_custom_criteria(
@@ -68,7 +80,7 @@ def load_water_bodies(
 ) -> gpd.GeoDataFrame:
     '''Load water body polygons from OSM and project them.'''
     t0 = pc()
-    osm = OSM(str(pbf_path))
+    osm = _load_pyrosm_osm(pbf_path)
 
     natural = _subset_values(_clean_polygon_layer(osm.get_natural()), 'natural', WATER_NATURAL_VALUES)
     landuse = _subset_values(_clean_polygon_layer(osm.get_landuse()), 'landuse', WATER_LANDUSE_VALUES)

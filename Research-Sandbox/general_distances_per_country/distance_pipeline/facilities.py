@@ -8,7 +8,6 @@ from typing import Literal
 import geopandas as gpd
 import numpy as np
 import pandas as pd
-from pyrosm import OSM
 from shapely.geometry import LineString, Point, Polygon
 
 try:
@@ -36,6 +35,19 @@ def _resolve_facility_backend(backend: FacilityBackend) -> Literal['pyrosm', 'os
     if backend == 'auto':
         return 'osmium' if osmium is not None else 'pyrosm'
     return backend
+
+
+def _load_pyrosm_osm(pbf_path: str) -> object:
+    """Construct a pyrosm OSM reader only when the pyrosm backend is used."""
+    try:
+        from pyrosm import OSM
+    except ImportError as exc:  # pragma: no cover - depends on optional binary package
+        raise ImportError(
+            "The optional 'pyrosm' package is required for the pyrosm facility "
+            "backend. Use backend='osmium' to avoid importing pyrosm."
+        ) from exc
+
+    return OSM(str(pbf_path))
 
 
 def _tag_value(tags: object, key: str) -> str | None:
@@ -317,7 +329,7 @@ def load_facilities(
             verbose=verbose,
         )
 
-    osm = OSM(str(pbf_path))
+    osm = _load_pyrosm_osm(pbf_path)
 
     custom_filter: dict[str, list[str] | bool] = {
         'amenity': amenity_values,

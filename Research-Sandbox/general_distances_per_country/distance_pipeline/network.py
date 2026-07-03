@@ -11,7 +11,6 @@ import warnings
 import geopandas as gpd
 import pandas as pd
 from pyproj import Geod
-from pyrosm import OSM
 from shapely.geometry import LineString
 
 
@@ -142,6 +141,19 @@ def _pyrosm_bbox(bbox: BBox | None) -> list[float] | None:
         return None
     min_lon, min_lat, max_lon, max_lat = bbox
     return [min_lon, min_lat, max_lon, max_lat]
+
+
+def _load_pyrosm_osm(pbf_path: str, bbox: BBox | None = None) -> object:
+    """Construct a pyrosm OSM reader only when the pyrosm backend is used."""
+    try:
+        from pyrosm import OSM
+    except ImportError as exc:  # pragma: no cover - depends on optional binary package
+        raise ImportError(
+            "The optional 'pyrosm' package is required for the pyrosm network "
+            "backend. Use --network-backend osmium to avoid importing pyrosm."
+        ) from exc
+
+    return OSM(str(pbf_path), bounding_box=_pyrosm_bbox(bbox))
 
 
 def _resolve_network_backend(
@@ -728,7 +740,7 @@ def load_osm_network_data(
             profile=network_profile,
         )
 
-    osm = OSM(str(pbf_path), bounding_box=_pyrosm_bbox(bbox))
+    osm = _load_pyrosm_osm(pbf_path, bbox)
     nodes, edges = osm.get_network(network_type='driving', nodes=True)
     nodes, edges = _prepare_network_data(nodes, edges)
 
@@ -766,7 +778,7 @@ def load_osm_road_edges(
             profile=network_profile,
         )
 
-    osm = OSM(str(pbf_path), bounding_box=_pyrosm_bbox(bbox))
+    osm = _load_pyrosm_osm(pbf_path, bbox)
     edges = osm.get_network(network_type='driving', nodes=False).copy()
 
     if verbose:
