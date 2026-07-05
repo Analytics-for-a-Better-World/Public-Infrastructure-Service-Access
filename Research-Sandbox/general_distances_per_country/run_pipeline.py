@@ -1896,18 +1896,11 @@ def main(
                 settings.snap_components,
                 verbose=settings.verbose,
             )
-            route_nodes = snap_nodes
-            route_edges = filter_edges_to_nodes(
-                edges,
-                route_nodes,
-                original_node_count=len(nodes),
-                verbose=settings.verbose,
-            )
-            route_nodes = filter_nodes_to_edge_endpoints(
-                route_nodes,
-                route_edges,
-                verbose=settings.verbose,
-            )
+            if settings.verbose:
+                logging.info(
+                    'Keeping the full routing network for Pandana while '
+                    'restricting snapping to the selected components'
+                )
         if settings.diagnose_connectivity:
             component_summary = computed_component_summary
 
