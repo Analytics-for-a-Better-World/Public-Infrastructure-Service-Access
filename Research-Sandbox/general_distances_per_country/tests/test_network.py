@@ -8,7 +8,11 @@ from distance_pipeline.pipeline_support import build_output_run_tag
 from distance_pipeline.routing import build_networkx_graph, route_geometry_from_nodes
 from distance_pipeline.settings import PipelineSettings
 from distance_pipeline.snapping import snap_points_to_nodes
-from run_pipeline import filter_edges_to_nodes, pandana_weight_columns
+from run_pipeline import (
+    filter_edges_to_nodes,
+    filter_nodes_to_edge_endpoints,
+    pandana_weight_columns,
+)
 
 
 def test_prepare_network_data_accepts_geometry_free_edges():
@@ -155,4 +159,19 @@ def test_filter_edges_to_nodes_keeps_only_selected_component_edges():
         {'u': 10, 'v': 11, 'length': 1.0},
         {'u': 11, 'v': 10, 'length': 1.0},
     ]
+
+
+def test_filter_nodes_to_edge_endpoints_drops_nonincident_nodes():
+    nodes = pd.DataFrame(
+        {
+            'lon': [0.0, 1.0, 2.0],
+            'lat': [0.0, 1.0, 2.0],
+        },
+        index=pd.Index([10, 11, 12], name='id'),
+    )
+    edges = pd.DataFrame({'u': [10], 'v': [11], 'length': [1.0]})
+
+    filtered = filter_nodes_to_edge_endpoints(nodes, edges, verbose=False)
+
+    assert filtered.index.to_list() == [10, 11]
 

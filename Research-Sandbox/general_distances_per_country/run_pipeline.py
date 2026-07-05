@@ -1430,6 +1430,38 @@ def filter_edges_to_nodes(
     return filtered
 
 
+def filter_nodes_to_edge_endpoints(
+    nodes: pd.DataFrame,
+    edges: pd.DataFrame,
+    *,
+    verbose: bool,
+) -> pd.DataFrame:
+    '''Return nodes that are endpoints of at least one retained edge.'''
+    endpoint_ids = pd.Index(edges['u']).union(pd.Index(edges['v']))
+    filtered = nodes.loc[nodes.index.intersection(endpoint_ids)].copy()
+
+    missing_endpoint_count = len(endpoint_ids.difference(filtered.index))
+    if missing_endpoint_count:
+        raise ValueError(
+            'Routing edge endpoints are missing from the retained node table: '
+            f'{missing_endpoint_count:,} endpoints are unavailable.'
+        )
+    if filtered.empty:
+        raise ValueError(
+            'No routing nodes remain after pruning to retained edge endpoints.'
+        )
+
+    if verbose and len(filtered) != len(nodes):
+        logging.info(
+            'Pruned routing nodes without retained incident edges: '
+            '%s of %s selected nodes retained',
+            f'{len(filtered):,}',
+            f'{len(nodes):,}',
+        )
+
+    return filtered
+
+
 def write_matrix_outputs(
     *,
     matrix_df: object,
@@ -1868,6 +1900,11 @@ def main(
                 edges,
                 route_nodes,
                 original_node_count=len(nodes),
+                verbose=settings.verbose,
+            )
+            route_nodes = filter_nodes_to_edge_endpoints(
+                route_nodes,
+                route_edges,
                 verbose=settings.verbose,
             )
         if settings.diagnose_connectivity:
