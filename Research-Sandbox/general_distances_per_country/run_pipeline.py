@@ -1396,6 +1396,40 @@ def filter_nodes_to_components(
     return filtered
 
 
+def filter_edges_to_nodes(
+    edges: pd.DataFrame,
+    nodes: pd.DataFrame,
+    *,
+    original_node_count: int | None = None,
+    verbose: bool,
+) -> pd.DataFrame:
+    '''Return network edges whose endpoints are both present in the node table.'''
+    allowed_node_ids = nodes.index
+    filtered = edges.loc[
+        edges['u'].isin(allowed_node_ids) & edges['v'].isin(allowed_node_ids)
+    ].copy()
+
+    if filtered.empty:
+        raise ValueError(
+            'No network edges remain after filtering to the selected snap components.'
+        )
+
+    if verbose:
+        original_nodes = (
+            len(nodes) if original_node_count is None else original_node_count
+        )
+        logging.info(
+            'Restricting routing network to selected snap components: '
+            '%s of %s nodes and %s of %s edges retained',
+            f'{len(nodes):,}',
+            f'{original_nodes:,}',
+            f'{len(filtered):,}',
+            f'{len(edges):,}',
+        )
+
+    return filtered
+
+
 def write_matrix_outputs(
     *,
     matrix_df: object,
@@ -1812,6 +1846,8 @@ def main(
     component_ids = None
     component_summary = None
     snap_nodes = nodes
+    route_nodes = nodes
+    route_edges = edges
     if not map_only and (
         settings.diagnose_connectivity or settings.snap_components is not None
     ):
@@ -1825,6 +1861,13 @@ def main(
                 nodes,
                 component_ids,
                 settings.snap_components,
+                verbose=settings.verbose,
+            )
+            route_nodes = snap_nodes
+            route_edges = filter_edges_to_nodes(
+                edges,
+                route_nodes,
+                original_node_count=len(nodes),
                 verbose=settings.verbose,
             )
         if settings.diagnose_connectivity:
@@ -1912,20 +1955,20 @@ def main(
     if settings.verbose:
         logging.info(
             'Building Pandana network from %s nodes and %s edges',
-            f'{len(nodes):,}',
-            f'{len(edges):,}',
+            f'{len(route_nodes):,}',
+            f'{len(route_edges):,}',
         )
     t_pandana = pc()
-    edges = add_edge_speeds(edges)
-    if settings.network_impedance not in edges.columns:
+    route_edges = add_edge_speeds(route_edges)
+    if settings.network_impedance not in route_edges.columns:
         raise ValueError(
             f'--network-impedance {settings.network_impedance!r} is not available '
-            f'on the edge table. Available columns include: {sorted(edges.columns)}'
+            f'on the edge table. Available columns include: {sorted(route_edges.columns)}'
         )
     network_weight_cols = pandana_weight_columns(settings)
     network = build_pandana_network(
-        nodes,
-        edges,
+        route_nodes,
+        route_edges,
         weight_cols=network_weight_cols,
     )
     cost_options = matrix_cost_options(settings)
