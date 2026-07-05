@@ -589,6 +589,13 @@ def plot_context_map(
         print(f'Existing facilities: {len(existing):,}')
         print(f'Candidate sites: {len(candidates):,}')
 
+    rasterize_heavy_layers = (
+        output_path is not None
+        and Path(output_path).suffix.lower() in {'.pdf', '.svg', '.eps'}
+    )
+    if verbose and rasterize_heavy_layers:
+        print('Rasterizing dense map layers for compact vector output')
+
     t_figure = pc()
     if verbose:
         print('Creating figure')
@@ -622,6 +629,7 @@ def plot_context_map(
             capstyle='round',
             joinstyle='round',
             zorder=1,
+            rasterized=rasterize_heavy_layers,
         )
         subset.plot(
             ax=ax,
@@ -631,6 +639,7 @@ def plot_context_map(
             capstyle='round',
             joinstyle='round',
             zorder=2,
+            rasterized=rasterize_heavy_layers,
         )
 
         if verbose:
@@ -661,6 +670,7 @@ def plot_context_map(
         color='#2f2f2f',
         edgecolor='none',
         zorder=3,
+        rasterized=rasterize_heavy_layers,
     )
 
     if verbose:
@@ -678,6 +688,7 @@ def plot_context_map(
             alpha=0.95,
             color='magenta',
             zorder=4,
+            rasterized=rasterize_heavy_layers,
         )
 
     if not candidates.empty:
@@ -690,6 +701,7 @@ def plot_context_map(
             edgecolor='black',
             linewidth=0.35,
             zorder=5,
+            rasterized=rasterize_heavy_layers,
         )
 
     if verbose:
