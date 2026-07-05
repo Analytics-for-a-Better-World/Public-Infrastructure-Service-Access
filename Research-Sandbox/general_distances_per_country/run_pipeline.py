@@ -1408,6 +1408,7 @@ def filter_edges_to_nodes(
     filtered = edges.loc[
         edges['u'].isin(allowed_node_ids) & edges['v'].isin(allowed_node_ids)
     ].copy()
+    filtered = filtered.reset_index(drop=True)
 
     if filtered.empty:
         raise ValueError(

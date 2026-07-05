@@ -155,6 +155,7 @@ def test_filter_edges_to_nodes_keeps_only_selected_component_edges():
 
     filtered = filter_edges_to_nodes(edges, nodes, verbose=False)
 
+    assert filtered.index.to_list() == [0, 1]
     assert filtered[['u', 'v', 'length']].to_dict('records') == [
         {'u': 10, 'v': 11, 'length': 1.0},
         {'u': 11, 'v': 10, 'length': 1.0},
