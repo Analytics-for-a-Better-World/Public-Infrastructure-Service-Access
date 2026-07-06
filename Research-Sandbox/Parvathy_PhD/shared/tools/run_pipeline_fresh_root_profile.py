@@ -268,6 +268,7 @@ def make_walking_loaders(network_module: object) -> tuple[Callable[..., tuple[pd
         bbox: object | None = None,
         backend: str = "osmium_walking_trails",
         simplify: bool = False,
+        **_: object,
     ) -> tuple[pd.DataFrame, pd.DataFrame]:
         del backend
         t0 = pc()
@@ -310,6 +311,7 @@ def make_walking_loaders(network_module: object) -> tuple[Callable[..., tuple[pd
         verbose: bool = True,
         bbox: object | None = None,
         backend: str = "osmium_walking_trails",
+        **_: object,
     ) -> gpd.GeoDataFrame:
         del backend
         t0 = pc()
