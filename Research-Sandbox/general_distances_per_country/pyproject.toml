@@ -1,0 +1,112 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "abw-distance-matrix"
+version = "0.1.0"
+description = "Road-network distance and travel-time matrix pipeline for public infrastructure service access."
+readme = "README.md"
+requires-python = ">=3.10"
+authors = [{name = "Analytics for a Better World"}]
+license = {text = "See repository license"}
+keywords = [
+  "accessibility",
+  "distance matrix",
+  "facility location",
+  "geospatial optimization",
+  "openstreetmap",
+  "public infrastructure",
+  "worldpop",
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Topic :: Scientific/Engineering",
+]
+dependencies = [
+  "numpy>=1.23",
+  "pandas>=2.0",
+  "pyyaml>=6.0",
+  "requests>=2.28",
+]
+
+[project.optional-dependencies]
+geo = [
+  "contextily>=1.4",
+  "geopandas>=1.0",
+  "matplotlib>=3.7",
+  "pyproj>=3.3",
+  "rasterio>=1.3",
+  "shapely>=2.0",
+  "xyzservices>=2023.0",
+]
+osm = [
+  "pyosmium>=4.0",
+  "pyrosm>=0.6",
+]
+routing = [
+  "networkx>=3.0",
+  "pandana<=0.7",
+  "numpy<2",
+  "scipy>=1.10",
+]
+speed = [
+  "scipy>=1.10",
+]
+excel = [
+  "openpyxl>=3.1",
+]
+dev = [
+  "build>=1.0",
+  "pytest>=8",
+  "twine>=5",
+]
+all = [
+  "contextily>=1.4",
+  "geopandas>=1.0",
+  "matplotlib>=3.7",
+  "networkx>=3.0",
+  "numpy<2",
+  "openpyxl>=3.1",
+  "pandana<=0.7",
+  "pyosmium>=4.0",
+  "pyproj>=3.3",
+  "pyrosm>=0.6",
+  "rasterio>=1.3",
+  "scipy>=1.10",
+  "shapely>=2.0",
+  "xyzservices>=2023.0",
+]
+
+[project.scripts]
+abw-distances = "abw_distance_matrix.cli:main"
+abw-speed-calibration = "abw_distance_matrix.speed_calibration:main"
+
+[tool.setuptools]
+py-modules = [
+  "calibrate_speeds",
+  "parse_pipeline_logs",
+  "run_pipeline",
+]
+
+[tool.setuptools.packages.find]
+where = [".", "src"]
+include = [
+  "abw_distance_matrix*",
+  "countries*",
+  "distance_pipeline*",
+]
+exclude = [
+  "tests*",
+  "results*",
+  "figures*",
+  "logs*",
+  "descriptive_access_outputs*",
+]
+
+[tool.setuptools.package-data]
+abw_distance_matrix = ["py.typed", "README.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
