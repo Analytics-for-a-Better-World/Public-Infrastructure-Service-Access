@@ -7,9 +7,12 @@ from time import perf_counter as pc
 
 import geopandas as gpd
 import numpy as np
+import pandas as pd
 import rasterio
 from affine import Affine
 from rasterio.transform import xy
+
+from distance_pipeline.source_tables import normalize_custom_points
 
 
 def _compute_total_population(
@@ -214,3 +217,154 @@ def worldpop_to_points(
         )
 
     return gdf
+
+
+def table_to_population_points(
+    table_path: str | Path,
+    population_threshold: float = 1.0,
+    sample_fraction: float = 1.0,
+    max_points: int | None = None,
+    random_seed: int = 42,
+    aggregate_factor: int | None = None,
+    verbose: bool = True,
+) -> gpd.GeoDataFrame:
+    '''
+    Convert a point population table into the population-point schema.
+
+    This supports Meta Data for Good / Facebook HRSL-style point exports and
+    other already-disaggregated population tables. Coordinate columns are
+    normalized using the same logic as custom source/destination tables.
+    '''
+    t0 = pc()
+
+    table_path = Path(table_path)
+    if not table_path.exists():
+        raise FileNotFoundError(f'File not found: {table_path}')
+
+    if aggregate_factor is not None:
+        raise ValueError(
+            'aggregate_factor is only supported for raster population data. '
+            'Use a pre-aggregated point table or omit --aggregate-factor.'
+        )
+
+    if not 0 < sample_fraction <= 1:
+        raise ValueError('sample_fraction must be in the interval (0, 1]')
+
+    suffix = table_path.suffix.lower()
+    if suffix == '.parquet':
+        raw = pd.read_parquet(table_path)
+    elif suffix in {'.geojson', '.gpkg', '.shp'}:
+        raw = gpd.read_file(table_path)
+    else:
+        raw = pd.read_csv(table_path)
+
+    lower_to_actual = {str(col).lower(): col for col in raw.columns}
+    for candidate in (
+        'population',
+        'pop',
+        'population_count',
+        'population_estimate',
+        'population_2020',
+        'value',
+    ):
+        actual = lower_to_actual.get(candidate)
+        if actual is not None:
+            if actual != 'population':
+                raw = raw.rename(columns={actual: 'population'})
+            break
+
+    gdf = normalize_custom_points(raw, prefix=table_path.stem)
+    gdf['population'] = pd.to_numeric(gdf['population'], errors='coerce')
+    gdf = gdf[gdf['population'].notna()].copy()
+    gdf = gdf[gdf['population'] >= population_threshold].copy()
+
+    if gdf.empty:
+        raise ValueError('No table rows found above the population threshold')
+
+    rng = np.random.default_rng(random_seed)
+
+    if sample_fraction < 1.0:
+        n_sample = max(1, int(len(gdf) * sample_fraction))
+        idx = rng.choice(len(gdf), size=n_sample, replace=False)
+        gdf = gdf.iloc[idx].copy()
+
+        if verbose:
+            print(f'Sampled down to {len(gdf):,} points')
+
+    if max_points is not None and len(gdf) > max_points:
+        idx = rng.choice(len(gdf), size=max_points, replace=False)
+        gdf = gdf.iloc[idx].copy()
+
+        if verbose:
+            print(f'Capped to {len(gdf):,} points')
+
+    gdf = gdf.reset_index(drop=True)
+    gdf['ID'] = np.arange(len(gdf), dtype='int64')
+
+    keep_cols = [
+        'ID',
+        'Longitude',
+        'Latitude',
+        'population',
+        'geometry',
+    ]
+    gdf = gdf[keep_cols].copy()
+
+    if verbose:
+        print(
+            f'Created {len(gdf):,} population points from table '
+            f'in {pc() - t0:.2f} seconds'
+        )
+
+    return gdf
+
+
+def population_to_points(
+    population_path: str | Path,
+    population_threshold: float = 1.0,
+    sample_fraction: float = 1.0,
+    max_points: int | None = None,
+    random_seed: int = 42,
+    aggregate_factor: int | None = None,
+    data_format: str = 'auto',
+    verbose: bool = True,
+) -> gpd.GeoDataFrame:
+    '''
+    Convert raster or point-table population data into population points.
+
+    ``data_format='auto'`` treats common raster extensions as rasters and all
+    other files as point tables.
+    '''
+    population_path = Path(population_path)
+    format_key = data_format.lower().strip()
+    if format_key not in {'auto', 'raster', 'table'}:
+        raise ValueError("data_format must be 'auto', 'raster', or 'table'.")
+
+    raster_suffixes = {'.tif', '.tiff', '.vrt'}
+    if format_key == 'auto':
+        format_key = (
+            'raster'
+            if population_path.suffix.lower() in raster_suffixes
+            else 'table'
+        )
+
+    if format_key == 'raster':
+        return worldpop_to_points(
+            population_path,
+            population_threshold=population_threshold,
+            sample_fraction=sample_fraction,
+            max_points=max_points,
+            random_seed=random_seed,
+            aggregate_factor=aggregate_factor,
+            verbose=verbose,
+        )
+
+    return table_to_population_points(
+        population_path,
+        population_threshold=population_threshold,
+        sample_fraction=sample_fraction,
+        max_points=max_points,
+        random_seed=random_seed,
+        aggregate_factor=aggregate_factor,
+        verbose=verbose,
+    )

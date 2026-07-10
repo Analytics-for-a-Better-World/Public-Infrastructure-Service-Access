@@ -3,7 +3,7 @@
 Build sparse road-distance matrices from online geospatial data. The pipeline combines:
 
 - OpenStreetMap road networks from Geofabrik `.osm.pbf` extracts
-- WorldPop population rasters
+- WorldPop population rasters or Meta/Facebook Data for Good population files
 - OSM amenities such as schools, clinics, hospitals, or other service points
 - optional user-provided point tables
 - optional regular-grid candidate locations
@@ -37,9 +37,9 @@ We are also testing newer local Pandana builds that support NumPy 2. If you are 
 
 For a configured country or region, the CLI can:
 
-1. Download or reuse the configured OSM PBF and WorldPop raster.
+1. Download or reuse the configured OSM PBF and active population input.
 2. Extract a drivable road network from OSM.
-3. Convert WorldPop raster cells to weighted population points.
+3. Convert the active population input to weighted population points.
 4. Extract OSM amenities selected by `--amenity`.
 5. Load custom point tables as sources, destinations, or both.
 6. Generate regular-grid candidate locations.
@@ -96,7 +96,7 @@ cd C:\local\GIT\Public-Infrastructure-Service-Access\Research-Sandbox\general_di
 py run_pipeline.py timor_leste --sources amenities --destinations population --amenity hospital clinic doctors --max-points 10 --no-aggregate --max-total-dist 5000 --matrix-output-mode split
 ```
 
-This keeps only 10 population points and writes a small split matrix. It is useful for checking the Python environment, OSM loading, WorldPop loading, snapping, Pandana, parquet output, and manifests.
+This keeps only 10 population points and writes a small split matrix. It is useful for checking the Python environment, OSM loading, population loading, snapping, Pandana, parquet output, and manifests.
 
 ---
 
@@ -193,7 +193,7 @@ The pipeline is layer based. Sources and destinations can be selected independen
 
 Supported layer names:
 
-- `population` or `pop`: WorldPop-derived demand points
+- `population` or `pop`: demand points derived from the active population provider, usually WorldPop and optionally Meta/Facebook Data for Good
 - `amenities`, `amenity`, or `osm`: OSM amenities selected by `--amenity`
 - `candidates`, `candidate`, or `grid`: generated grid candidates
 - `table` or `custom`: a user-provided point table
@@ -285,6 +285,33 @@ Aggregate raster cells by summing non-overlapping square blocks before convertin
 
 Disable aggregation even if the country config defines one.
 
+Population source can be selected with:
+
+```powershell
+--population-provider worldpop|meta
+--population-format auto|raster|table
+--population-filename FILENAME
+--population-url URL
+--population-path PATH
+--meta-population-year INT
+```
+
+`worldpop` is the default provider. `meta` is intended for Meta/Facebook Data for Good population products supplied as a local GeoTIFF/CSV/parquet/GeoJSON-style point table or as an explicit URL. The pipeline does not guess Meta/HDX download URLs, because those publication paths vary by product and release. Use `--population-path` for the most reproducible runs; the file metadata and checksum are recorded in the manifest.
+
+For a Meta-style raster:
+
+```powershell
+py run_pipeline.py luxembourg --population-provider meta --population-path "C:\data\meta_lux_population.tif" --population-format raster --sources amenities --destinations population --amenity school --max-total-dist 10000
+```
+
+For a Meta-style point table:
+
+```powershell
+py run_pipeline.py luxembourg --population-provider meta --population-path "C:\data\meta_lux_population.csv" --population-format table --no-aggregate --sources amenities --destinations population --amenity school --max-total-dist 10000
+```
+
+Table population inputs should contain recognizable longitude/latitude columns and a population-like column such as `population`, `pop`, `population_count`, `population_estimate`, `population_2020`, or `value`. Aggregation is only available for raster population inputs.
+
 WorldPop can be overridden with:
 
 ```powershell
@@ -298,7 +325,7 @@ WorldPop can be overridden with:
 --worldpop-path PATH
 ```
 
-The strongest reproducibility option is `--worldpop-path`, because it points to a local raster whose exact bytes are recorded in the run manifest.
+The strongest WorldPop reproducibility option is `--worldpop-path` or the generic `--population-path`, because it points to a local raster whose exact bytes are recorded in the run manifest.
 
 OSM PBF extracts can be overridden with:
 
@@ -499,7 +526,7 @@ py run_pipeline.py netherlands --network-backend osmium --network-profile drivin
 
 For publication runs, record the backend, simplification mode, network profile, bbox, aggregation, and distance cap in the run notes.
 
-Large national extracts should usually avoid random sampling in final runs. Prefer the smallest aggregation that keeps the candidate target/source pair set computationally feasible, and report the retained WorldPop headcount from the log or run manifest. For example, health-facility accessibility capped at 100 km can be run as:
+Large national extracts should usually avoid random sampling in final runs. Prefer the smallest aggregation that keeps the candidate target/source pair set computationally feasible, and report the retained population-provider headcount from the log or run manifest. For example, health-facility accessibility capped at 100 km can be run as:
 
 ```powershell
 py run_pipeline.py switzerland `

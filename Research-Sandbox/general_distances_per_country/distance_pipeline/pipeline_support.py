@@ -144,6 +144,7 @@ def build_output_run_tag(
     candidate_max_snap_dist_m: float | None,
     has_candidates: bool,
     pbf_filename: str | None = None,
+    population_label: str | None = None,
 ) -> str:
     """Build a filename-safe tag describing the pipeline output settings."""
     candidate_part = (
@@ -154,6 +155,11 @@ def build_output_run_tag(
     )
     snap_part = format_snap_components_suffix(settings.snap_components)
     pbf_part = format_pbf_suffix(pbf_filename)
+    population_part = (
+        ''
+        if population_label is None
+        else f'_population_{format_filename_part(population_label)}'
+    )
     network_part = format_network_suffix(settings)
     impedance_part = (
         ''
@@ -175,7 +181,7 @@ def build_output_run_tag(
         f"maxdist_{format_output_value(settings.max_total_dist)}_"
         f"amenity_{format_amenity_suffix(amenity_values)}_"
         f"{candidate_part}{snap_part}{pbf_part}{network_part}"
-        f"{impedance_part}{chunk_part}"
+        f"{population_part}{impedance_part}{chunk_part}"
     )
 
 

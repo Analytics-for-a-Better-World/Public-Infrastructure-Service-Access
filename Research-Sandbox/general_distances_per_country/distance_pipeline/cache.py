@@ -173,6 +173,10 @@ class CacheManager:
     def worldpop_stem(self) -> str:
         return self.cfg.WORLDPOP_PATH.stem
 
+    @property
+    def population_stem(self) -> str:
+        return self.cfg.POPULATION_PATH.stem
+
     def nodes_path(
         self,
         bbox: tuple[float, float, float, float] | list[float] | None = None,
@@ -324,7 +328,7 @@ class CacheManager:
         return (
             self.cache_dir
             / (
-                f'{self.worldpop_stem}_population_points_'
+                f'{self.population_stem}_population_points_'
                 f'pop_{population_threshold:g}_'
                 f'sample_{sample_fraction:g}_'
                 f'seed_{random_seed}_'
@@ -366,7 +370,7 @@ class CacheManager:
         return (
             self.cache_dir
             / (
-                f'{self.worldpop_stem}_population_snapped_'
+                f'{self.population_stem}_population_snapped_'
                 f'{population_part}_{distance_col}_'
                 f'epsg_{self.cfg.PROJECTED_EPSG}{snap_part}{backend_part}.pkl'
             )
@@ -450,6 +454,7 @@ class CacheManager:
     ) -> Path:
         max_total_dist_str = _none_or_number(max_total_dist, 'm')
         population_part = (
+            f'population_{_safe_part(self.population_stem)}_'
             f'pop_{_none_or_number(population_threshold)}_'
             f'sample_{_none_or_number(sample_fraction)}_'
             f'seed_{_none_or_int(random_seed)}_'

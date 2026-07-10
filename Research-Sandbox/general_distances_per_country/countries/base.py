@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 
-ConfigValue = str | int | float | Path | bool | None
+ConfigValue = str | int | float | Path | bool | dict[str, float] | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +19,8 @@ class CountryConfig:
     base_root: Path = Path(r'C:\local') / 'Download_Depot'
     distance_threshold_km: float = 150.0
     geofabrik_region: str = 'europe'
+    population_provider: str = 'worldpop'
+    population_format: str = 'auto'
     worldpop_year: int = 2020
     worldpop_dataset: str = 'global1'
     worldpop_release: str | None = None
@@ -29,6 +32,10 @@ class CountryConfig:
     worldpop_filename: str | None = None
     worldpop_url: str | None = None
     worldpop_path: Path | None = None
+    meta_population_year: int | None = None
+    meta_population_filename: str | None = None
+    meta_population_url: str | None = None
+    meta_population_path: Path | None = None
     pbf_filename: str | None = None
     pbf_url: str | None = None
     plot_title_suffix: str = 'roads, population, and service facilities'
@@ -76,6 +83,31 @@ class CountryConfig:
         return '_'.join(parts) + '.tif'
 
     @property
+    def resolved_meta_population_filename(self) -> str:
+        '''Return the configured Meta population filename.'''
+        if self.meta_population_filename is not None:
+            return self.meta_population_filename
+        if self.meta_population_path is not None:
+            return Path(self.meta_population_path).name
+        if self.meta_population_url is not None:
+            filename = Path(unquote(urlparse(self.meta_population_url).path)).name
+            if filename:
+                return filename
+        raise ValueError(
+            'Meta population data requires meta_population_filename, '
+            'meta_population_path, or meta_population_url.'
+        )
+
+    @property
+    def resolved_population_filename(self) -> str:
+        '''Return the configured population filename for the active provider.'''
+        if self.population_provider == 'worldpop':
+            return self.resolved_worldpop_filename
+        if self.population_provider == 'meta':
+            return self.resolved_meta_population_filename
+        raise ValueError(f'Unsupported population_provider: {self.population_provider!r}')
+
+    @property
     def PBF_URL(self) -> str:
         '''Return the OSM PBF download URL.'''
         if self.pbf_url is not None:
@@ -110,6 +142,20 @@ class CountryConfig:
         )
 
     @property
+    def POPULATION_URL(self) -> str:
+        '''Return the active population-data download URL.'''
+        if self.population_provider == 'worldpop':
+            return self.WORLDPOP_URL
+        if self.population_provider == 'meta':
+            if self.meta_population_url is None:
+                raise ValueError(
+                    'Meta population downloads require --population-url or '
+                    'a configured meta_population_url.'
+                )
+            return self.meta_population_url
+        raise ValueError(f'Unsupported population_provider: {self.population_provider!r}')
+
+    @property
     def PBF_PATH(self) -> Path:
         '''Return the local OSM PBF path.'''
         return self.BASE_DIR / self.resolved_pbf_filename
@@ -120,6 +166,17 @@ class CountryConfig:
         if self.worldpop_path is not None:
             return self.worldpop_path
         return self.BASE_DIR / self.resolved_worldpop_filename
+
+    @property
+    def POPULATION_PATH(self) -> Path:
+        '''Return the local path for the active population dataset.'''
+        if self.population_provider == 'worldpop':
+            return self.WORLDPOP_PATH
+        if self.population_provider == 'meta':
+            if self.meta_population_path is not None:
+                return self.meta_population_path
+            return self.BASE_DIR / self.resolved_meta_population_filename
+        raise ValueError(f'Unsupported population_provider: {self.population_provider!r}')
 
     @property
     def COUNTRY_NAME(self) -> str:
@@ -146,6 +203,8 @@ DEFAULTS: dict[str, ConfigValue] = {
     'base_root': Path(r'C:\local') / 'Download_Depot',
     'distance_threshold_km': 150.0,
     'geofabrik_region': 'europe',
+    'population_provider': 'worldpop',
+    'population_format': 'auto',
     'worldpop_year': 2020,
     'worldpop_dataset': 'global1',
     'worldpop_release': None,
@@ -157,6 +216,10 @@ DEFAULTS: dict[str, ConfigValue] = {
     'worldpop_filename': None,
     'worldpop_url': None,
     'worldpop_path': None,
+    'meta_population_year': None,
+    'meta_population_filename': None,
+    'meta_population_url': None,
+    'meta_population_path': None,
     'pbf_filename': None,
     'pbf_url': None,
     'plot_title_suffix': 'roads, population, and service facilities',
@@ -199,8 +262,14 @@ def build_config(
     candidate_grid_spacing_m = merged['candidate_grid_spacing_m']
     candidate_max_snap_dist_m = merged['candidate_max_snap_dist_m']
     aggregate_factor = merged['aggregate_factor']
+    population_provider = str(merged['population_provider'])
+    population_format = str(merged['population_format'])
     worldpop_dataset = str(merged['worldpop_dataset'])
 
+    if population_provider not in {'worldpop', 'meta'}:
+        raise ValueError("population_provider must be 'worldpop' or 'meta'.")
+    if population_format not in {'auto', 'raster', 'table'}:
+        raise ValueError("population_format must be 'auto', 'raster', or 'table'.")
     if worldpop_dataset not in {'global1', 'global2'}:
         raise ValueError("worldpop_dataset must be 'global1' or 'global2'.")
 
@@ -216,6 +285,8 @@ def build_config(
         base_root=Path(base_root),
         distance_threshold_km=float(merged['distance_threshold_km']),
         geofabrik_region=str(merged['geofabrik_region']),
+        population_provider=population_provider,
+        population_format=population_format,
         worldpop_year=int(merged['worldpop_year']),
         worldpop_dataset=worldpop_dataset,
         worldpop_release=(
@@ -246,6 +317,26 @@ def build_config(
             None
             if merged['worldpop_path'] is None
             else Path(merged['worldpop_path'])
+        ),
+        meta_population_year=(
+            None
+            if merged['meta_population_year'] is None
+            else int(merged['meta_population_year'])
+        ),
+        meta_population_filename=(
+            None
+            if merged['meta_population_filename'] is None
+            else str(merged['meta_population_filename'])
+        ),
+        meta_population_url=(
+            None
+            if merged['meta_population_url'] is None
+            else str(merged['meta_population_url'])
+        ),
+        meta_population_path=(
+            None
+            if merged['meta_population_path'] is None
+            else Path(merged['meta_population_path'])
         ),
         pbf_filename=(
             None
