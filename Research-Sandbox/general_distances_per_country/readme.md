@@ -3,7 +3,7 @@
 Build sparse road-distance matrices from online geospatial data. The pipeline combines:
 
 - OpenStreetMap road networks from Geofabrik `.osm.pbf` extracts
-- WorldPop population rasters
+- WorldPop population rasters or Meta/Facebook Data for Good population files
 - OSM amenities such as schools, clinics, hospitals, or other service points
 - optional user-provided point tables
 - optional regular-grid candidate locations
@@ -12,6 +12,12 @@ The main entry point is:
 
 ```powershell
 py run_pipeline.py <country> [options]
+```
+
+When installed as a package, the equivalent console entry point is:
+
+```powershell
+abw-distances <country> [options]
 ```
 
 ---
@@ -37,9 +43,9 @@ We are also testing newer local Pandana builds that support NumPy 2. If you are 
 
 For a configured country or region, the CLI can:
 
-1. Download or reuse the configured OSM PBF and WorldPop raster.
+1. Download or reuse the configured OSM PBF and population dataset.
 2. Extract a drivable road network from OSM.
-3. Convert WorldPop raster cells to weighted population points.
+3. Convert population rasters or point tables to weighted population points.
 4. Extract OSM amenities selected by `--amenity`.
 5. Load custom point tables as sources, destinations, or both.
 6. Generate regular-grid candidate locations.
@@ -55,7 +61,37 @@ The pipeline caches expensive intermediate stages under each country's configure
 
 # Setup
 
-There is no pinned environment file in this folder yet. A practical environment should include:
+This folder is now also an installable incubation package, following the same
+pattern as `Research-Sandbox\abw_maxcover`. From the repository root:
+
+```powershell
+cd C:\local\GIT\Public-Infrastructure-Service-Access
+py -m pip install -e "Research-Sandbox\general_distances_per_country[all,dev]"
+```
+
+For a lighter install, choose only the optional extras you need:
+
+```powershell
+py -m pip install -e "Research-Sandbox\general_distances_per_country[geo,osm,routing,excel]"
+```
+
+The package distribution name is `abw-distance-matrix`; the import name is
+`abw_distance_matrix`. It installs the historical `distance_pipeline` and
+`countries` modules as compatibility modules and exposes these console scripts:
+
+```powershell
+abw-distances --help
+abw-speed-calibration --help
+```
+
+The old script entry points remain supported:
+
+```powershell
+py run_pipeline.py --help
+py calibrate_speeds.py --help
+```
+
+A practical full environment includes:
 
 ```text
 numpy
@@ -75,7 +111,11 @@ networkx
 openpyxl
 ```
 
-For a conservative PyPI-only environment, use `numpy<2`. For the current modernization work, a locally built NumPy-2-compatible Pandana wheel can be used with newer NumPy and Python versions.
+For a conservative PyPI-only environment, use `numpy<2`. The package extras
+`routing` and `all` encode that conservative Pandana constraint. For the
+current modernization work, a locally built NumPy-2-compatible Pandana wheel can
+be used with newer NumPy and Python versions, but then install dependencies
+manually rather than using the conservative `routing` extra.
 
 The optional `osmium` package enables the streaming OSM backend:
 
@@ -96,13 +136,37 @@ cd C:\local\GIT\Public-Infrastructure-Service-Access\Research-Sandbox\general_di
 py run_pipeline.py timor_leste --sources amenities --destinations population --amenity hospital clinic doctors --max-points 10 --no-aggregate --max-total-dist 5000 --matrix-output-mode split
 ```
 
-This keeps only 10 population points and writes a small split matrix. It is useful for checking the Python environment, OSM loading, WorldPop loading, snapping, Pandana, parquet output, and manifests.
+This keeps only 10 population points and writes a small split matrix. It is useful for checking the Python environment, OSM loading, population loading, snapping, Pandana, parquet output, and manifests.
 
 ---
 
-# Travel-Time Speed Calibration
+# Travel-Time Speed Profiles And Calibration
 
-The main pipeline computes road-network distance matrices. The companion script `calibrate_speeds.py` prepares a travel-time impedance layer by:
+The main pipeline computes road-network distance matrices by default, but every
+OSM edge is also enriched with a first-estimate travel-time weight:
+
+- `length` and `length_m`: road distance in meters;
+- `speed_kph`: estimated edge speed;
+- `travel_time_s`: estimated traversal time in seconds.
+
+The first estimate is controlled by country configuration fields:
+
+- `legal_speeds_kph`: highway-class speeds in km/h, preferably legal or posted
+  maximum speeds where known;
+- `speed_general_factor`: a conservative global multiplier that translates
+  legal or posted speeds into average achievable speeds;
+- `surface_speed_multipliers`: factors for OSM `surface` tags such as
+  `asphalt`, `paved`, `gravel`, `dirt`, or `mud`;
+- `urban_density_threshold_pop_per_km2`, `urban_density_speed_factor`, and
+  `urban_density_radius_m`: an optional population-provider-based reduction for dense
+  areas. The pipeline estimates local population density around each edge
+  midpoint and applies the density factor when the threshold is exceeded.
+
+If a country does not provide these fields, backward-compatible generic speed
+defaults are used. The generated run manifest records the speed assumptions.
+
+The companion script `calibrate_speeds.py` validates and calibrates this first
+estimate by:
 
 1. sampling population-to-facility origin-destination pairs;
 2. computing shortest-distance paths on the OSM network;
@@ -144,7 +208,7 @@ py calibrate_speeds.py timor_leste `
 
 Outputs are written by default to `<country_data>\speed_calibration`, including sampled pair diagnostics, a YAML speed profile, and calibrated edge weights. The Mapbox mode is intended for sampled calibration and validation; full matrices should still be computed locally with Pandana using the calibrated weights.
 
-Backward compatibility is preserved: road distance remains stored in the historical `length` column and is also exposed explicitly as `length_m`. Travel-time weights are added separately as `travel_time_s`, and calibrated runs also write `calibrated_time_s`. Use the distance impedance for shortest-distance matrices and the time impedance for fastest-route experiments.
+Backward compatibility is preserved: road distance remains stored in the historical `length` column and is also exposed explicitly as `length_m`. Travel-time weights are added separately as `travel_time_s`, and calibrated runs also write `calibrated_time_s`. Use `--network-impedance length` for shortest-distance matrices and `--network-impedance travel_time_s` or a calibrated time column for fastest-route experiments.
 
 ---
 
@@ -193,7 +257,7 @@ The pipeline is layer based. Sources and destinations can be selected independen
 
 Supported layer names:
 
-- `population` or `pop`: WorldPop-derived demand points
+- `population` or `pop`: demand points derived from the active population provider, usually WorldPop and optionally Meta/Facebook Data for Good
 - `amenities`, `amenity`, or `osm`: OSM amenities selected by `--amenity`
 - `candidates`, `candidate`, or `grid`: generated grid candidates
 - `table` or `custom`: a user-provided point table
@@ -253,7 +317,7 @@ If `--destinations table` is used without `--destination-table`, the pipeline re
 --population-threshold FLOAT
 ```
 
-Minimum raster value retained as a population point. Default: `1.0`.
+Minimum population value retained as a population point. Default: `1.0`.
 
 ```powershell
 --sample-fraction FLOAT
@@ -271,13 +335,13 @@ Cap the number of population points. Useful for smoke tests.
 --random-seed INT
 ```
 
-Random seed used when `--sample-fraction` or `--max-points` selects a subset of population points. The default is `42`. With the same raster bytes, threshold, aggregation, sample fraction, max-points cap, and seed, the sampled population points are deterministic. The seed is included in population caches, snapped-population caches, matrix caches, output filenames, and the run manifest.
+Random seed used when `--sample-fraction` or `--max-points` selects a subset of population points. The default is `42`. With the same population input bytes, threshold, aggregation, sample fraction, max-points cap, and seed, the sampled population points are deterministic. The seed is included in population caches, snapped-population caches, matrix caches, output filenames, and the run manifest.
 
 ```powershell
 --aggregate-factor INT
 ```
 
-Aggregate raster cells by summing non-overlapping square blocks before converting to points.
+Aggregate raster cells by summing non-overlapping square blocks before converting to points. This applies to raster population sources only.
 
 ```powershell
 --no-aggregate
@@ -285,7 +349,31 @@ Aggregate raster cells by summing non-overlapping square blocks before convertin
 
 Disable aggregation even if the country config defines one.
 
-WorldPop can be overridden with:
+Choose the population provider with:
+
+```powershell
+--population-provider worldpop|meta
+--population-format auto|raster|table
+--population-url URL
+--population-path PATH
+--population-filename FILENAME
+```
+
+`worldpop` is the default provider. `meta` is intended for Meta/Facebook Data for Good population products supplied as a local GeoTIFF/CSV/parquet/GeoJSON-style point table or as an explicit URL. The pipeline does not guess Meta/HDX download URLs, because those publication paths vary by product and release. Use `--population-path` for the most reproducible runs; the file metadata and checksum are recorded in the manifest.
+
+Examples:
+
+```powershell
+py run_pipeline.py luxembourg --population-provider meta --population-path "C:\data\meta_lux_population.tif" --population-format raster --sources amenities --destinations population --amenity school --max-total-dist 10000
+```
+
+```powershell
+py run_pipeline.py luxembourg --population-provider meta --population-path "C:\data\meta_lux_population.csv" --population-format table --no-aggregate --sources amenities --destinations population --amenity school --max-total-dist 10000
+```
+
+For table population data, the loader accepts common coordinate columns such as `longitude`/`latitude`, `lon`/`lat`, or `Longitude`/`Latitude`. It looks for a population-like column such as `population`, `pop`, `population_count`, `population_estimate`, or `value`. Table population data is assumed to already represent point/grid-cell demand weights; `--aggregate-factor` is therefore only valid for raster inputs.
+
+WorldPop-specific metadata can be overridden with:
 
 ```powershell
 --worldpop-year INT
@@ -298,7 +386,7 @@ WorldPop can be overridden with:
 --worldpop-path PATH
 ```
 
-The strongest reproducibility option is `--worldpop-path`, because it points to a local raster whose exact bytes are recorded in the run manifest.
+The strongest WorldPop reproducibility option is `--worldpop-path` or the generic `--population-path`, because it points to a local raster whose exact bytes are recorded in the run manifest.
 
 OSM PBF extracts can be overridden with:
 
@@ -499,7 +587,7 @@ py run_pipeline.py netherlands --network-backend osmium --network-profile drivin
 
 For publication runs, record the backend, simplification mode, network profile, bbox, aggregation, and distance cap in the run notes.
 
-Large national extracts should usually avoid random sampling in final runs. Prefer the smallest aggregation that keeps the candidate target/source pair set computationally feasible, and report the retained WorldPop headcount from the log or run manifest. For example, health-facility accessibility capped at 100 km can be run as:
+Large national extracts should usually avoid random sampling in final runs. Prefer the smallest aggregation that keeps the candidate target/source pair set computationally feasible, and report the retained population-provider headcount from the log or run manifest. For example, health-facility accessibility capped at 100 km can be run as:
 
 ```powershell
 py run_pipeline.py switzerland `
@@ -635,7 +723,7 @@ Caches are written below:
 <cfg.BASE_DIR>/cache/
 ```
 
-Cache keys include the relevant runtime settings, including population settings, random seed, aggregation, amenity filters, candidate settings, bbox, network backend, network profile, distance threshold, and maximum total distance.
+Cache keys include the relevant runtime settings, including population source, population settings, random seed, aggregation, amenity filters, candidate settings, bbox, network backend, network profile, distance threshold, and maximum total distance.
 
 Sparse matrix construction also maintains a reusable road-node-pair cache below:
 

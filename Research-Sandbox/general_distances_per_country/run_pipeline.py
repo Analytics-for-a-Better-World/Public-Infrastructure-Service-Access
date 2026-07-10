@@ -36,7 +36,7 @@ from distance_pipeline.pipeline_support import (
     resolve_candidate_grid_spacing,
     resolve_candidate_max_snap_dist,
 )
-from distance_pipeline.population import worldpop_to_points
+from distance_pipeline.population import population_to_points
 from distance_pipeline.routing import add_edge_speeds
 from distance_pipeline.settings import PipelineSettings
 from distance_pipeline.snapping import snap_points_to_nodes
@@ -335,6 +335,14 @@ def pbf_filename_from_url(pbf_url: str) -> str:
     return validate_pbf_filename(filename)
 
 
+def input_filename_from_url(input_url: str, argument_name: str) -> str:
+    """Derive a cache filename from a generic input URL path."""
+    filename = Path(unquote(urlparse(input_url).path)).name
+    if not filename:
+        raise ValueError(f'{argument_name} must include a filename.')
+    return filename
+
+
 def resolve_input_config(
     cfg: CountryConfig,
     args: argparse.Namespace,
@@ -343,6 +351,18 @@ def resolve_input_config(
     overrides: dict[str, object] = {}
     pbf_url = getattr(args, 'pbf_url', None)
     pbf_filename = getattr(args, 'pbf_filename', None)
+    population_provider = getattr(args, 'population_provider', None)
+    population_format = getattr(args, 'population_format', None)
+    population_filename = getattr(args, 'population_filename', None)
+    population_url = getattr(args, 'population_url', None)
+    population_path = getattr(args, 'population_path', None)
+    meta_population_year = getattr(args, 'meta_population_year', None)
+    resolved_provider = population_provider or cfg.population_provider
+
+    if population_provider is not None:
+        overrides['population_provider'] = population_provider
+    if population_format is not None:
+        overrides['population_format'] = population_format
 
     if args.worldpop_year is not None:
         overrides['worldpop_year'] = args.worldpop_year
@@ -364,6 +384,28 @@ def resolve_input_config(
         overrides['worldpop_url'] = args.worldpop_url
     if args.worldpop_path is not None:
         overrides['worldpop_path'] = Path(args.worldpop_path)
+    if population_filename is not None:
+        if resolved_provider == 'meta':
+            overrides['meta_population_filename'] = population_filename
+        else:
+            overrides['worldpop_filename'] = population_filename
+    if population_url is not None:
+        if resolved_provider == 'meta':
+            overrides['meta_population_url'] = population_url
+            if population_filename is None and population_path is None:
+                overrides['meta_population_filename'] = input_filename_from_url(
+                    population_url,
+                    '--population-url',
+                )
+        else:
+            overrides['worldpop_url'] = population_url
+    if population_path is not None:
+        if resolved_provider == 'meta':
+            overrides['meta_population_path'] = Path(population_path)
+        else:
+            overrides['worldpop_path'] = Path(population_path)
+    if meta_population_year is not None:
+        overrides['meta_population_year'] = meta_population_year
     if pbf_url is not None:
         overrides['pbf_url'] = pbf_url
     if pbf_filename is not None:
@@ -409,6 +451,67 @@ def pbf_filename_for_output_tag(
     if cfg.pbf_url is None and cfg.resolved_pbf_filename == default_filename:
         return None
     return cfg.resolved_pbf_filename
+
+
+def population_label_for_output_tag(
+    cfg: CountryConfig,
+    base_cfg: CountryConfig | None = None,
+) -> str | None:
+    """Return a population-data label for output filenames, if needed."""
+    if base_cfg is not None:
+        if (
+            cfg.population_provider == base_cfg.population_provider
+            and cfg.resolved_population_filename == base_cfg.resolved_population_filename
+            and cfg.POPULATION_PATH == base_cfg.POPULATION_PATH
+        ):
+            return None
+
+    if cfg.population_provider == 'worldpop' and base_cfg is None:
+        return None
+
+    return f'{cfg.population_provider}_{Path(cfg.resolved_population_filename).stem}'
+
+
+def ensure_population_input(cfg: CountryConfig, settings: PipelineSettings) -> None:
+    """Download or validate the active population input dataset."""
+    population_path = cfg.POPULATION_PATH
+    provider_name = cfg.population_provider
+    explicit_path = (
+        cfg.worldpop_path is not None
+        if provider_name == 'worldpop'
+        else cfg.meta_population_path is not None
+    )
+
+    if explicit_path:
+        if not population_path.exists():
+            raise FileNotFoundError(
+                f'Configured population path does not exist: {population_path}'
+            )
+        if settings.verbose:
+            logging.info(
+                f'Using local {provider_name} population data: {population_path}'
+            )
+        return
+
+    if provider_name == 'meta' and cfg.meta_population_url is None:
+        if population_path.exists():
+            if settings.verbose:
+                logging.info(
+                    f'Using existing local Meta population data: {population_path}'
+                )
+            return
+        raise ValueError(
+            'Meta/Facebook Data for Good population data requires '
+            '--population-path, --population-url, or a pre-existing '
+            f'file at {population_path}.'
+        )
+
+    download_file(
+        cfg.POPULATION_URL,
+        population_path,
+        overwrite=False,
+        verbose=settings.verbose,
+    )
 
 
 # ------------------------
@@ -676,6 +779,67 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help='Optional maximum total distance to retain in the output matrix.',
+    )
+
+    parser.add_argument(
+        '--population-provider',
+        choices=('worldpop', 'meta'),
+        default=None,
+        help=(
+            'Population data provider. Default: country config, normally '
+            'worldpop. Use meta for Meta/Facebook Data for Good population '
+            'rasters or point tables supplied through --population-path or '
+            '--population-url.'
+        ),
+    )
+
+    parser.add_argument(
+        '--population-format',
+        choices=('auto', 'raster', 'table'),
+        default=None,
+        help=(
+            'Format of the active population dataset. auto treats .tif/.tiff/.vrt '
+            'as rasters and other files as point tables.'
+        ),
+    )
+
+    parser.add_argument(
+        '--population-filename',
+        type=str,
+        default=None,
+        help=(
+            'Explicit filename for the active population provider. With '
+            '--population-provider meta, this names the local Meta population '
+            'file below the country data directory unless --population-path is used.'
+        ),
+    )
+
+    parser.add_argument(
+        '--population-url',
+        type=str,
+        default=None,
+        help=(
+            'Explicit download URL for the active population provider. With '
+            '--population-provider meta, the URL path filename is used unless '
+            '--population-filename is given.'
+        ),
+    )
+
+    parser.add_argument(
+        '--population-path',
+        type=str,
+        default=None,
+        help=(
+            'Explicit local population file for the active provider. Use this '
+            'for downloaded Meta/Facebook Data for Good GeoTIFF or CSV files.'
+        ),
+    )
+
+    parser.add_argument(
+        '--meta-population-year',
+        type=int,
+        default=None,
+        help='Optional metadata year for Meta/Facebook Data for Good population data.',
     )
 
     parser.add_argument(
@@ -1004,10 +1168,23 @@ def settings_from_args(args: argparse.Namespace) -> PipelineSettings:
         raise ValueError('--random-seed must be nonnegative.')
     if args.max_total_dist is not None and args.max_total_dist <= 0:
         raise ValueError('--max-total-dist must be positive.')
+    if args.population_url is not None and args.population_path is not None:
+        raise ValueError('--population-url and --population-path cannot be combined.')
+    if args.meta_population_year is not None and args.meta_population_year <= 0:
+        raise ValueError('--meta-population-year must be positive.')
     if args.worldpop_year is not None and args.worldpop_year <= 0:
         raise ValueError('--worldpop-year must be positive.')
     if args.worldpop_url is not None and args.worldpop_path is not None:
         raise ValueError('--worldpop-url and --worldpop-path cannot be combined.')
+    if args.population_provider == 'meta' and (
+        args.worldpop_url is not None
+        or args.worldpop_path is not None
+        or args.worldpop_filename is not None
+    ):
+        raise ValueError(
+            'Use --population-url/--population-path/--population-filename for '
+            'Meta population data, not --worldpop-* overrides.'
+        )
     if args.pbf_filename is not None:
         validate_pbf_filename(args.pbf_filename)
     if args.pbf_url is not None and args.pbf_filename is None:
@@ -1594,24 +1771,13 @@ def main(
         logging.info(f'Amenity filter: {amenity_values}')
         logging.info(f'Network backend: {settings.network_backend}')
         logging.info(f'Network profile: {settings.network_profile}')
+        logging.info(f'Population provider: {cfg.population_provider}')
+        logging.info(f'Population format: {cfg.population_format}')
 
     cfg.BASE_DIR.mkdir(parents=True, exist_ok=True)
 
     download_file(cfg.PBF_URL, cfg.PBF_PATH, overwrite=False, verbose=settings.verbose)
-    if cfg.worldpop_path is not None:
-        if not cfg.WORLDPOP_PATH.exists():
-            raise FileNotFoundError(
-                f'Configured --worldpop-path does not exist: {cfg.WORLDPOP_PATH}'
-            )
-        if settings.verbose:
-            logging.info(f'Using local WorldPop raster: {cfg.WORLDPOP_PATH}')
-    else:
-        download_file(
-            cfg.WORLDPOP_URL,
-            cfg.WORLDPOP_PATH,
-            overwrite=False,
-            verbose=settings.verbose,
-        )
+    ensure_population_input(cfg, settings)
 
     nodes = None
     edges = None
@@ -1677,13 +1843,14 @@ def main(
             random_seed=settings.random_seed,
             aggregate_factor=agg,
         ),
-        builder=lambda: worldpop_to_points(
-            cfg.WORLDPOP_PATH,
+        builder=lambda: population_to_points(
+            cfg.POPULATION_PATH,
             population_threshold=settings.population_threshold,
             sample_fraction=settings.sample_fraction,
             max_points=settings.max_points,
             random_seed=settings.random_seed,
             aggregate_factor=agg,
+            data_format=cfg.population_format,
             verbose=settings.verbose,
         ),
     )
@@ -1890,7 +2057,17 @@ def main(
             f'{len(edges):,}',
         )
     t_pandana = pc()
-    edges = add_edge_speeds(edges)
+    edges = add_edge_speeds(
+        edges,
+        default_speeds_kph=cfg.legal_speeds_kph,
+        surface_multipliers=cfg.surface_speed_multipliers,
+        general_speed_factor=cfg.speed_general_factor,
+        population_points=population_points,
+        projected_epsg=cfg.PROJECTED_EPSG,
+        urban_density_threshold_pop_per_km2=cfg.urban_density_threshold_pop_per_km2,
+        urban_density_speed_factor=cfg.urban_density_speed_factor,
+        urban_density_radius_m=cfg.urban_density_radius_m,
+    )
     if settings.network_impedance not in edges.columns:
         raise ValueError(
             f'--network-impedance {settings.network_impedance!r} is not available '
@@ -2160,6 +2337,7 @@ def main(
         candidate_max_snap_dist_m=candidate_max_snap_dist_m,
         has_candidates=candidate_sites_snapped is not None,
         pbf_filename=pbf_filename_for_output_tag(cfg, base_cfg),
+        population_label=population_label_for_output_tag(cfg, base_cfg),
     )
     if settings.diagnose_connectivity:
         run_tag = f'{run_tag}_connectivity'

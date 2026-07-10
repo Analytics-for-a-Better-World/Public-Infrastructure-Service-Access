@@ -127,6 +127,26 @@ def country_config_metadata(cfg: CountryConfig) -> dict[str, Any]:
         'base_dir': Path(cfg.BASE_DIR).as_posix(),
         'distance_threshold_km': cfg.distance_threshold_km,
         'geofabrik_region': cfg.geofabrik_region,
+        'population_provider': cfg.population_provider,
+        'population_format': cfg.population_format,
+        'population_filename': cfg.resolved_population_filename,
+        'population_path': Path(cfg.POPULATION_PATH).as_posix(),
+        'population_url': (
+            None
+            if (
+                cfg.population_provider == 'worldpop'
+                and cfg.worldpop_path is not None
+            )
+            or (
+                cfg.population_provider == 'meta'
+                and cfg.meta_population_path is not None
+            )
+            else (
+                cfg.WORLDPOP_URL
+                if cfg.population_provider == 'worldpop'
+                else cfg.meta_population_url
+            )
+        ),
         'worldpop_year': cfg.worldpop_year,
         'worldpop_dataset': cfg.worldpop_dataset,
         'worldpop_release': cfg.worldpop_release,
@@ -137,6 +157,21 @@ def country_config_metadata(cfg: CountryConfig) -> dict[str, Any]:
         'worldpop_adjustment': cfg.worldpop_adjustment,
         'worldpop_filename': cfg.resolved_worldpop_filename,
         'worldpop_path': Path(cfg.WORLDPOP_PATH).as_posix(),
+        'meta_population_year': cfg.meta_population_year,
+        'meta_population_filename': (
+            cfg.resolved_meta_population_filename
+            if cfg.population_provider == 'meta'
+            or cfg.meta_population_filename is not None
+            or cfg.meta_population_path is not None
+            or cfg.meta_population_url is not None
+            else None
+        ),
+        'meta_population_path': (
+            None
+            if cfg.meta_population_path is None
+            else Path(cfg.meta_population_path).as_posix()
+        ),
+        'meta_population_url': cfg.meta_population_url,
         'pbf_filename': cfg.resolved_pbf_filename,
         'pbf_url': cfg.PBF_URL,
         'worldpop_url': None if cfg.worldpop_path is not None else cfg.WORLDPOP_URL,
@@ -146,6 +181,12 @@ def country_config_metadata(cfg: CountryConfig) -> dict[str, Any]:
         'candidate_include_boundary': cfg.candidate_include_boundary,
         'candidate_max_snap_dist_m': cfg.candidate_max_snap_dist_m,
         'aggregate_factor': cfg.aggregate_factor,
+        'legal_speeds_kph': cfg.legal_speeds_kph,
+        'speed_general_factor': cfg.speed_general_factor,
+        'surface_speed_multipliers': cfg.surface_speed_multipliers,
+        'urban_density_threshold_pop_per_km2': cfg.urban_density_threshold_pop_per_km2,
+        'urban_density_speed_factor': cfg.urban_density_speed_factor,
+        'urban_density_radius_m': cfg.urban_density_radius_m,
     }
 
 
@@ -168,12 +209,34 @@ def build_run_manifest(
             'url': cfg.PBF_URL,
             **file_metadata(cfg.PBF_PATH),
         },
-        'worldpop_raster': {
+        'population_data': {
+            'role': f'population:{cfg.population_provider}',
+            'format': cfg.population_format,
+            'url': (
+                None
+                if (
+                    cfg.population_provider == 'worldpop'
+                    and cfg.worldpop_path is not None
+                )
+                or (
+                    cfg.population_provider == 'meta'
+                    and cfg.meta_population_path is not None
+                )
+                else (
+                    cfg.WORLDPOP_URL
+                    if cfg.population_provider == 'worldpop'
+                    else cfg.meta_population_url
+                )
+            ),
+            **file_metadata(cfg.POPULATION_PATH),
+        },
+    }
+    if cfg.population_provider == 'worldpop':
+        input_files['worldpop_raster'] = {
             'role': 'download:worldpop_raster',
             'url': None if cfg.worldpop_path is not None else cfg.WORLDPOP_URL,
             **file_metadata(cfg.WORLDPOP_PATH),
-        },
-    }
+        }
     outputs = {
         name: file_metadata(path)
         for name, path in output_paths.items()

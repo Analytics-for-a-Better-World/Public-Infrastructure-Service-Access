@@ -1,8 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
+from urllib.parse import unquote, urlparse
 
 
-ConfigValue = str | int | float | Path | bool | None
+ConfigValue = str | int | float | Path | bool | dict[str, float] | None
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +19,8 @@ class CountryConfig:
     base_root: Path = Path(r'C:\local') / 'Download_Depot'
     distance_threshold_km: float = 150.0
     geofabrik_region: str = 'europe'
+    population_provider: str = 'worldpop'
+    population_format: str = 'auto'
     worldpop_year: int = 2020
     worldpop_dataset: str = 'global1'
     worldpop_release: str | None = None
@@ -29,6 +32,10 @@ class CountryConfig:
     worldpop_filename: str | None = None
     worldpop_url: str | None = None
     worldpop_path: Path | None = None
+    meta_population_year: int | None = None
+    meta_population_filename: str | None = None
+    meta_population_url: str | None = None
+    meta_population_path: Path | None = None
     pbf_filename: str | None = None
     pbf_url: str | None = None
     plot_title_suffix: str = 'roads, population, and service facilities'
@@ -38,6 +45,12 @@ class CountryConfig:
     candidate_include_boundary: bool = True
     candidate_max_snap_dist_m: float | None = None
     aggregate_factor: int | None = None
+    legal_speeds_kph: dict[str, float] | None = None
+    speed_general_factor: float = 1.0
+    surface_speed_multipliers: dict[str, float] | None = None
+    urban_density_threshold_pop_per_km2: float | None = None
+    urban_density_speed_factor: float = 1.0
+    urban_density_radius_m: float = 1000.0
 
     @property
     def BASE_DIR(self) -> Path:
@@ -76,6 +89,31 @@ class CountryConfig:
         return '_'.join(parts) + '.tif'
 
     @property
+    def resolved_meta_population_filename(self) -> str:
+        '''Return the configured Meta population filename.'''
+        if self.meta_population_filename is not None:
+            return self.meta_population_filename
+        if self.meta_population_path is not None:
+            return Path(self.meta_population_path).name
+        if self.meta_population_url is not None:
+            filename = Path(unquote(urlparse(self.meta_population_url).path)).name
+            if filename:
+                return filename
+        raise ValueError(
+            'Meta population data requires meta_population_filename, '
+            'meta_population_path, or meta_population_url.'
+        )
+
+    @property
+    def resolved_population_filename(self) -> str:
+        '''Return the configured population filename for the active provider.'''
+        if self.population_provider == 'worldpop':
+            return self.resolved_worldpop_filename
+        if self.population_provider == 'meta':
+            return self.resolved_meta_population_filename
+        raise ValueError(f'Unsupported population_provider: {self.population_provider!r}')
+
+    @property
     def PBF_URL(self) -> str:
         '''Return the OSM PBF download URL.'''
         if self.pbf_url is not None:
@@ -110,6 +148,20 @@ class CountryConfig:
         )
 
     @property
+    def POPULATION_URL(self) -> str:
+        '''Return the active population-data download URL.'''
+        if self.population_provider == 'worldpop':
+            return self.WORLDPOP_URL
+        if self.population_provider == 'meta':
+            if self.meta_population_url is None:
+                raise ValueError(
+                    'Meta population downloads require --population-url or '
+                    'a configured meta_population_url.'
+                )
+            return self.meta_population_url
+        raise ValueError(f'Unsupported population_provider: {self.population_provider!r}')
+
+    @property
     def PBF_PATH(self) -> Path:
         '''Return the local OSM PBF path.'''
         return self.BASE_DIR / self.resolved_pbf_filename
@@ -120,6 +172,17 @@ class CountryConfig:
         if self.worldpop_path is not None:
             return self.worldpop_path
         return self.BASE_DIR / self.resolved_worldpop_filename
+
+    @property
+    def POPULATION_PATH(self) -> Path:
+        '''Return the local path for the active population dataset.'''
+        if self.population_provider == 'worldpop':
+            return self.WORLDPOP_PATH
+        if self.population_provider == 'meta':
+            if self.meta_population_path is not None:
+                return self.meta_population_path
+            return self.BASE_DIR / self.resolved_meta_population_filename
+        raise ValueError(f'Unsupported population_provider: {self.population_provider!r}')
 
     @property
     def COUNTRY_NAME(self) -> str:
@@ -146,6 +209,8 @@ DEFAULTS: dict[str, ConfigValue] = {
     'base_root': Path(r'C:\local') / 'Download_Depot',
     'distance_threshold_km': 150.0,
     'geofabrik_region': 'europe',
+    'population_provider': 'worldpop',
+    'population_format': 'auto',
     'worldpop_year': 2020,
     'worldpop_dataset': 'global1',
     'worldpop_release': None,
@@ -157,6 +222,10 @@ DEFAULTS: dict[str, ConfigValue] = {
     'worldpop_filename': None,
     'worldpop_url': None,
     'worldpop_path': None,
+    'meta_population_year': None,
+    'meta_population_filename': None,
+    'meta_population_url': None,
+    'meta_population_path': None,
     'pbf_filename': None,
     'pbf_url': None,
     'plot_title_suffix': 'roads, population, and service facilities',
@@ -166,7 +235,39 @@ DEFAULTS: dict[str, ConfigValue] = {
     'candidate_include_boundary': True,
     'candidate_max_snap_dist_m': None,
     'aggregate_factor': None,
+    'legal_speeds_kph': None,
+    'speed_general_factor': 1.0,
+    'surface_speed_multipliers': None,
+    'urban_density_threshold_pop_per_km2': None,
+    'urban_density_speed_factor': 1.0,
+    'urban_density_radius_m': 1000.0,
 }
+
+
+def _optional_float_dict(value: object, field_name: str) -> dict[str, float] | None:
+    '''Return a normalized string-to-float dictionary or None.'''
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError(f'{field_name} must be a dictionary or None.')
+    result: dict[str, float] = {}
+    for key, item in value.items():
+        numeric = float(item)
+        if numeric <= 0:
+            raise ValueError(f'{field_name}[{key!r}] must be positive.')
+        result[str(key)] = numeric
+    return result
+
+
+def _optional_factor_dict(value: object, field_name: str) -> dict[str, float] | None:
+    '''Return a normalized string-to-factor dictionary or None.'''
+    result = _optional_float_dict(value, field_name)
+    if result is None:
+        return None
+    for key, item in result.items():
+        if item > 1:
+            raise ValueError(f'{field_name}[{key!r}] must be in (0, 1].')
+    return result
 
 
 def build_config(
@@ -199,13 +300,31 @@ def build_config(
     candidate_grid_spacing_m = merged['candidate_grid_spacing_m']
     candidate_max_snap_dist_m = merged['candidate_max_snap_dist_m']
     aggregate_factor = merged['aggregate_factor']
+    population_provider = str(merged['population_provider'])
+    population_format = str(merged['population_format'])
     worldpop_dataset = str(merged['worldpop_dataset'])
+    speed_general_factor = float(merged['speed_general_factor'])
+    urban_density_threshold = merged['urban_density_threshold_pop_per_km2']
+    urban_density_speed_factor = float(merged['urban_density_speed_factor'])
+    urban_density_radius_m = float(merged['urban_density_radius_m'])
 
+    if population_provider not in {'worldpop', 'meta'}:
+        raise ValueError("population_provider must be 'worldpop' or 'meta'.")
+    if population_format not in {'auto', 'raster', 'table'}:
+        raise ValueError("population_format must be 'auto', 'raster', or 'table'.")
     if worldpop_dataset not in {'global1', 'global2'}:
         raise ValueError("worldpop_dataset must be 'global1' or 'global2'.")
 
     if aggregate_factor is not None and int(aggregate_factor) < 2:
         raise ValueError('aggregate_factor must be >= 2 or None.')
+    if speed_general_factor <= 0 or speed_general_factor > 1:
+        raise ValueError('speed_general_factor must be in (0, 1].')
+    if urban_density_speed_factor <= 0 or urban_density_speed_factor > 1:
+        raise ValueError('urban_density_speed_factor must be in (0, 1].')
+    if urban_density_radius_m <= 0:
+        raise ValueError('urban_density_radius_m must be positive.')
+    if urban_density_threshold is not None and float(urban_density_threshold) <= 0:
+        raise ValueError('urban_density_threshold_pop_per_km2 must be positive or None.')
 
     return CountryConfig(
         iso3=str(merged['iso3']),
@@ -216,6 +335,8 @@ def build_config(
         base_root=Path(base_root),
         distance_threshold_km=float(merged['distance_threshold_km']),
         geofabrik_region=str(merged['geofabrik_region']),
+        population_provider=population_provider,
+        population_format=population_format,
         worldpop_year=int(merged['worldpop_year']),
         worldpop_dataset=worldpop_dataset,
         worldpop_release=(
@@ -247,6 +368,26 @@ def build_config(
             if merged['worldpop_path'] is None
             else Path(merged['worldpop_path'])
         ),
+        meta_population_year=(
+            None
+            if merged['meta_population_year'] is None
+            else int(merged['meta_population_year'])
+        ),
+        meta_population_filename=(
+            None
+            if merged['meta_population_filename'] is None
+            else str(merged['meta_population_filename'])
+        ),
+        meta_population_url=(
+            None
+            if merged['meta_population_url'] is None
+            else str(merged['meta_population_url'])
+        ),
+        meta_population_path=(
+            None
+            if merged['meta_population_path'] is None
+            else Path(merged['meta_population_path'])
+        ),
         pbf_filename=(
             None
             if merged['pbf_filename'] is None
@@ -270,4 +411,20 @@ def build_config(
             else float(candidate_max_snap_dist_m)
         ),
         aggregate_factor=None if aggregate_factor is None else int(aggregate_factor),
+        legal_speeds_kph=_optional_float_dict(
+            merged['legal_speeds_kph'],
+            'legal_speeds_kph',
+        ),
+        speed_general_factor=speed_general_factor,
+        surface_speed_multipliers=_optional_factor_dict(
+            merged['surface_speed_multipliers'],
+            'surface_speed_multipliers',
+        ),
+        urban_density_threshold_pop_per_km2=(
+            None
+            if urban_density_threshold is None
+            else float(urban_density_threshold)
+        ),
+        urban_density_speed_factor=urban_density_speed_factor,
+        urban_density_radius_m=urban_density_radius_m,
     )
