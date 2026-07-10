@@ -630,10 +630,23 @@ This writes the usual source, destination, population, matrix, and manifest outp
 
 # Outputs
 
-Outputs are written below:
+By default, outputs are written below:
 
 ```text
 <cfg.BASE_DIR>/outputs/
+```
+
+Use `--output-root` to write final run artifacts to a separate directory without
+changing where input data or reusable caches live:
+
+```powershell
+py run_pipeline.py timor_leste `
+  --data-root "C:\work\codex\data" `
+  --cache-root "C:\work\codex\cache\timor_leste" `
+  --output-root "C:\work\codex\outputs\timor_leste_run_001" `
+  --sources amenities candidates `
+  --destinations population `
+  --matrix-output-mode split
 ```
 
 Typical files:
@@ -670,13 +683,20 @@ The run manifest records the input URLs or paths, resolved settings, output path
 
 # Caching
 
-Caches are written below:
+By default, caches are written below:
 
 ```text
 <cfg.BASE_DIR>/cache/
 ```
 
-Cache keys include the relevant runtime settings, including population settings, random seed, aggregation, amenity filters, candidate settings, bbox, network backend, network profile, distance threshold, and maximum total distance.
+Use `--cache-root` to place reusable generated caches on a local scratch disk or
+outside a synchronized folder. Use `--data-root` to place persistent downloaded
+inputs such as PBF and population files below `<data-root>/<country_slug>_data`.
+If these options are omitted, the historical country-data layout is preserved.
+
+Cache keys include the relevant runtime settings, including population settings,
+random seed, aggregation, amenity filters, candidate settings, bbox, network
+backend, network profile, distance threshold, and maximum total distance.
 
 Sparse matrix construction also maintains a reusable road-node-pair cache below:
 

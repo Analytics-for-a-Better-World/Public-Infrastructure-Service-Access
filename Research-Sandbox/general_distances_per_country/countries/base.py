@@ -17,6 +17,9 @@ class CountryConfig:
     projected_epsg: int
 
     base_root: Path = Path(r'C:\local') / 'Download_Depot'
+    data_root: Path | None = None
+    cache_root: Path | None = None
+    output_root: Path | None = None
     distance_threshold_km: float = 150.0
     geofabrik_region: str = 'europe'
     population_provider: str = 'worldpop'
@@ -53,9 +56,35 @@ class CountryConfig:
     urban_density_radius_m: float = 1000.0
 
     @property
+    def DATA_ROOT(self) -> Path:
+        '''Return the root under which country input data is stored.'''
+        return self.base_root if self.data_root is None else self.data_root
+
+    @property
     def BASE_DIR(self) -> Path:
         '''Return the local base directory for the country.'''
-        return self.base_root / f'{self.country_slug}_data'
+        return self.DATA_ROOT / f'{self.country_slug}_data'
+
+    @property
+    def CACHE_DIR(self) -> Path:
+        '''Return the directory for reusable pipeline caches.'''
+        if self.cache_root is not None:
+            return self.cache_root
+        return self.BASE_DIR / 'cache'
+
+    @property
+    def OUTPUT_DIR(self) -> Path:
+        '''Return the directory for run outputs.'''
+        if self.output_root is not None:
+            return self.output_root
+        return self.BASE_DIR / 'outputs'
+
+    @property
+    def FIGURES_DIR(self) -> Path:
+        '''Return the directory for generated figures and context maps.'''
+        if self.output_root is not None:
+            return self.OUTPUT_DIR / 'figures'
+        return self.BASE_DIR / 'figures'
 
     @property
     def resolved_pbf_filename(self) -> str:
@@ -207,6 +236,9 @@ class CountryConfig:
 
 DEFAULTS: dict[str, ConfigValue] = {
     'base_root': Path(r'C:\local') / 'Download_Depot',
+    'data_root': None,
+    'cache_root': None,
+    'output_root': None,
     'distance_threshold_km': 150.0,
     'geofabrik_region': 'europe',
     'population_provider': 'worldpop',

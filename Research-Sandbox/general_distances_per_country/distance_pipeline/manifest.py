@@ -124,7 +124,16 @@ def country_config_metadata(cfg: CountryConfig) -> dict[str, Any]:
         'country_slug': cfg.country_slug,
         'projected_epsg': cfg.projected_epsg,
         'base_root': Path(cfg.base_root).as_posix(),
+        'data_root': Path(cfg.DATA_ROOT).as_posix(),
         'base_dir': Path(cfg.BASE_DIR).as_posix(),
+        'cache_root': (
+            None if cfg.cache_root is None else Path(cfg.cache_root).as_posix()
+        ),
+        'cache_dir': Path(cfg.CACHE_DIR).as_posix(),
+        'output_root': (
+            None if cfg.output_root is None else Path(cfg.output_root).as_posix()
+        ),
+        'output_dir': Path(cfg.OUTPUT_DIR).as_posix(),
         'distance_threshold_km': cfg.distance_threshold_km,
         'geofabrik_region': cfg.geofabrik_region,
         'population_provider': cfg.population_provider,
@@ -270,8 +279,11 @@ def build_run_manifest(
             'iso3': cfg.iso3,
         },
         'cache': {
-            'root': Path(cfg.base_root).as_posix(),
-            'country_dir': Path(cfg.BASE_DIR).as_posix(),
+            'root': Path(cfg.CACHE_DIR).as_posix(),
+            'base_root': Path(cfg.base_root).as_posix(),
+            'data_root': Path(cfg.DATA_ROOT).as_posix(),
+            'country_data_dir': Path(cfg.BASE_DIR).as_posix(),
+            'output_dir': Path(cfg.OUTPUT_DIR).as_posix(),
             'policy': 'downloaded inputs and generated artifacts are reused when present unless force_recompute is true',
         },
         'inputs': input_files,

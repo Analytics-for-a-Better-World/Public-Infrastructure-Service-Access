@@ -352,6 +352,10 @@ def resolve_input_config(
     overrides: dict[str, object] = {}
     pbf_url = getattr(args, 'pbf_url', None)
     pbf_filename = getattr(args, 'pbf_filename', None)
+    base_root = getattr(args, 'base_root', None)
+    data_root = getattr(args, 'data_root', None)
+    cache_root = getattr(args, 'cache_root', None)
+    output_root = getattr(args, 'output_root', None)
     population_provider = getattr(args, 'population_provider', None)
     population_format = getattr(args, 'population_format', None)
     population_filename = getattr(args, 'population_filename', None)
@@ -359,6 +363,15 @@ def resolve_input_config(
     population_path = getattr(args, 'population_path', None)
     meta_population_year = getattr(args, 'meta_population_year', None)
     resolved_provider = population_provider or cfg.population_provider
+
+    if base_root is not None:
+        overrides['base_root'] = Path(base_root)
+    if data_root is not None:
+        overrides['data_root'] = Path(data_root)
+    if cache_root is not None:
+        overrides['cache_root'] = Path(cache_root)
+    if output_root is not None:
+        overrides['output_root'] = Path(output_root)
 
     if population_provider is not None:
         overrides['population_provider'] = population_provider
@@ -588,6 +601,49 @@ def build_parser() -> argparse.ArgumentParser:
         type=str,
         default=None,
         help='Optional path to write logs to file.'
+    )
+
+    parser.add_argument(
+        '--base-root',
+        type=str,
+        default=None,
+        help=(
+            'Legacy parent root for country data directories. When no more '
+            'specific root option is set, inputs, caches, figures, and outputs '
+            'use <base-root>/<country_slug>_data, preserving historical layout.'
+        ),
+    )
+
+    parser.add_argument(
+        '--data-root',
+        type=str,
+        default=None,
+        help=(
+            'Parent root for persistent country input data such as PBF and '
+            'population files. The country directory remains '
+            '<data-root>/<country_slug>_data. Defaults to --base-root or the '
+            'country config base_root.'
+        ),
+    )
+
+    parser.add_argument(
+        '--cache-root',
+        type=str,
+        default=None,
+        help=(
+            'Directory for reusable generated caches. Defaults to '
+            '<country_data>/cache, preserving historical behavior.'
+        ),
+    )
+
+    parser.add_argument(
+        '--output-root',
+        type=str,
+        default=None,
+        help=(
+            'Directory for final run outputs and run manifests. Defaults to '
+            '<country_data>/outputs, preserving historical behavior.'
+        ),
     )
 
     parser.add_argument(
@@ -1866,6 +1922,9 @@ def main(
         logging.info(f'Network profile: {settings.network_profile}')
         logging.info(f'Population provider: {cfg.population_provider}')
         logging.info(f'Population format: {cfg.population_format}')
+        logging.info(f'Data directory: {cfg.BASE_DIR}')
+        logging.info(f'Cache directory: {cfg.CACHE_DIR}')
+        logging.info(f'Output directory: {cfg.OUTPUT_DIR}')
 
     cfg.BASE_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -2421,7 +2480,7 @@ def main(
             effective_distance_threshold_km,
         )
 
-    output_dir = cfg.BASE_DIR / 'outputs'
+    output_dir = cfg.OUTPUT_DIR
     output_dir.mkdir(parents=True, exist_ok=True)
     run_tag = build_output_run_tag(
         settings=settings,

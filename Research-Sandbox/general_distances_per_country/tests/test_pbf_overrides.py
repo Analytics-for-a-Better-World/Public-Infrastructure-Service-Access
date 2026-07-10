@@ -6,6 +6,7 @@ from distance_pipeline.config_loader import load_cfg
 from distance_pipeline.pipeline_support import build_output_run_tag
 from distance_pipeline.settings import PipelineSettings
 from run_pipeline import (
+    build_parser,
     pbf_filename_for_output_tag,
     population_label_for_output_tag,
     resolve_input_config,
@@ -15,6 +16,10 @@ from run_pipeline import (
 
 def make_args(**overrides: object) -> argparse.Namespace:
     values: dict[str, object] = {
+        'base_root': None,
+        'data_root': None,
+        'cache_root': None,
+        'output_root': None,
         'worldpop_year': None,
         'worldpop_dataset': None,
         'worldpop_release': None,
@@ -183,6 +188,69 @@ class PbfOverrideTests(unittest.TestCase):
         self.assertEqual(resolved.resolved_meta_population_filename, 'tls_hrsl_2020.tif')
         self.assertEqual(resolved.POPULATION_PATH.name, 'tls_hrsl_2020.tif')
         self.assertEqual(resolved.POPULATION_URL, 'https://example.test/meta/tls_hrsl_2020.tif')
+
+    def test_root_defaults_preserve_legacy_layout(self) -> None:
+        cfg = load_cfg('timor_leste')
+
+        resolved = resolve_input_config(cfg, make_args())
+
+        self.assertIs(resolved, cfg)
+        self.assertEqual(resolved.DATA_ROOT, resolved.base_root)
+        self.assertEqual(
+            resolved.BASE_DIR,
+            resolved.base_root / f'{resolved.country_slug}_data',
+        )
+        self.assertEqual(resolved.CACHE_DIR, resolved.BASE_DIR / 'cache')
+        self.assertEqual(resolved.OUTPUT_DIR, resolved.BASE_DIR / 'outputs')
+        self.assertEqual(resolved.FIGURES_DIR, resolved.BASE_DIR / 'figures')
+
+    def test_root_overrides_keep_data_cache_and_outputs_separate(self) -> None:
+        cfg = load_cfg('timor_leste')
+
+        resolved = resolve_input_config(
+            cfg,
+            make_args(
+                base_root='C:/legacy_depot',
+                data_root='C:/pipeline_data',
+                cache_root='D:/pipeline_cache/timor',
+                output_root='E:/pipeline_outputs/timor_run_001',
+            ),
+        )
+
+        self.assertEqual(resolved.base_root, Path('C:/legacy_depot'))
+        self.assertEqual(resolved.DATA_ROOT, Path('C:/pipeline_data'))
+        self.assertEqual(
+            resolved.BASE_DIR,
+            Path('C:/pipeline_data') / f'{resolved.country_slug}_data',
+        )
+        self.assertEqual(resolved.CACHE_DIR, Path('D:/pipeline_cache/timor'))
+        self.assertEqual(resolved.OUTPUT_DIR, Path('E:/pipeline_outputs/timor_run_001'))
+        self.assertEqual(
+            resolved.FIGURES_DIR,
+            Path('E:/pipeline_outputs/timor_run_001') / 'figures',
+        )
+        self.assertEqual(
+            resolved.PBF_PATH,
+            resolved.BASE_DIR / resolved.resolved_pbf_filename,
+        )
+        self.assertEqual(
+            resolved.POPULATION_PATH,
+            resolved.BASE_DIR / resolved.resolved_population_filename,
+        )
+
+    def test_parser_accepts_storage_root_options(self) -> None:
+        parser = build_parser()
+
+        args = parser.parse_args([
+            'timor_leste',
+            '--data-root', 'C:/pipeline_data',
+            '--cache-root', 'D:/pipeline_cache/timor',
+            '--output-root', 'E:/pipeline_outputs/timor_run_001',
+        ])
+
+        self.assertEqual(args.data_root, 'C:/pipeline_data')
+        self.assertEqual(args.cache_root, 'D:/pipeline_cache/timor')
+        self.assertEqual(args.output_root, 'E:/pipeline_outputs/timor_run_001')
 
 
 if __name__ == '__main__':

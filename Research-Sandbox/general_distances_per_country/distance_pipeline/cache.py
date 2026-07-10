@@ -159,11 +159,11 @@ class CacheManager:
 
     @property
     def cache_dir(self) -> Path:
-        return self.cfg.BASE_DIR / 'cache'
+        return self.cfg.CACHE_DIR
 
     @property
     def figures_dir(self) -> Path:
-        return self.cfg.BASE_DIR / 'figures'
+        return self.cfg.FIGURES_DIR
 
     @property
     def pbf_stem(self) -> str:
