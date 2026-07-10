@@ -45,6 +45,12 @@ class CountryConfig:
     candidate_include_boundary: bool = True
     candidate_max_snap_dist_m: float | None = None
     aggregate_factor: int | None = None
+    legal_speeds_kph: dict[str, float] | None = None
+    speed_general_factor: float = 1.0
+    surface_speed_multipliers: dict[str, float] | None = None
+    urban_density_threshold_pop_per_km2: float | None = None
+    urban_density_speed_factor: float = 1.0
+    urban_density_radius_m: float = 1000.0
 
     @property
     def BASE_DIR(self) -> Path:
@@ -229,7 +235,39 @@ DEFAULTS: dict[str, ConfigValue] = {
     'candidate_include_boundary': True,
     'candidate_max_snap_dist_m': None,
     'aggregate_factor': None,
+    'legal_speeds_kph': None,
+    'speed_general_factor': 1.0,
+    'surface_speed_multipliers': None,
+    'urban_density_threshold_pop_per_km2': None,
+    'urban_density_speed_factor': 1.0,
+    'urban_density_radius_m': 1000.0,
 }
+
+
+def _optional_float_dict(value: object, field_name: str) -> dict[str, float] | None:
+    '''Return a normalized string-to-float dictionary or None.'''
+    if value is None:
+        return None
+    if not isinstance(value, dict):
+        raise ValueError(f'{field_name} must be a dictionary or None.')
+    result: dict[str, float] = {}
+    for key, item in value.items():
+        numeric = float(item)
+        if numeric <= 0:
+            raise ValueError(f'{field_name}[{key!r}] must be positive.')
+        result[str(key)] = numeric
+    return result
+
+
+def _optional_factor_dict(value: object, field_name: str) -> dict[str, float] | None:
+    '''Return a normalized string-to-factor dictionary or None.'''
+    result = _optional_float_dict(value, field_name)
+    if result is None:
+        return None
+    for key, item in result.items():
+        if item > 1:
+            raise ValueError(f'{field_name}[{key!r}] must be in (0, 1].')
+    return result
 
 
 def build_config(
@@ -265,6 +303,10 @@ def build_config(
     population_provider = str(merged['population_provider'])
     population_format = str(merged['population_format'])
     worldpop_dataset = str(merged['worldpop_dataset'])
+    speed_general_factor = float(merged['speed_general_factor'])
+    urban_density_threshold = merged['urban_density_threshold_pop_per_km2']
+    urban_density_speed_factor = float(merged['urban_density_speed_factor'])
+    urban_density_radius_m = float(merged['urban_density_radius_m'])
 
     if population_provider not in {'worldpop', 'meta'}:
         raise ValueError("population_provider must be 'worldpop' or 'meta'.")
@@ -275,6 +317,14 @@ def build_config(
 
     if aggregate_factor is not None and int(aggregate_factor) < 2:
         raise ValueError('aggregate_factor must be >= 2 or None.')
+    if speed_general_factor <= 0 or speed_general_factor > 1:
+        raise ValueError('speed_general_factor must be in (0, 1].')
+    if urban_density_speed_factor <= 0 or urban_density_speed_factor > 1:
+        raise ValueError('urban_density_speed_factor must be in (0, 1].')
+    if urban_density_radius_m <= 0:
+        raise ValueError('urban_density_radius_m must be positive.')
+    if urban_density_threshold is not None and float(urban_density_threshold) <= 0:
+        raise ValueError('urban_density_threshold_pop_per_km2 must be positive or None.')
 
     return CountryConfig(
         iso3=str(merged['iso3']),
@@ -361,4 +411,20 @@ def build_config(
             else float(candidate_max_snap_dist_m)
         ),
         aggregate_factor=None if aggregate_factor is None else int(aggregate_factor),
+        legal_speeds_kph=_optional_float_dict(
+            merged['legal_speeds_kph'],
+            'legal_speeds_kph',
+        ),
+        speed_general_factor=speed_general_factor,
+        surface_speed_multipliers=_optional_factor_dict(
+            merged['surface_speed_multipliers'],
+            'surface_speed_multipliers',
+        ),
+        urban_density_threshold_pop_per_km2=(
+            None
+            if urban_density_threshold is None
+            else float(urban_density_threshold)
+        ),
+        urban_density_speed_factor=urban_density_speed_factor,
+        urban_density_radius_m=urban_density_radius_m,
     )

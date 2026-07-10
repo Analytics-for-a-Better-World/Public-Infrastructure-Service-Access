@@ -32,7 +32,6 @@ from distance_pipeline.facilities import deduplicate_osm_amenities, load_facilit
 from distance_pipeline.network import build_pandana_network, load_osm_network_data
 from distance_pipeline.population import worldpop_to_points
 from distance_pipeline.routing import (
-    VIETNAM_STYLE_SPEEDS_KPH,
     add_edge_speeds,
     build_networkx_graph,
     normalize_highway,
@@ -424,10 +423,19 @@ def main(argv: list[str] | None = None) -> None:
         bbox=args.bbox,
         backend=args.network_backend,
     )
+
+    population = _prepare_population(args=args, cfg=cfg, nodes=nodes)
     edges = add_edge_speeds(
         edges,
-        default_speeds_kph=VIETNAM_STYLE_SPEEDS_KPH,
+        default_speeds_kph=cfg.legal_speeds_kph,
+        surface_multipliers=cfg.surface_speed_multipliers,
         fallback_speed_kph=25.0,
+        general_speed_factor=cfg.speed_general_factor,
+        population_points=population,
+        projected_epsg=cfg.PROJECTED_EPSG,
+        urban_density_threshold_pop_per_km2=cfg.urban_density_threshold_pop_per_km2,
+        urban_density_speed_factor=cfg.urban_density_speed_factor,
+        urban_density_radius_m=cfg.urban_density_radius_m,
         time_col='travel_time_s',
     )
     edges['base_time_s'] = edges['travel_time_s']
@@ -441,7 +449,6 @@ def main(argv: list[str] | None = None) -> None:
         bidirectional=False,
     )
 
-    population = _prepare_population(args=args, cfg=cfg, nodes=nodes)
     sources = _prepare_sources(args=args, cfg=cfg, nodes=nodes)
 
     sampled_origins = _sample_origins(
@@ -551,7 +558,12 @@ def main(argv: list[str] | None = None) -> None:
         'country_code': args.country_code,
         'provider': args.provider,
         'profile': args.mapbox_profile if args.provider == 'mapbox' else None,
-        'base_speeds_kph': VIETNAM_STYLE_SPEEDS_KPH,
+        'base_speeds_kph': cfg.legal_speeds_kph,
+        'surface_speed_multipliers': cfg.surface_speed_multipliers,
+        'speed_general_factor': cfg.speed_general_factor,
+        'urban_density_threshold_pop_per_km2': cfg.urban_density_threshold_pop_per_km2,
+        'urban_density_speed_factor': cfg.urban_density_speed_factor,
+        'urban_density_radius_m': cfg.urban_density_radius_m,
         'speed_multipliers_by_highway': class_multipliers,
         'inverse_speed_multipliers_beta_by_highway': beta_by_class,
         'sample_size_requested': args.sample_size,

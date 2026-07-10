@@ -300,6 +300,37 @@ def validate_positive_float(value: float, field_name: str) -> float:
     return float(value)
 
 
+def validate_factor(value: object, field_name: str) -> float:
+    '''Validate a multiplicative speed factor in the interval (0, 1].'''
+    factor = float(value)
+    if factor <= 0 or factor > 1:
+        raise ValueError(f'{field_name} must be in (0, 1], got {value!r}.')
+    return factor
+
+
+def validate_float_dict(value: object, field_name: str) -> dict[str, float]:
+    '''Validate a JSON object whose values are positive floats.'''
+    if not isinstance(value, dict):
+        raise ValueError(f'{field_name} must be a JSON object.')
+    result: dict[str, float] = {}
+    for key, item in value.items():
+        numeric = float(item)
+        if numeric <= 0:
+            raise ValueError(f'{field_name}[{key!r}] must be positive.')
+        result[str(key)] = numeric
+    return result
+
+
+def validate_factor_dict(value: object, field_name: str) -> dict[str, float]:
+    '''Validate a JSON object whose values are speed factors in (0, 1].'''
+    if not isinstance(value, dict):
+        raise ValueError(f'{field_name} must be a JSON object.')
+    return {
+        str(key): validate_factor(item, f'{field_name}[{key!r}]')
+        for key, item in value.items()
+    }
+
+
 def validate_payload(payload: dict[str, object]) -> dict[str, object]:
     '''
     Validate and normalize the model payload.
@@ -328,6 +359,12 @@ def validate_payload(payload: dict[str, object]) -> dict[str, object]:
         'geofabrik_region',
         'worldpop_filename',
         'pbf_filename',
+        'legal_speeds_kph',
+        'speed_general_factor',
+        'surface_speed_multipliers',
+        'urban_density_threshold_pop_per_km2',
+        'urban_density_speed_factor',
+        'urban_density_radius_m',
     }
 
     missing_keys = sorted(required_keys - payload.keys())
@@ -346,6 +383,35 @@ def validate_payload(payload: dict[str, object]) -> dict[str, object]:
     geofabrik_region = parse_geofabrik_region(payload['geofabrik_region'])
     worldpop_filename = validate_worldpop_filename(payload['worldpop_filename'], iso3)
     pbf_filename = validate_pbf_filename(payload['pbf_filename'])
+    legal_speeds_kph = validate_float_dict(
+        payload['legal_speeds_kph'],
+        'legal_speeds_kph',
+    )
+    speed_general_factor = validate_factor(
+        payload['speed_general_factor'],
+        'speed_general_factor',
+    )
+    surface_speed_multipliers = validate_factor_dict(
+        payload['surface_speed_multipliers'],
+        'surface_speed_multipliers',
+    )
+    urban_density_threshold_raw = payload['urban_density_threshold_pop_per_km2']
+    urban_density_threshold = (
+        None
+        if urban_density_threshold_raw is None
+        else validate_positive_float(
+            float(urban_density_threshold_raw),
+            'urban_density_threshold_pop_per_km2',
+        )
+    )
+    urban_density_speed_factor = validate_factor(
+        payload['urban_density_speed_factor'],
+        'urban_density_speed_factor',
+    )
+    urban_density_radius_m = validate_positive_float(
+        float(payload['urban_density_radius_m']),
+        'urban_density_radius_m',
+    )
 
     return {
         'iso3': iso3,
@@ -356,6 +422,12 @@ def validate_payload(payload: dict[str, object]) -> dict[str, object]:
         'geofabrik_region': geofabrik_region,
         'worldpop_filename': worldpop_filename,
         'pbf_filename': pbf_filename,
+        'legal_speeds_kph': legal_speeds_kph,
+        'speed_general_factor': speed_general_factor,
+        'surface_speed_multipliers': surface_speed_multipliers,
+        'urban_density_threshold_pop_per_km2': urban_density_threshold,
+        'urban_density_speed_factor': urban_density_speed_factor,
+        'urban_density_radius_m': urban_density_radius_m,
     }
 
 
@@ -409,6 +481,12 @@ def build_country_config_module_text(
     geofabrik_region = str(payload['geofabrik_region'])
     worldpop_filename = str(payload['worldpop_filename'])
     pbf_filename = str(payload['pbf_filename'])
+    legal_speeds_kph = dict(payload['legal_speeds_kph'])
+    speed_general_factor = float(payload['speed_general_factor'])
+    surface_speed_multipliers = dict(payload['surface_speed_multipliers'])
+    urban_density_threshold = payload['urban_density_threshold_pop_per_km2']
+    urban_density_speed_factor = float(payload['urban_density_speed_factor'])
+    urban_density_radius_m = float(payload['urban_density_radius_m'])
     plot_title_suffix = str(plot_title_suffix).strip()
 
     if not plot_title_suffix:
@@ -430,6 +508,13 @@ def build_country_config_module_text(
         f"        'plot_title_suffix': {plot_title_suffix!r},\n"
         f"        'candidate_grid_spacing_m': {candidate_grid_spacing_m},\n"
         f"        'candidate_max_snap_dist_m': {candidate_max_snap_dist_m},\n"
+        f"        'legal_speeds_kph': {legal_speeds_kph!r},\n"
+        f"        'speed_general_factor': {speed_general_factor},\n"
+        f"        'surface_speed_multipliers': {surface_speed_multipliers!r},\n"
+        "        'urban_density_threshold_pop_per_km2': "
+        f"{urban_density_threshold!r},\n"
+        f"        'urban_density_speed_factor': {urban_density_speed_factor},\n"
+        f"        'urban_density_radius_m': {urban_density_radius_m},\n"
         '    }\n'
         ')\n'
     )
@@ -496,6 +581,12 @@ Return exactly these keys:
 - geofabrik_region
 - worldpop_filename
 - pbf_filename
+- legal_speeds_kph
+- speed_general_factor
+- surface_speed_multipliers
+- urban_density_threshold_pop_per_km2
+- urban_density_speed_factor
+- urban_density_radius_m
 
 Rules:
 - country_slug must be a lowercase python slug with underscores
@@ -504,6 +595,13 @@ Rules:
   africa, asia, australia-oceania, central-america, europe, north-america, south-america
 - worldpop_filename must look like iso3 lowercase plus _ppp_2020.tif
 - pbf_filename must be the exact Geofabrik latest extract filename, for example timor-leste-latest.osm.pbf
+- legal_speeds_kph must be a JSON object with plausible legal or statutory speeds in km/h for OSM highway classes, including at least motorway, motorway_link, trunk, trunk_link, primary, primary_link, secondary, secondary_link, tertiary, tertiary_link, residential, living_street, unclassified, service, track, and road
+- speed_general_factor must be a conservative multiplier in (0, 1] translating legal or posted maximum speeds into first-estimate average achievable speeds
+- surface_speed_multipliers must be a JSON object with factors in (0, 1] for asphalt, concrete, paved, compacted, gravel, unpaved, dirt, earth, sand, and mud
+- urban_density_threshold_pop_per_km2 must be a positive number or null; use it to identify dense urban areas from WorldPop-style population density
+- urban_density_speed_factor must be a multiplier in (0, 1] applied to edges whose nearby population density exceeds the threshold
+- urban_density_radius_m must be a positive radius in meters, usually 1000
+- speed values are first estimates for reproducible experiments, not legal advice
 - do not include markdown
 - do not include explanations
 '''

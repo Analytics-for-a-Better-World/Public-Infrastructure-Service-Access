@@ -1,11 +1,15 @@
 import geopandas as gpd
 import pandas as pd
-from shapely.geometry import Point
+from shapely.geometry import LineString, Point
 
 from distance_pipeline.cache import _backend_part
 from distance_pipeline.network import _prepare_network_data
 from distance_pipeline.pipeline_support import build_output_run_tag
-from distance_pipeline.routing import build_networkx_graph, route_geometry_from_nodes
+from distance_pipeline.routing import (
+    add_edge_speeds,
+    build_networkx_graph,
+    route_geometry_from_nodes,
+)
 from distance_pipeline.settings import PipelineSettings
 from distance_pipeline.snapping import snap_points_to_nodes
 from run_pipeline import (
@@ -95,6 +99,47 @@ def test_snap_points_to_nodes_uses_lon_lat_node_columns():
 
     assert snapped.loc['a', 'nearest_node'] == 1
     assert snapped.loc['a', 'dist_to_node'] > 0
+
+
+def test_add_edge_speeds_applies_general_surface_and_density_factors():
+    edges = gpd.GeoDataFrame(
+        {
+            'u': [1],
+            'v': [2],
+            'length': [1000.0],
+            'highway': ['residential'],
+            'surface': ['gravel'],
+            'geometry': [LineString([(0.0, 0.0), (1000.0, 0.0)])],
+        },
+        geometry='geometry',
+        crs='EPSG:3857',
+    )
+    population = gpd.GeoDataFrame(
+        {
+            'population': [5000.0],
+            'geometry': [Point(500.0, 0.0)],
+        },
+        geometry='geometry',
+        crs='EPSG:3857',
+    )
+
+    result = add_edge_speeds(
+        edges,
+        default_speeds_kph={'residential': 50.0},
+        surface_multipliers={'gravel': 0.5},
+        general_speed_factor=0.8,
+        population_points=population,
+        projected_epsg=3857,
+        urban_density_threshold_pop_per_km2=100.0,
+        urban_density_speed_factor=0.5,
+        urban_density_radius_m=1000.0,
+    )
+
+    assert result.loc[0, 'speed_kph'] == 10.0
+    assert result.loc[0, 'length_m'] == 1000.0
+    assert result.loc[0, 'travel_time_s'] == 360.0
+    assert result.loc[0, 'local_pop_density_per_km2'] > 100.0
+    assert result.loc[0, 'urban_density_speed_factor'] == 0.5
 
 
 def test_osmium_simplification_has_distinct_cache_and_output_keys():

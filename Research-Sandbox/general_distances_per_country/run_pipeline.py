@@ -2155,9 +2155,19 @@ def main(
             'Building Pandana network from %s nodes and %s edges',
             f'{len(route_nodes):,}',
             f'{len(route_edges):,}',
-        )
+    )
     t_pandana = pc()
-    route_edges = add_edge_speeds(route_edges)
+    route_edges = add_edge_speeds(
+        route_edges,
+        default_speeds_kph=cfg.legal_speeds_kph,
+        surface_multipliers=cfg.surface_speed_multipliers,
+        general_speed_factor=cfg.speed_general_factor,
+        population_points=population_points,
+        projected_epsg=cfg.PROJECTED_EPSG,
+        urban_density_threshold_pop_per_km2=cfg.urban_density_threshold_pop_per_km2,
+        urban_density_speed_factor=cfg.urban_density_speed_factor,
+        urban_density_radius_m=cfg.urban_density_radius_m,
+    )
     if settings.network_impedance not in route_edges.columns:
         raise ValueError(
             f'--network-impedance {settings.network_impedance!r} is not available '

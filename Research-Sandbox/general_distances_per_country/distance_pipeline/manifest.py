@@ -181,6 +181,12 @@ def country_config_metadata(cfg: CountryConfig) -> dict[str, Any]:
         'candidate_include_boundary': cfg.candidate_include_boundary,
         'candidate_max_snap_dist_m': cfg.candidate_max_snap_dist_m,
         'aggregate_factor': cfg.aggregate_factor,
+        'legal_speeds_kph': cfg.legal_speeds_kph,
+        'speed_general_factor': cfg.speed_general_factor,
+        'surface_speed_multipliers': cfg.surface_speed_multipliers,
+        'urban_density_threshold_pop_per_km2': cfg.urban_density_threshold_pop_per_km2,
+        'urban_density_speed_factor': cfg.urban_density_speed_factor,
+        'urban_density_radius_m': cfg.urban_density_radius_m,
     }
 
 

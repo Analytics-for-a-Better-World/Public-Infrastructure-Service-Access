@@ -110,6 +110,20 @@ The main pipeline computes road-network distance matrices. The companion script 
 4. fitting road-type speed multipliers;
 5. writing calibrated edge travel times that can be propagated to the full Pandana network.
 
+Every pipeline run also enriches OSM edges with first-estimate travel-time fields:
+`speed_kph` and `travel_time_s`. The first estimate is controlled by optional
+country configuration fields:
+
+- `legal_speeds_kph`: highway-class speeds in km/h;
+- `speed_general_factor`: a conservative global multiplier in `(0, 1]`;
+- `surface_speed_multipliers`: factors in `(0, 1]` for OSM `surface` tags;
+- `urban_density_threshold_pop_per_km2`, `urban_density_speed_factor`, and
+  `urban_density_radius_m`: optional population-density-based speed reduction.
+
+If a country does not provide these fields, backward-compatible generic speed
+defaults are used. The generated run manifest records the active speed
+assumptions.
+
 Use `dry-run` first. It makes no web requests and verifies that the local OSM/WorldPop data and graph workflow are usable:
 
 ```powershell

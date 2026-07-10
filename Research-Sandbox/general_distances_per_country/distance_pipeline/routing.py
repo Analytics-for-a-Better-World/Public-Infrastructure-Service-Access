@@ -12,6 +12,7 @@ import geopandas as gpd
 import networkx as nx
 import numpy as np
 import pandas as pd
+from scipy.spatial import cKDTree
 from shapely.geometry import LineString
 from shapely.ops import linemerge, unary_union
 
@@ -127,6 +128,102 @@ def normalize_surface(value: object) -> str | None:
     return text or None
 
 
+def _population_column(population_points: pd.DataFrame) -> str | None:
+    """Return the first supported population/headcount column, if present."""
+    for column in ('population', 'headcount', 'demand'):
+        if column in population_points.columns:
+            return column
+    return None
+
+
+def _edge_midpoints_projected(
+    edges: pd.DataFrame,
+    *,
+    projected_epsg: int,
+) -> gpd.GeoSeries | None:
+    """Return edge midpoint geometries in a projected CRS, if possible."""
+    if 'geometry' not in edges.columns:
+        return None
+
+    edge_layer = gpd.GeoDataFrame(
+        edges.copy(),
+        geometry='geometry',
+        crs=getattr(edges, 'crs', None),
+    )
+    if edge_layer.crs is None:
+        edge_layer = edge_layer.set_crs('EPSG:4326')
+
+    edge_layer = edge_layer[edge_layer.geometry.notna() & ~edge_layer.geometry.is_empty]
+    if edge_layer.empty:
+        return None
+
+    edge_layer = edge_layer.to_crs(epsg=projected_epsg)
+    try:
+        return edge_layer.geometry.interpolate(0.5, normalized=True)
+    except Exception:
+        return edge_layer.geometry.centroid
+
+
+def _population_density_adjustment(
+    edges: pd.DataFrame,
+    population_points: gpd.GeoDataFrame | pd.DataFrame,
+    *,
+    projected_epsg: int,
+    threshold_pop_per_km2: float,
+    dense_factor: float,
+    radius_m: float,
+) -> pd.DataFrame:
+    """Estimate local population density around edge midpoints."""
+    result = pd.DataFrame(index=edges.index)
+    result['local_pop_density_per_km2'] = np.nan
+    result['urban_density_speed_factor'] = 1.0
+
+    if threshold_pop_per_km2 <= 0 or dense_factor <= 0 or radius_m <= 0:
+        raise ValueError('Population-density speed parameters must be positive.')
+
+    midpoints = _edge_midpoints_projected(edges, projected_epsg=projected_epsg)
+    if midpoints is None or midpoints.empty:
+        return result
+
+    pop_col = _population_column(population_points)
+    if pop_col is None or 'geometry' not in population_points.columns:
+        return result
+
+    population = gpd.GeoDataFrame(
+        population_points.copy(),
+        geometry='geometry',
+        crs=getattr(population_points, 'crs', None),
+    )
+    if population.crs is None:
+        population = population.set_crs('EPSG:4326')
+    population = population[population.geometry.notna() & ~population.geometry.is_empty]
+    if population.empty:
+        return result
+
+    population = population.to_crs(epsg=projected_epsg)
+    population_values = pd.to_numeric(
+        population[pop_col],
+        errors='coerce',
+    ).fillna(0.0).to_numpy(dtype='float64')
+    pop_xy = np.column_stack([population.geometry.x.to_numpy(), population.geometry.y.to_numpy()])
+    edge_xy = np.column_stack([midpoints.x.to_numpy(), midpoints.y.to_numpy()])
+
+    tree = cKDTree(pop_xy)
+    neighbors = tree.query_ball_point(edge_xy, r=radius_m)
+    area_km2 = np.pi * (radius_m / 1000.0) ** 2
+    local_population = np.fromiter(
+        (float(population_values[idxs].sum()) for idxs in neighbors),
+        dtype='float64',
+        count=len(neighbors),
+    )
+    density = local_population / area_km2
+
+    result.loc[midpoints.index, 'local_pop_density_per_km2'] = density
+    dense_mask = density >= threshold_pop_per_km2
+    result.loc[midpoints.index[dense_mask], 'urban_density_speed_factor'] = dense_factor
+    return result
+
+
 def _reverse_geometry(geometry: object) -> object:
     """Reverse simple line geometry when adding synthetic reverse edges."""
     if isinstance(geometry, LineString):
@@ -140,6 +237,12 @@ def add_edge_speeds(
     default_speeds_kph: dict[str, float] | None = None,
     surface_multipliers: dict[str, float] | None = None,
     fallback_speed_kph: float = 30.0,
+    general_speed_factor: float = 1.0,
+    population_points: gpd.GeoDataFrame | pd.DataFrame | None = None,
+    projected_epsg: int | None = None,
+    urban_density_threshold_pop_per_km2: float | None = None,
+    urban_density_speed_factor: float = 1.0,
+    urban_density_radius_m: float = 1000.0,
     distance_col: str = 'length_m',
     speed_col: str = 'speed_kph',
     time_col: str = 'travel_time_s',
@@ -148,11 +251,14 @@ def add_edge_speeds(
 
     Existing ``maxspeed`` tags are used when parseable. Missing speeds fall
     back to the normalized ``highway`` class and then to ``fallback_speed_kph``.
-    Surface multipliers are applied after the road-type/maxspeed speed choice.
+    The general speed factor, surface multipliers, and optional population
+    density multiplier are applied after the road-type/maxspeed speed choice.
     Edge length is interpreted as meters, matching pyrosm network output.
     """
     if 'length' not in edges.columns:
         raise KeyError("edges must contain a 'length' column in meters")
+    if general_speed_factor <= 0:
+        raise ValueError('general_speed_factor must be positive')
 
     speeds = DEFAULT_SPEEDS_KPH if default_speeds_kph is None else default_speeds_kph
     surfaces = (
@@ -177,6 +283,8 @@ def add_edge_speeds(
     else:
         result[speed_col] = highway_speed
 
+    result[speed_col] = result[speed_col] * general_speed_factor
+
     if 'surface' in result.columns:
         surface_factor = (
             result['surface']
@@ -186,6 +294,27 @@ def add_edge_speeds(
             .astype('float64')
         )
         result[speed_col] = result[speed_col] * surface_factor
+
+    if (
+        population_points is not None
+        and urban_density_threshold_pop_per_km2 is not None
+        and projected_epsg is not None
+    ):
+        density_adjustment = _population_density_adjustment(
+            result,
+            population_points,
+            projected_epsg=projected_epsg,
+            threshold_pop_per_km2=urban_density_threshold_pop_per_km2,
+            dense_factor=urban_density_speed_factor,
+            radius_m=urban_density_radius_m,
+        )
+        result['local_pop_density_per_km2'] = density_adjustment[
+            'local_pop_density_per_km2'
+        ]
+        result['urban_density_speed_factor'] = density_adjustment[
+            'urban_density_speed_factor'
+        ]
+        result[speed_col] = result[speed_col] * result['urban_density_speed_factor']
 
     result[speed_col] = pd.to_numeric(result[speed_col], errors='raise').astype(
         'float64'
