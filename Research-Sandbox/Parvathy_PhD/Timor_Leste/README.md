@@ -65,3 +65,26 @@ outputs/timor_component012_saturation_*
 ```
 
 The result figures used in the integrated report are generated from those output folders.
+
+## WorldPop 2026 exact-frontier replication
+
+The latest exact benchmark uses WorldPop Global2 `R2025A v1` for 2026 and a
+fixed Timor-Leste OSM snapshot. Run the complete, self-validating notebook:
+
+```text
+notebooks/timor_leste_worldpop_2026_full_exact_pareto_replication.ipynb
+```
+
+It documents and verifies the input hashes, reconstructs the three sparse
+candidate-grid matrices when requested, and launches
+`tools/run_timor_global2_2026_exact_pareto.py`. The campaign uses Gurobipy for
+all nine combinations of 10, 5, and 1 km candidate grids with 2, 5, and 10 km
+service thresholds. It solves every integer budget from zero through the first
+exact saturation budget.
+
+Each budget is durably checkpointed in two append-only files: `frontier.jsonl`
+contains status, bounds, gap, warm-start provenance, timestamps, and detailed
+timings; `solutions.jsonl` contains both internal indices and stable candidate
+IDs for the corresponding exact solution. A resumed run skips previously
+verified optimal budgets. Generated data and solver outputs remain outside Git
+because of their size.
