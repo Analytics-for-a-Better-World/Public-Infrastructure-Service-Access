@@ -18,9 +18,16 @@ def exact_pareto_curve(
     gurobi_config: GurobiConfig | None = None,
     pyomo_config: PyomoConfig | None = None,
     progress: Callable[[Any], Any] = lambda iterable: iterable,
+    result_callback: Callable[[MaxCoverResult], Any] | None = None,
 ) -> MaxCoverCurve:
     if solver == "gurobi":
-        return solve_gurobi_curve(instance, budgets, config=gurobi_config, progress=progress)
+        return solve_gurobi_curve(
+            instance,
+            budgets,
+            config=gurobi_config,
+            progress=progress,
+            result_callback=result_callback,
+        )
     if solver == "pyomo":
         return solve_pyomo_curve(instance, budgets, config=pyomo_config, progress=progress)
     raise ValueError(f"unsupported solver: {solver}")

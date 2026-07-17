@@ -85,12 +85,17 @@ def solve_gurobi_curve(
     *,
     config: GurobiConfig | None = None,
     progress: Callable[[Any], Any] = lambda iterable: iterable,
+    result_callback: Callable[[MaxCoverResult], Any] | None = None,
 ) -> MaxCoverCurve:
     """Solve an exact Pareto curve with one reusable gurobipy model.
 
     When ``warm_start`` is enabled, each requested execution budget receives a
     MIP start from the previous optimal solution plus shared-core greedy
     additions.
+
+    ``result_callback`` is invoked after every solved budget, enabling callers
+    to checkpoint long-running exact curves without rebuilding the model.
+
     """
     cfg = config or GurobiConfig()
     import gurobipy as gb
@@ -197,6 +202,8 @@ def solve_gurobi_curve(
             },
         )
         result_by_budget[int(budget)] = result
+        if result_callback is not None:
+            result_callback(result)
         previous_optimal_solution = solution if status == "optimal" else None
 
     return MaxCoverCurve(
