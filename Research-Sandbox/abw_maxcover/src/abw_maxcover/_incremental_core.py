@@ -261,7 +261,14 @@ def swap_first_improving(
     solution: list[int],
     coverage: np.ndarray | None = None,
     objective: int | None = None,
+    *,
+    max_moves: int | None = None,
+    time_limit_seconds: float | None = None,
 ) -> HeuristicResult:
+    if max_moves is not None and int(max_moves) < 0:
+        raise ValueError("max_moves must be nonnegative or None")
+    if time_limit_seconds is not None and float(time_limit_seconds) < 0:
+        raise ValueError("time_limit_seconds must be nonnegative or None")
     weights = instance.weights
     sol = _deduplicate_solution(solution)
     if coverage is None:
@@ -302,6 +309,10 @@ def swap_first_improving(
 
     start = perf_counter()
     while True:
+        if max_moves is not None and len(objectives) - 1 >= int(max_moves):
+            break
+        if time_limit_seconds is not None and perf_counter() - start >= float(time_limit_seconds):
+            break
         refresh_open_mask()
         modified = False
         for position, removed in enumerate(sol):
@@ -484,7 +495,14 @@ class SparseSwapLocalSearch:
         solution: list[int],
         coverage: np.ndarray | None = None,
         objective: int | None = None,
+        *,
+        max_moves: int | None = None,
+        time_limit_seconds: float | None = None,
     ) -> HeuristicResult:
+        if max_moves is not None and int(max_moves) < 0:
+            raise ValueError("max_moves must be nonnegative or None")
+        if time_limit_seconds is not None and float(time_limit_seconds) < 0:
+            raise ValueError("time_limit_seconds must be nonnegative or None")
         instance = self.instance
         weights = instance.weights
         sol = _deduplicate_solution(solution)
@@ -504,6 +522,10 @@ class SparseSwapLocalSearch:
         start = perf_counter()
 
         while True:
+            if max_moves is not None and len(objectives) - 1 >= int(max_moves):
+                break
+            if time_limit_seconds is not None and perf_counter() - start >= float(time_limit_seconds):
+                break
             modified = False
             for position, removed in enumerate(sol):
                 removed_i = int(removed)
@@ -574,6 +596,8 @@ def improve_local_search(
     *,
     local_search: LocalSearchName = "first_sparse",
     sparse_local_search: SparseSwapLocalSearch | None = None,
+    max_moves: int | None = None,
+    time_limit_seconds: float | None = None,
 ) -> HeuristicResult:
     if local_search == "none":
         return HeuristicResult(
@@ -591,6 +615,8 @@ def improve_local_search(
             solution=result.solution,
             coverage=result.coverage,
             objective=result.objective,
+            max_moves=max_moves,
+            time_limit_seconds=time_limit_seconds,
         )
     if local_search == "first":
         return swap_first_improving(
@@ -598,6 +624,8 @@ def improve_local_search(
             result.solution,
             coverage=result.coverage,
             objective=result.objective,
+            max_moves=max_moves,
+            time_limit_seconds=time_limit_seconds,
         )
     raise ValueError(f"unsupported local search: {local_search}")
 
@@ -671,46 +699,118 @@ def path_relink_fast(
     instance: MaxCoverInstance,
     start_result: HeuristicResult,
     guide_solution: list[int],
+    *,
+    max_steps: int | None = 64,
+    candidate_width: int | None = 16,
+    refresh_interval: int = 8,
 ) -> HeuristicResult:
-    """Relink from one solution toward a guide solution, keeping the best state."""
+    """Relink toward a guide through a bounded beam of exact swap deltas.
+
+    Candidate exits and entries are ranked by their current drop loss and add
+    gain. Exact pairwise swap deltas are evaluated only inside the leading
+    candidate beam, whose ranking is periodically refreshed. The default
+    limits avoid the cubic worst-case growth of exhaustive path relinking for
+    solutions containing thousands of facilities.
+
+    Beam-level losses, gains, and incidence rows are computed once per path
+    step. A reusable demand mask supplies the overlap correction for an exact
+    swap delta without allocating and sorting a pairwise intersection.
+    """
+    if max_steps is not None and int(max_steps) < 0:
+        raise ValueError("max_steps must be nonnegative or None")
+    if candidate_width is not None and int(candidate_width) <= 0:
+        raise ValueError("candidate_width must be positive or None")
+    if int(refresh_interval) <= 0:
+        raise ValueError("refresh_interval must be positive")
     start_time = perf_counter()
-    solution = list(start_result.solution)
     coverage = start_result.coverage.copy()
     objective = int(start_result.objective)
     guide_set = set(int(x) for x in guide_solution)
-    solution_set = set(int(x) for x in solution)
-    to_exit = [facility for facility in solution if facility not in guide_set]
+    solution_set = set(int(x) for x in start_result.solution)
+    to_exit = [facility for facility in start_result.solution if facility not in guide_set]
     to_enter = [facility for facility in guide_solution if int(facility) not in solution_set]
-    best_solution = list(solution)
-    best_coverage = coverage.copy()
     best_objective = int(objective)
+    best_step = 0
+    applied_swaps: list[tuple[int, int]] = []
     objectives = [int(objective)]
     times = [0.0]
+    recovery_mask = np.zeros(instance.n_demand, dtype=bool)
 
-    while to_exit and to_enter:
+    available_steps = min(len(to_exit), len(to_enter))
+    step_limit = available_steps if max_steps is None else min(available_steps, int(max_steps))
+    width_limit = None if candidate_width is None else int(candidate_width)
+
+    for step in range(step_limit):
+        if not to_exit or not to_enter:
+            break
+        if step % int(refresh_interval) == 0:
+            to_exit.sort(
+                key=lambda facility: drop_delta(instance, coverage, int(facility)),
+                reverse=True,
+            )
+            to_enter.sort(
+                key=lambda facility: add_delta(instance, coverage, int(facility)),
+                reverse=True,
+            )
+
+        exit_candidates = to_exit if width_limit is None else to_exit[:width_limit]
+        enter_candidates = to_enter if width_limit is None else to_enter[:width_limit]
+        enter_demand = [instance.demand_of(int(facility)) for facility in enter_candidates]
+        enter_gain = np.zeros(len(enter_candidates), dtype=np.int64)
+        for enter_index, demand in enumerate(enter_demand):
+            if demand.size:
+                enter_gain[enter_index] = int(
+                    instance.weights[demand[coverage[demand] == 0]].sum()
+                )
         best_pair: tuple[int, int] | None = None
         best_delta: int | None = None
-        for swap_out in to_exit:
-            for swap_in in to_enter:
-                delta = _swap_delta(instance, coverage, int(swap_out), int(swap_in))
+        for swap_out in exit_candidates:
+            out_cover = instance.demand_of(int(swap_out))
+            newly_uncovered = (
+                out_cover[coverage[out_cover] == 1]
+                if out_cover.size
+                else np.empty(0, dtype=np.int32)
+            )
+            loss = (
+                int(instance.weights[newly_uncovered].sum())
+                if newly_uncovered.size
+                else 0
+            )
+            if newly_uncovered.size:
+                recovery_mask[newly_uncovered] = True
+            for enter_index, swap_in in enumerate(enter_candidates):
+                in_cover = enter_demand[enter_index]
+                recovered = 0
+                if newly_uncovered.size and in_cover.size:
+                    overlap = recovery_mask[in_cover]
+                    if overlap.any():
+                        recovered = int(instance.weights[in_cover[overlap]].sum())
+                delta = int(enter_gain[enter_index]) - loss + recovered
                 if best_delta is None or delta > best_delta:
                     best_delta = int(delta)
                     best_pair = (int(swap_out), int(swap_in))
+            if newly_uncovered.size:
+                recovery_mask[newly_uncovered] = False
         if best_pair is None or best_delta is None:
             break
         swap_out, swap_in = best_pair
-        solution.remove(swap_out)
-        solution.append(swap_in)
         _apply_swap(instance, coverage, swap_out, swap_in)
         objective += int(best_delta)
         to_exit.remove(swap_out)
         to_enter.remove(swap_in)
+        applied_swaps.append((swap_out, swap_in))
         objectives.append(int(objective))
         times.append(perf_counter() - start_time)
         if objective > best_objective:
             best_objective = int(objective)
-            best_solution = list(solution)
-            best_coverage = coverage.copy()
+            best_step = len(applied_swaps)
+
+    best_solution = list(start_result.solution)
+    best_coverage = start_result.coverage.copy()
+    for swap_out, swap_in in applied_swaps[:best_step]:
+        best_solution.remove(swap_out)
+        best_solution.append(swap_in)
+        _apply_swap(instance, best_coverage, swap_out, swap_in)
 
     return HeuristicResult(
         solution=best_solution,

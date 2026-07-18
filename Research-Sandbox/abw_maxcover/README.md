@@ -60,6 +60,39 @@ used by deterministic greedy, compact, re-greedy, randomized construction,
 GRASP-style multi-starts, local search, path relinking, and deployment curves,
 so improvements in the core benefit every higher-level strategy.
 
+Path relinking is deliberately bounded for large solutions. Exhaustively
+evaluating every exit--entry pair at every step has cubic worst-case growth in
+the symmetric-difference size and is not suitable when budgets reach thousands
+of facilities. The default heuristic therefore:
+
+- ranks candidate exits by current loss and entries by current gain;
+- evaluates exact swap deltas inside a 16-by-16 candidate beam;
+- refreshes that ranking every eight accepted path steps; and
+- stops after 64 path steps while retaining the best state visited.
+
+Within each beam, exit losses, entry gains, and facility incidence rows are
+computed once per path step. Exact overlap corrections use a reusable demand
+mask rather than repeated pairwise set intersections. The best path position
+is recorded and reconstructed once, avoiding full coverage-vector copies at
+every incumbent improvement.
+
+These controls are exposed as `path_relinking_candidate_width`,
+`path_relinking_refresh_interval`, and `path_relinking_max_steps` on
+`HeuristicConfig`. Set the width and step limit to `None` only for a small
+instance where exhaustive relinking is intentionally required.
+
+Long-running approximate curves can pass `result_callback` to
+`approximate_pareto_curve`. The callback receives the best result immediately
+after each internally sorted budget is complete, allowing experiment scripts
+to persist frontier points and selected facilities without waiting for the
+entire curve.
+
+`HeuristicConfig` also exposes `local_search_max_moves` and
+`local_search_time_limit_seconds`. These optional limits make the intensification
+effort explicit on national instances; the incremental greedy result remains in
+the portfolio and therefore preserves the standard weighted maximum-coverage
+guarantee even when local search is truncated.
+
 ## Small working example
 
 ```python

@@ -76,9 +76,29 @@ def approximate_pareto_curve(
     config: HeuristicConfig | None = None,
     select_best: bool = True,
     progress: Callable[[Any], Any] = lambda iterable: iterable,
+    result_callback: Callable[[MaxCoverResult], Any] | None = None,
 ) -> MaxCoverCurve:
-    """Compute a scalable heuristic Pareto approximation and optionally keep the best row per budget."""
-    curve = run_heuristics(instance, budgets, config=config, progress=progress)
+    """Compute a heuristic Pareto approximation with optional budget checkpoints.
+
+    ``result_callback`` receives the best portfolio result as soon as each
+    execution budget is complete. Budgets are evaluated in sorted order even
+    when the returned curve follows a different requested order.
+    """
+
+    def checkpoint(_budget: int, candidates: list[MaxCoverResult]) -> None:
+        if result_callback is None:
+            return
+        best = best_by_budget(candidates)
+        if best:
+            result_callback(best[0])
+
+    curve = run_heuristics(
+        instance,
+        budgets,
+        config=config,
+        progress=progress,
+        budget_callback=checkpoint if result_callback is not None else None,
+    )
     if not select_best:
         curve.kind = "approximation_all"
         return curve
