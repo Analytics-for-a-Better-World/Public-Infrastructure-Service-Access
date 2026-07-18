@@ -71,10 +71,11 @@ of facilities. The default heuristic therefore:
 - stops after 64 path steps while retaining the best state visited.
 
 Within each beam, exit losses, entry gains, and facility incidence rows are
-computed once per path step. Exact overlap corrections use a reusable demand
-mask rather than repeated pairwise set intersections. The best path position
-is recorded and reconstructed once, avoiding full coverage-vector copies at
-every incumbent improvement.
+computed once per path step. Entry incidence rows are flattened into one compact
+array, allowing all overlap corrections for an exit candidate to be accumulated
+in one integer-exact NumPy operation. A reusable demand mask replaces repeated
+pairwise set intersections. The best path position is recorded and reconstructed
+once, avoiding full coverage-vector copies at every incumbent improvement.
 
 These controls are exposed as `path_relinking_candidate_width`,
 `path_relinking_refresh_interval`, and `path_relinking_max_steps` on

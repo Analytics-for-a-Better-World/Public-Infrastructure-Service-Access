@@ -756,14 +756,29 @@ def path_relink_fast(
         exit_candidates = to_exit if width_limit is None else to_exit[:width_limit]
         enter_candidates = to_enter if width_limit is None else to_enter[:width_limit]
         enter_demand = [instance.demand_of(int(facility)) for facility in enter_candidates]
+        enter_sizes = np.fromiter(
+            (demand.size for demand in enter_demand),
+            dtype=np.intp,
+            count=len(enter_demand),
+        )
+        flat_enter_demand = (
+            np.concatenate(enter_demand)
+            if int(enter_sizes.sum())
+            else np.empty(0, dtype=np.int32)
+        )
+        flat_enter_owner = np.repeat(
+            np.arange(len(enter_candidates), dtype=np.intp), enter_sizes
+        )
         enter_gain = np.zeros(len(enter_candidates), dtype=np.int64)
-        for enter_index, demand in enumerate(enter_demand):
-            if demand.size:
-                enter_gain[enter_index] = int(
-                    instance.weights[demand[coverage[demand] == 0]].sum()
-                )
+        uncovered = coverage[flat_enter_demand] == 0
+        np.add.at(
+            enter_gain,
+            flat_enter_owner[uncovered],
+            instance.weights[flat_enter_demand[uncovered]],
+        )
         best_pair: tuple[int, int] | None = None
         best_delta: int | None = None
+        recovered = np.zeros(len(enter_candidates), dtype=np.int64)
         for swap_out in exit_candidates:
             out_cover = instance.demand_of(int(swap_out))
             newly_uncovered = (
@@ -778,17 +793,22 @@ def path_relink_fast(
             )
             if newly_uncovered.size:
                 recovery_mask[newly_uncovered] = True
-            for enter_index, swap_in in enumerate(enter_candidates):
-                in_cover = enter_demand[enter_index]
-                recovered = 0
-                if newly_uncovered.size and in_cover.size:
-                    overlap = recovery_mask[in_cover]
-                    if overlap.any():
-                        recovered = int(instance.weights[in_cover[overlap]].sum())
-                delta = int(enter_gain[enter_index]) - loss + recovered
-                if best_delta is None or delta > best_delta:
-                    best_delta = int(delta)
-                    best_pair = (int(swap_out), int(swap_in))
+            recovered.fill(0)
+            overlap = recovery_mask[flat_enter_demand]
+            np.add.at(
+                recovered,
+                flat_enter_owner[overlap],
+                instance.weights[flat_enter_demand[overlap]],
+            )
+            deltas = enter_gain - loss + recovered
+            enter_index = int(np.argmax(deltas))
+            delta = int(deltas[enter_index])
+            if best_delta is None or delta > best_delta:
+                best_delta = delta
+                best_pair = (
+                    int(swap_out),
+                    int(enter_candidates[enter_index]),
+                )
             if newly_uncovered.size:
                 recovery_mask[newly_uncovered] = False
         if best_pair is None or best_delta is None:
