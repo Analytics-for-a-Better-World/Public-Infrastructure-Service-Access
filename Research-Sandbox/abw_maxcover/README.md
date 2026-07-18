@@ -30,11 +30,11 @@ From this repository:
 python -m pip install -e Research-Sandbox\abw_maxcover
 ```
 
-The core package requires only NumPy. Optional extras are available for sparse
-local search, exact solvers, and development:
+The core package requires only NumPy, including the raw-CSR local search.
+Optional extras are available for exact solvers and development:
 
 ```powershell
-python -m pip install -e Research-Sandbox\abw_maxcover[sparse,gurobi,dev]
+python -m pip install -e Research-Sandbox\abw_maxcover[gurobi,dev]
 ```
 
 ## Module map
@@ -59,6 +59,12 @@ facilities updates only affected demand and candidate rows. The same logic is
 used by deterministic greedy, compact, re-greedy, randomized construction,
 GRASP-style multi-starts, local search, path relinking, and deployment curves,
 so improvements in the core benefit every higher-level strategy.
+
+First-improvement local search gathers replacement candidates directly from the
+instance's demand-to-facility CSR arrays. Vectorized row gathering and one
+deduplication replace repeated construction, slicing, and reduction of temporary
+SciPy matrices. This keeps candidate ordering and swap decisions deterministic,
+while avoiding a duplicate sparse matrix and making local search NumPy-only.
 
 Path relinking is deliberately bounded for large solutions. Exhaustively
 evaluating every exit--entry pair at every step has cubic worst-case growth in

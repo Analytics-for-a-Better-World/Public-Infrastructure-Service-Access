@@ -27,7 +27,6 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-sparse = ["scipy>=1.10"]
 gurobi = ["gurobipy>=10"]
 pyomo = ["pyomo>=6"]
 data = ["pandas>=2"]

@@ -418,7 +418,7 @@ def drop_redundant_facilities(
 
 
 class SparseSwapLocalSearch:
-    """SciPy CSR-accelerated first-improving swap local search."""
+    """Raw-CSR first-improving swap local search."""
 
     def __init__(
         self,
@@ -439,18 +439,11 @@ class SparseSwapLocalSearch:
         *,
         cache_facility_demand: bool | None = None,
     ) -> "SparseSwapLocalSearch":
-        from scipy import sparse
-
         if cache_facility_demand is None:
             cache_facility_demand = instance.n_facilities <= 50_000
-        data = np.ones(instance.ij_indices.size, dtype=np.uint8)
-        household_facility_matrix = sparse.csr_matrix(
-            (data, instance.ij_indices, instance.ij_indptr),
-            shape=(instance.n_demand, instance.n_facilities),
-        )
         return cls(
             instance=instance,
-            household_facility_matrix=household_facility_matrix,
+            household_facility_matrix=None,
             base_gain=_initial_gain(instance),
             facility_demand=(
                 tuple(
@@ -481,8 +474,19 @@ class SparseSwapLocalSearch:
     ) -> np.ndarray:
         if newly_uncovered.size == 0:
             return np.empty(0, dtype=np.int32)
-        touched_counts = self.household_facility_matrix[newly_uncovered].sum(axis=0)
-        candidates = np.asarray(touched_counts).ravel().nonzero()[0].astype(np.int32, copy=False)
+        indptr = self.instance.ij_indptr
+        starts = indptr[newly_uncovered]
+        lengths = indptr[newly_uncovered + 1] - starts
+        total = int(lengths.sum())
+        if total == 0:
+            return np.empty(0, dtype=np.int32)
+
+        output_offsets = np.cumsum(lengths, dtype=np.int64) - lengths
+        source_positions = (
+            np.arange(total, dtype=np.int64)
+            + np.repeat(starts.astype(np.int64) - output_offsets, lengths)
+        )
+        candidates = np.unique(self.instance.ij_indices[source_positions])
         if candidates.size == 0:
             return candidates
         candidates = candidates[(~open_mask[candidates]) & (self.base_gain[candidates] > loss)]

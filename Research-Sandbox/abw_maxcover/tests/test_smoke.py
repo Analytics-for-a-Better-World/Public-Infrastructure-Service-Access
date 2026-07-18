@@ -149,6 +149,7 @@ def test_local_search_move_limit_is_respected() -> None:
     instance = toy_instance()
     constructed = mc.select_by_marginal_gain(instance, 2)
     search = mc.SparseSwapLocalSearch.from_instance(instance)
+    assert search.household_facility_matrix is None
     improved = search.improve(
         constructed.solution,
         coverage=constructed.coverage,
