@@ -86,6 +86,20 @@
 <section id="documentation">
 <h2>Documentation<a class="headerlink" href="#documentation" title="Link to this heading"></a></h2>
 <p>For detailed documentation on the code, read the <a class="reference external" href="https://analytics-for-a-better-world.github.io/Public-Infrastructure-Service-Access/index.html">docs</a>.</p>
+</section>
+<section id="maintained-optimization-package">
+<h2>Maintained optimization package<a class="headerlink" href="#maintained-optimization-package" title="Link to this heading"></a></h2>
+<p>Large-scale maximum-covering algorithms are maintained as the independently
+installable <a class="reference internal" href="#packages/abw_maxcover"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">abw-maxcover</span></code></span></a> package. It provides a
+solver-independent sparse instance model, complete coverage–budget frontiers,
+exact Gurobi and Pyomo adapters, greedy and randomized heuristics, sparse local
+search, bounded path relinking, deployment sequencing, and reproducibility
+tools. Keeping it under <code class="docutils literal notranslate"><span class="pre">packages/</span></code> separates the reusable library from legacy
+scripts in <code class="docutils literal notranslate"><span class="pre">optimization/</span></code> and experiments in <code class="docutils literal notranslate"><span class="pre">Research-Sandbox/</span></code>.</p>
+<div class="highlight-sh notranslate"><div class="highlight"><pre><span></span>python<span class="w"> </span>-m<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span>packages/abw_maxcover
+python<span class="w"> </span>packages/abw_maxcover/examples/small_working_example.py
+</pre></div>
+</div>
 <blockquote>
 <div><p>⚠️ <strong>Important:</strong><br />
 The latest version of PISA contains significant refactoring and improvements.<br />
