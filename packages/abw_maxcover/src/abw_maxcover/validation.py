@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Literal
 
+from ._incremental_core import compute_coverage_and_objective
 from .instance import MaxCoverInstance, _validate_biadjacency_consistency
 from .results import MaxCoverCurve, MaxCoverResult
-from ._incremental_core import compute_coverage_and_objective
 
 
 def validate_instance(instance: MaxCoverInstance) -> None:

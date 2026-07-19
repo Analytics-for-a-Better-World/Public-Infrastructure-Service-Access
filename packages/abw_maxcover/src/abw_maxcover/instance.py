@@ -7,7 +7,10 @@ from typing import Any
 
 import numpy as np
 
-def _as_int_array(values: Any, dtype: np.dtype = np.dtype("int32")) -> np.ndarray:
+_INT32_DTYPE = np.dtype("int32")
+
+
+def _as_int_array(values: Any, dtype: np.dtype = _INT32_DTYPE) -> np.ndarray:
     return np.asarray(values, dtype=dtype)
 
 

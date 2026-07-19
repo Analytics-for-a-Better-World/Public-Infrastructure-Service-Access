@@ -29,10 +29,10 @@ ROOT = Path(
 REPOSITORY = Path(
     os.environ.get(
         "PISA_REPOSITORY",
-        r"C:\github\Public-Infrastructure-Service-Access",
+        str(Path(__file__).resolve().parents[4]),
     )
 )
-ABW_SRC = REPOSITORY / "Research-Sandbox" / "abw_maxcover" / "src"
+ABW_SRC = REPOSITORY / "packages" / "abw_maxcover" / "src"
 RUN_OUT = Path(
     os.environ.get(
         "TIMOR_GLOBAL2_2026_PIPELINE_OUTPUT",

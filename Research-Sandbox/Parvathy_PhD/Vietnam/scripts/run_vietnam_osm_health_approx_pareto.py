@@ -22,7 +22,7 @@ def default_abw_maxcover_src(script_path: Path) -> Path:
         resolved.parents[1],
         resolved.parents[1] / "abw_maxcover" / "src",
         # Repository layout: Research-Sandbox/Parvathy_PhD/Vietnam/scripts/<script>.py
-        resolved.parents[3] / "abw_maxcover" / "src",
+        resolved.parents[4] / "packages" / "abw_maxcover" / "src",
     ]
     for candidate in candidates:
         if (candidate / "abw_maxcover").exists():

@@ -2,17 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import Any, Callable
+from typing import Any
 
 from ._budgets import normalise_budget_order
-from .instance import MaxCoverInstance
-from .results import HeuristicResult, MaxCoverCurve, MaxCoverResult
 from ._incremental_core import (
-    ConstructorName,
     DETERMINISTIC_CONSTRUCTORS,
-    LocalSearchName,
     RANDOMIZED_CONSTRUCTORS,
+    ConstructorName,
+    LocalSearchName,
     SparseSwapLocalSearch,
     budgeted_construct,
     drop_redundant_facilities,
@@ -22,6 +21,9 @@ from ._incremental_core import (
     prefix_result,
     select_by_marginal_gain,
 )
+from .instance import MaxCoverInstance
+from .results import HeuristicResult, MaxCoverCurve, MaxCoverResult
+
 
 @dataclass(slots=True)
 class HeuristicConfig:
@@ -217,7 +219,8 @@ def run_heuristics(
     unsupported = [
         constructor
         for constructor in constructors
-        if constructor not in DETERMINISTIC_CONSTRUCTORS and constructor not in RANDOMIZED_CONSTRUCTORS
+        if constructor not in DETERMINISTIC_CONSTRUCTORS
+        and constructor not in RANDOMIZED_CONSTRUCTORS
     ]
     if unsupported:
         raise ValueError(f"unsupported constructors: {unsupported}")

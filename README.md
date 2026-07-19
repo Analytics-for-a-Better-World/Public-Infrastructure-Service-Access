@@ -6,6 +6,21 @@ PISA assists policymakers in identifying and planning key resources such as road
 
 For detailed documentation on the code, read the [docs](https://analytics-for-a-better-world.github.io/Public-Infrastructure-Service-Access/index.html).
 
+## Maintained optimization package
+
+Large-scale maximum-covering algorithms are maintained as the independently
+installable [`abw-maxcover`](packages/abw_maxcover) package. It provides a
+solver-independent sparse instance model, complete coverage--budget frontiers,
+exact Gurobi and Pyomo adapters, greedy and randomized heuristics, sparse local
+search, bounded path relinking, deployment sequencing, and reproducibility
+tools. Keeping it under `packages/` separates the reusable library from legacy
+scripts in `optimization/` and experiments in `Research-Sandbox/`.
+
+```sh
+python -m pip install -e packages/abw_maxcover
+python packages/abw_maxcover/examples/small_working_example.py
+```
+
 > ⚠️ **Important:**  
 > The latest version of PISA contains significant refactoring and improvements.  
 > If you need the original codebase, use version `0.1.0` available from the [GitHub releases](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/releases/tag/v0.1.0) or refer to the [list of releases](https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/releases) for more information.  

@@ -4,8 +4,9 @@ from __future__ import annotations
 
 import csv
 import json
+from collections.abc import Mapping
 from os import PathLike
-from typing import Any, Mapping
+from typing import Any
 
 import numpy as np
 

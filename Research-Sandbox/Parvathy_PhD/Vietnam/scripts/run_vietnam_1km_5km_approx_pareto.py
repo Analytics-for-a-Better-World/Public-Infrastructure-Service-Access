@@ -14,12 +14,8 @@ import pyarrow.parquet as pq
 
 
 ROOT = Path(__file__).resolve().parents[1]
-ABW_SRC = (
-    Path(r"C:\github\Public-Infrastructure-Service-Access")
-    / "Research-Sandbox"
-    / "abw_maxcover"
-    / "src"
-)
+REPOSITORY = Path(__file__).resolve().parents[4]
+ABW_SRC = REPOSITORY / "packages" / "abw_maxcover" / "src"
 sys.path.insert(0, str(ABW_SRC))
 
 from abw_maxcover import MaxCoverInstance  # noqa: E402

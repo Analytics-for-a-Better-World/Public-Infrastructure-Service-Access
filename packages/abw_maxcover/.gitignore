@@ -1,0 +1,8 @@
+/.pytest_cache/
+/.ruff_cache/
+/benchmark-output/
+/build/
+/dist/
+__pycache__/
+*.py[cod]
+*.egg-info/

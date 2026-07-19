@@ -7,6 +7,7 @@ from typing import Any
 
 import numpy as np
 
+
 @dataclass(slots=True)
 class HeuristicResult:
     solution: list[int]

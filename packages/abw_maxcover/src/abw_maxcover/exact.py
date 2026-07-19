@@ -2,20 +2,22 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from math import floor, isfinite
 from time import perf_counter
-from typing import Any, Callable, Literal
+from typing import Any
 
 import numpy as np
 
 from ._budgets import normalise_budget_order
-from .instance import MaxCoverInstance
-from .results import MaxCoverCurve, MaxCoverResult
 from ._incremental_core import (
     compute_coverage_and_objective,
     select_by_marginal_gain,
 )
+from .instance import MaxCoverInstance
+from .results import MaxCoverCurve, MaxCoverResult
+
 
 @dataclass(slots=True)
 class GurobiConfig:
@@ -39,6 +41,7 @@ class PyomoConfig:
     fixed_facilities: tuple[int, ...] = ()
     fixed_count_against_budget: bool = False
 
+
 def _greedy_mip_start(
     instance: MaxCoverInstance,
     budget: int,
@@ -47,7 +50,9 @@ def _greedy_mip_start(
     fixed_facilities: tuple[int, ...] = (),
     fixed_count_against_budget: bool = False,
 ) -> tuple[list[int], np.ndarray, int, str]:
-    max_selected = int(budget) if fixed_count_against_budget else int(budget) + len(fixed_facilities)
+    max_selected = (
+        int(budget) if fixed_count_against_budget else int(budget) + len(fixed_facilities)
+    )
     start = select_by_marginal_gain(
         instance,
         max_selected,
@@ -128,13 +133,16 @@ def solve_gurobi_curve(
     for demand in target_demand:
         demand_i = int(demand)
         model.addConstr(
-            y[demand_i] <= gb.quicksum(x[int(facility)] for facility in instance.facilities_of(demand_i)),
+            y[demand_i]
+            <= gb.quicksum(x[int(facility)] for facility in instance.facilities_of(demand_i)),
             name=f"cover_{demand_i}",
         )
 
     budget_constr = model.addConstr(x.sum() <= 0, name="budget")
     model.setObjective(
-        gb.quicksum(float(instance.weights[int(demand)]) * y[int(demand)] for demand in target_demand),
+        gb.quicksum(
+            float(instance.weights[int(demand)]) * y[int(demand)] for demand in target_demand
+        ),
         gb.GRB.MAXIMIZE,
     )
     model.update()
@@ -144,7 +152,11 @@ def solve_gurobi_curve(
     previous_optimal_solution: list[int] | None = None
 
     for budget in progress(execution_budgets):
-        rhs = int(budget) if cfg.fixed_count_against_budget else int(budget) + len(cfg.fixed_facilities)
+        rhs = (
+            int(budget)
+            if cfg.fixed_count_against_budget
+            else int(budget) + len(cfg.fixed_facilities)
+        )
         budget_constr.RHS = rhs
         start_solution: list[int] = []
         start_objective: int | None = None
@@ -171,7 +183,9 @@ def solve_gurobi_curve(
         status = _gurobi_status_name(gb, int(model.Status))
 
         if model.SolCount > 0:
-            solution = [facility for facility in range(instance.n_facilities) if x[facility].X >= 0.5]
+            solution = [
+                facility for facility in range(instance.n_facilities) if x[facility].X >= 0.5
+            ]
             coverage, objective = compute_coverage_and_objective(instance, solution)
         else:
             solution = []
@@ -289,7 +303,9 @@ def solve_pyomo_curve(
 
     @model.Constraint(model.I)
     def cover_if_open(m, demand):
-        return m.Y[demand] <= pyo.quicksum(m.X[int(facility)] for facility in instance.facilities_of(int(demand)))
+        return m.Y[demand] <= pyo.quicksum(
+            m.X[int(facility)] for facility in instance.facilities_of(int(demand))
+        )
 
     @model.Constraint()
     def budget_limit(m):
@@ -304,7 +320,9 @@ def solve_pyomo_curve(
     result_by_budget: dict[int, MaxCoverResult] = {}
     for budget in progress(execution_budgets):
         model.budget.set_value(
-            int(budget) if cfg.fixed_count_against_budget else int(budget) + len(cfg.fixed_facilities)
+            int(budget)
+            if cfg.fixed_count_against_budget
+            else int(budget) + len(cfg.fixed_facilities)
         )
         solve_start = perf_counter()
         solver_result = solver.solve(model, tee=cfg.trace)

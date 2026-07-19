@@ -6,7 +6,7 @@ The code is intentionally stored next to, but separate from, the two reusable pr
 
 ```text
 Research-Sandbox/general_distances_per_country
-Research-Sandbox/abw_maxcover
+packages/abw_maxcover
 ```
 
 Use `general_distances_per_country` to generate road-network distance matrices and component-aware snapped source/destination layers. Use `abw_maxcover` for exact and heuristic maximum-covering optimization.
@@ -63,7 +63,7 @@ The 2026 runs were executed on Windows with Python 3.14, the PISA distance pipel
 cd C:\github\Public-Infrastructure-Service-Access
 py -3.14 -m venv Research-Sandbox\general_distances_per_country\.venv
 Research-Sandbox\general_distances_per_country\.venv\Scripts\python.exe -m pip install -r Research-Sandbox\Parvathy_PhD\requirements-reproduction.txt
-Research-Sandbox\general_distances_per_country\.venv\Scripts\python.exe -m pip install -e Research-Sandbox\abw_maxcover
+Research-Sandbox\general_distances_per_country\.venv\Scripts\python.exe -m pip install -e packages\abw_maxcover
 ```
 
 Some exact runs require a licensed Gurobi installation. The heuristic and figure-generation code should still be inspectable without Gurobi; the reusable `abw_maxcover` package delays solver imports to solver-specific modules.

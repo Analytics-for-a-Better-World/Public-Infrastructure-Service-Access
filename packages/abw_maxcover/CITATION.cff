@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: >-
+  If you use abw-maxcover, cite this software and the exact repository commit
+  used to generate your results.
+title: abw-maxcover
+type: software
+version: 0.2.0
+date-released: 2026-07-19
+authors:
+  - family-names: Krishnakumari
+    given-names: Parvathy K.
+  - family-names: den Hertog
+    given-names: Dick
+  - family-names: Gromicho
+    given-names: Joaquim
+repository-code: https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access
+url: https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access/tree/main/packages/abw_maxcover
+license: MIT
+keywords:
+  - maximum covering location problem
+  - Pareto frontier
+  - sparse optimization
+  - facility location
+  - submodular optimization

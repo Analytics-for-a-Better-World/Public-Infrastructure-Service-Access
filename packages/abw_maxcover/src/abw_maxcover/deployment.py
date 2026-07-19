@@ -2,13 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Literal
+from collections.abc import Callable
+from typing import Any, Literal
+
+import numpy as np
 
 from ._budgets import normalise_budget_order
+from ._incremental_core import _deduplicate_solution, prefix_result, select_by_marginal_gain
+from .exact import GurobiConfig, PyomoConfig
 from .instance import MaxCoverInstance
 from .results import MaxCoverCurve, MaxCoverResult
-from .exact import GurobiConfig, PyomoConfig
-from ._incremental_core import _deduplicate_solution, prefix_result, select_by_marginal_gain
+
 
 def greedy_deployment_sequence(
     instance: MaxCoverInstance,

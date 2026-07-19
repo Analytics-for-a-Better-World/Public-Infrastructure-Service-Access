@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Literal
+from collections.abc import Callable
+from typing import Any, Literal
 
 from ._budgets import normalise_budget_order
-from .instance import MaxCoverInstance
-from .results import CurveComparison, MaxCoverCurve, MaxCoverResult, best_by_budget
 from .exact import GurobiConfig, PyomoConfig, solve_gurobi_curve, solve_pyomo_curve
 from .heuristics import HeuristicConfig, run_heuristics
+from .instance import MaxCoverInstance
+from .results import CurveComparison, MaxCoverCurve, MaxCoverResult, best_by_budget
+
 
 def exact_pareto_curve(
     instance: MaxCoverInstance,
@@ -68,6 +70,7 @@ def compare_curves(
 
 def coverage_gain_between_instances(coarse: MaxCoverCurve, fine: MaxCoverCurve) -> CurveComparison:
     return compare_curves(coarse, fine, label_reference="coarse", label_challenger="fine")
+
 
 def approximate_pareto_curve(
     instance: MaxCoverInstance,

@@ -5,7 +5,7 @@ This folder contains scripts shared by the Timor-Leste and Vietnam studies.
 The shared helpers are mostly thin orchestration or reporting utilities around:
 
 - `Research-Sandbox/general_distances_per_country` for distance matrices;
-- `Research-Sandbox/abw_maxcover` for optimization;
+- `packages/abw_maxcover` for optimization;
 - local output folders that are deliberately not committed to Git.
 
 Use the country-specific README files for execution order. The shared scripts are copied here to make the exact 2026 report/deck workflow auditable without searching a Codex sandbox.

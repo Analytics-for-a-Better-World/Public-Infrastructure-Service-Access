@@ -70,7 +70,9 @@ def test_delta_helpers_and_deployment_sequence() -> None:
 def test_bounded_path_relinking_keeps_a_consistent_best_solution() -> None:
     instance = toy_instance()
     start = mc.select_by_marginal_gain(instance, 2)
-    guide = [facility for facility in range(instance.n_facilities) if facility not in start.solution]
+    guide = [
+        facility for facility in range(instance.n_facilities) if facility not in start.solution
+    ]
 
     relinked = mc.path_relink_fast(
         instance,

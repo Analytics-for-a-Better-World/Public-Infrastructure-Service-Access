@@ -1,10 +1,10 @@
 # abw-maxcover
 
-`abw-maxcover` is the reusable maximum-cover optimization package incubated in
-the Analytics for a Better World public-infrastructure service-access work. It
-is built for experiments where demand points have weights, candidate facilities
-cover subsets of demand, and the analyst needs exact or scalable approximate
-coverage curves over many budgets.
+`abw-maxcover` is the maintained maximum-cover optimization package of the
+Analytics for a Better World Public Infrastructure Service Access project. It
+is built for applications where demand points have weights, candidate
+facilities cover subsets of demand, and the analyst needs exact or scalable
+approximate coverage curves over many budgets.
 
 The Python import name is `abw_maxcover`.
 
@@ -24,17 +24,23 @@ The Python import name is `abw_maxcover`.
 
 ## Installation
 
+From PyPI, after the first public release:
+
+```powershell
+python -m pip install abw-maxcover
+```
+
 From this repository:
 
 ```powershell
-python -m pip install -e Research-Sandbox\abw_maxcover
+python -m pip install -e packages\abw_maxcover
 ```
 
 The core package requires only NumPy, including the raw-CSR local search.
 Optional extras are available for exact solvers and development:
 
 ```powershell
-python -m pip install -e Research-Sandbox\abw_maxcover[gurobi,dev]
+python -m pip install -e packages\abw_maxcover[gurobi,dev]
 ```
 
 ## Module map
@@ -175,6 +181,17 @@ those dependencies.
 ## Development checks
 
 ```powershell
-python -m pytest -q Research-Sandbox\abw_maxcover
-python Research-Sandbox\abw_maxcover\examples\small_working_example.py
+python -m pytest -q packages\abw_maxcover
+python packages\abw_maxcover\examples\small_working_example.py
 ```
+
+The `benchmarks/` directory contains self-contained scaling and correctness
+harnesses. Paper-specific campaigns should record the package version, Git
+commit, instance hashes, random seeds, solver status, incumbent, upper bound,
+and stage timings. See [the reproducibility guide](docs/reproducibility.md).
+
+## Citation
+
+The preferred software citation is maintained in [`CITATION.cff`](CITATION.cff).
+Until an archival software DOI is minted, cite the exact Git commit used by an
+experiment in addition to the repository URL.

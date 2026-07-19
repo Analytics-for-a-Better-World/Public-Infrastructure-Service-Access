@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from time import perf_counter
-from typing import Any, Literal, Sequence
+from typing import Any, Literal
 
 import numpy as np
 
@@ -161,7 +162,9 @@ def budgeted_construct(
     objectives: list[int] = [objective]
     times: list[float] = [0.0]
     remaining_budget = max(0, target_size - len(solution))
-    random_plus_count = max(0, min(int(round(random_plus_fraction * remaining_budget)), remaining_budget))
+    random_plus_count = max(
+        0, min(int(round(random_plus_fraction * remaining_budget)), remaining_budget)
+    )
 
     if solution or candidate_pool is not None:
         gain = np.full(instance.n_facilities, -1, dtype=np.int64)
@@ -210,7 +213,7 @@ def budgeted_construct(
                     touched = np.empty(total_nnz, dtype=np.int32)
                     weights = np.empty(total_nnz, dtype=np.int64)
                     pos = 0
-                    for demand, row_start, row_end in zip(newly_covered, starts, ends):
+                    for demand, row_start, row_end in zip(newly_covered, starts, ends, strict=True):
                         width = int(row_end - row_start)
                         if not width:
                             continue
@@ -242,7 +245,9 @@ def greedy_construct(instance: MaxCoverInstance) -> HeuristicResult:
     return budgeted_construct(instance, instance.n_facilities, constructor="greedy")
 
 
-def prefix_result(instance: MaxCoverInstance, result: HeuristicResult, budget: int) -> HeuristicResult:
+def prefix_result(
+    instance: MaxCoverInstance, result: HeuristicResult, budget: int
+) -> HeuristicResult:
     solution = list(result.solution[: max(0, int(budget))])
     coverage, objective = compute_coverage_and_objective(instance, solution)
     idx = min(len(solution), len(result.times) - 1)
@@ -438,7 +443,7 @@ class SparseSwapLocalSearch:
         instance: MaxCoverInstance,
         *,
         cache_facility_demand: bool | None = None,
-    ) -> "SparseSwapLocalSearch":
+    ) -> SparseSwapLocalSearch:
         if cache_facility_demand is None:
             cache_facility_demand = instance.n_facilities <= 50_000
         return cls(
@@ -482,9 +487,8 @@ class SparseSwapLocalSearch:
             return np.empty(0, dtype=np.int32)
 
         output_offsets = np.cumsum(lengths, dtype=np.int64) - lengths
-        source_positions = (
-            np.arange(total, dtype=np.int64)
-            + np.repeat(starts.astype(np.int64) - output_offsets, lengths)
+        source_positions = np.arange(total, dtype=np.int64) + np.repeat(
+            starts.astype(np.int64) - output_offsets, lengths
         )
         candidates = np.unique(self.instance.ij_indices[source_positions])
         if candidates.size == 0:
@@ -528,7 +532,9 @@ class SparseSwapLocalSearch:
         while True:
             if max_moves is not None and len(objectives) - 1 >= int(max_moves):
                 break
-            if time_limit_seconds is not None and perf_counter() - start >= float(time_limit_seconds):
+            if time_limit_seconds is not None and perf_counter() - start >= float(
+                time_limit_seconds
+            ):
                 break
             modified = False
             for position, removed in enumerate(sol):
@@ -670,7 +676,9 @@ def greedy_then_local_search(
     return constructed, improved, reduced
 
 
-def _swap_delta(instance: MaxCoverInstance, coverage: np.ndarray, swap_out: int, swap_in: int) -> int:
+def _swap_delta(
+    instance: MaxCoverInstance, coverage: np.ndarray, swap_out: int, swap_in: int
+) -> int:
     out_cover = instance.demand_of(int(swap_out))
     if out_cover.size:
         newly_uncovered = out_cover[coverage[out_cover] == 1]
@@ -690,7 +698,9 @@ def _swap_delta(instance: MaxCoverInstance, coverage: np.ndarray, swap_out: int,
     return gain - loss
 
 
-def _apply_swap(instance: MaxCoverInstance, coverage: np.ndarray, swap_out: int, swap_in: int) -> None:
+def _apply_swap(
+    instance: MaxCoverInstance, coverage: np.ndarray, swap_out: int, swap_in: int
+) -> None:
     out_cover = instance.demand_of(int(swap_out))
     if out_cover.size:
         coverage[out_cover] -= 1
@@ -766,13 +776,9 @@ def path_relink_fast(
             count=len(enter_demand),
         )
         flat_enter_demand = (
-            np.concatenate(enter_demand)
-            if int(enter_sizes.sum())
-            else np.empty(0, dtype=np.int32)
+            np.concatenate(enter_demand) if int(enter_sizes.sum()) else np.empty(0, dtype=np.int32)
         )
-        flat_enter_owner = np.repeat(
-            np.arange(len(enter_candidates), dtype=np.intp), enter_sizes
-        )
+        flat_enter_owner = np.repeat(np.arange(len(enter_candidates), dtype=np.intp), enter_sizes)
         enter_gain = np.zeros(len(enter_candidates), dtype=np.int64)
         uncovered = coverage[flat_enter_demand] == 0
         np.add.at(
@@ -790,11 +796,7 @@ def path_relink_fast(
                 if out_cover.size
                 else np.empty(0, dtype=np.int32)
             )
-            loss = (
-                int(instance.weights[newly_uncovered].sum())
-                if newly_uncovered.size
-                else 0
-            )
+            loss = int(instance.weights[newly_uncovered].sum()) if newly_uncovered.size else 0
             if newly_uncovered.size:
                 recovery_mask[newly_uncovered] = True
             recovered.fill(0)

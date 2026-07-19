@@ -201,7 +201,7 @@ RUN_DATA_PIPELINE = env_bool("PARVATHY_RUN_DATA_PIPELINE", True)
 RUN_OPTIMIZATION = env_bool("PARVATHY_RUN_OPTIMIZATION", True)
 
 DISTANCE_PIPELINE = REPO_DIR / "Research-Sandbox" / "general_distances_per_country"
-ABW_MAXCOVER_SRC = REPO_DIR / "Research-Sandbox" / "abw_maxcover" / "src"
+ABW_MAXCOVER_SRC = REPO_DIR / "packages" / "abw_maxcover" / "src"
 PARVATHY = REPO_DIR / "Research-Sandbox" / "Parvathy_PhD"
 
 tool_candidates = [
@@ -286,7 +286,7 @@ If GitHub access is unavailable inside the notebook, clone the repository manual
 git clone https://github.com/Analytics-for-a-Better-World/Public-Infrastructure-Service-Access.git
 ```
 
-Use the pipeline in `Research-Sandbox/general_distances_per_country`, the optimization package in `Research-Sandbox/abw_maxcover`, and the reproduction scripts in `Research-Sandbox/Parvathy_PhD`.
+Use the pipeline in `Research-Sandbox/general_distances_per_country`, the optimization package in `packages/abw_maxcover`, and the reproduction scripts in `Research-Sandbox/Parvathy_PhD`.
 
 For portable Pandana replication use Python <= 3.12, `numpy<2`, and `pandana==0.7.*`. This machine also has a local patched Pandana runtime used by Codex.
 '''),

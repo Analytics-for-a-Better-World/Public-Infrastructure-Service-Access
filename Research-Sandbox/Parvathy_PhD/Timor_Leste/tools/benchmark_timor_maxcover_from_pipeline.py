@@ -13,8 +13,8 @@ import pandas as pd
 import yaml
 
 
-REPO_ROOT = Path(r"C:\github\Public-Infrastructure-Service-Access")
-ABW_MAXCOVER_SRC = REPO_ROOT / "Research-Sandbox" / "abw_maxcover" / "src"
+REPO_ROOT = Path(__file__).resolve().parents[4]
+ABW_MAXCOVER_SRC = REPO_ROOT / "packages" / "abw_maxcover" / "src"
 if str(ABW_MAXCOVER_SRC) not in sys.path:
     sys.path.insert(0, str(ABW_MAXCOVER_SRC))
 
