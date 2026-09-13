@@ -2,12 +2,30 @@
 
 from __future__ import annotations
 
+import warnings
 from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
 
 _INT32_DTYPE = np.dtype("int32")
+
+
+def _resolve_assume_unique(assume_unique: bool, assume_unique_sorted: bool | None) -> bool:
+    """Map the deprecated ``assume_unique_sorted`` keyword onto ``assume_unique``.
+
+    Only uniqueness within a row has ever mattered to the package; no code
+    path relies on rows being sorted.
+    """
+    if assume_unique_sorted is None:
+        return bool(assume_unique)
+    warnings.warn(
+        "assume_unique_sorted is deprecated; use assume_unique. Rows never "
+        "needed to be sorted, only free of duplicate entries.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+    return bool(assume_unique_sorted)
 
 
 def _as_int_array(values: Any, dtype: np.dtype = _INT32_DTYPE) -> np.ndarray:
@@ -21,14 +39,14 @@ def _deduplicate_solution(solution: list[int] | tuple[int, ...] | np.ndarray) ->
 def _normalise_row(
     row: np.ndarray | list[int] | tuple[int, ...],
     *,
-    assume_unique_sorted: bool,
+    assume_unique: bool,
 ) -> np.ndarray:
     arr = np.asarray(row, dtype=np.int32)
     if arr.ndim != 1:
         raise ValueError("each row must be one-dimensional")
     if arr.size and int(arr.min()) < 0:
         raise ValueError("row values must be nonnegative")
-    if assume_unique_sorted or arr.size <= 1:
+    if assume_unique or arr.size <= 1:
         return arr
     return np.unique(arr)
 
@@ -37,7 +55,7 @@ def _rows_to_arrays(
     rows: dict[int, np.ndarray | list[int]] | list[np.ndarray | list[int]],
     n_rows: int,
     *,
-    assume_unique_sorted: bool = False,
+    assume_unique: bool = False,
 ) -> tuple[np.ndarray, np.ndarray]:
     if n_rows < 0:
         raise ValueError("n_rows must be nonnegative")
@@ -51,17 +69,14 @@ def _rows_to_arrays(
         if invalid_rows:
             raise ValueError("row mapping contains invalid row ids")
         for row in range(n_rows):
-            arr = _normalise_row(
-                rows.get(row, []),
-                assume_unique_sorted=assume_unique_sorted,
-            )
+            arr = _normalise_row(rows.get(row, []), assume_unique=assume_unique)
             normalised[row] = arr
             indptr[row + 1] = indptr[row] + arr.size
     else:
         if len(rows) != n_rows:
             raise ValueError("row mapping length must match n_rows")
         for row, values in enumerate(rows):
-            arr = _normalise_row(values, assume_unique_sorted=assume_unique_sorted)
+            arr = _normalise_row(values, assume_unique=assume_unique)
             normalised[row] = arr
             indptr[row + 1] = indptr[row] + arr.size
 
@@ -178,11 +193,20 @@ def build_instance(
     *,
     name: str = "max_cover",
     n_facilities: int | None = None,
-    assume_unique_sorted: bool = False,
+    assume_unique: bool = False,
     validate_consistency: bool = False,
     metadata: dict[str, Any] | None = None,
+    assume_unique_sorted: bool | None = None,
 ) -> MaxCoverInstance:
-    """Build a canonical instance from demand-to-facility and facility-to-demand rows."""
+    """Build a canonical instance from demand-to-facility and facility-to-demand rows.
+
+    By default every row is deduplicated. Pass ``assume_unique=True`` to skip
+    that pass when the rows are already free of repeated entries; rows do not
+    need to be sorted. A duplicate that slips through with ``assume_unique``
+    double-counts its weight in marginal gains, so ``validate_consistency=True``
+    also checks for duplicates. ``assume_unique_sorted`` is a deprecated alias.
+    """
+    assume_unique = _resolve_assume_unique(assume_unique, assume_unique_sorted)
     weights_arr = np.asarray(weights, dtype=np.int64)
     if weights_arr.ndim != 1:
         raise ValueError("weights must be one-dimensional")
@@ -190,7 +214,7 @@ def build_instance(
     ij_indptr, ij_indices = _rows_to_arrays(
         ij,
         int(weights_arr.size),
-        assume_unique_sorted=assume_unique_sorted,
+        assume_unique=assume_unique,
     )
 
     if isinstance(ji, dict):
@@ -202,7 +226,7 @@ def build_instance(
     ji_indptr, ji_indices = _rows_to_arrays(
         ji,
         n_ji_rows,
-        assume_unique_sorted=assume_unique_sorted,
+        assume_unique=assume_unique,
     )
 
     instance = MaxCoverInstance(
@@ -226,10 +250,15 @@ def build_instance_from_facility_map(
     covered: set[int] | np.ndarray | None = None,
     name: str = "max_cover",
     n_facilities: int | None = None,
-    assume_unique_sorted: bool = False,
+    assume_unique: bool = False,
     metadata: dict[str, Any] | None = None,
+    assume_unique_sorted: bool | None = None,
 ) -> MaxCoverInstance:
-    """Build an instance from a legacy facility-to-demand catchment mapping."""
+    """Build an instance from a legacy facility-to-demand catchment mapping.
+
+    ``assume_unique`` skips per-row deduplication; see :func:`build_instance`.
+    """
+    assume_unique = _resolve_assume_unique(assume_unique, assume_unique_sorted)
     weights_arr = np.asarray(weights, dtype=np.int64)
     covered_arr = np.asarray(sorted([] if covered is None else covered), dtype=np.int32)
     n_facilities_final = (
@@ -240,7 +269,7 @@ def build_instance_from_facility_map(
     ji: dict[int, np.ndarray] = {}
     ij_lists: list[list[int]] = [[] for _ in range(weights_arr.size)]
     for facility, demand_values in facility_to_demand.items():
-        arr = _normalise_row(demand_values, assume_unique_sorted=assume_unique_sorted)
+        arr = _normalise_row(demand_values, assume_unique=assume_unique)
         if covered_arr.size:
             arr = np.setdiff1d(arr, covered_arr, assume_unique=True)
         if arr.size == 0:
@@ -255,13 +284,27 @@ def build_instance_from_facility_map(
         ji,
         name=name,
         n_facilities=n_facilities_final,
-        assume_unique_sorted=False,
+        assume_unique=False,
         validate_consistency=False,
         metadata=metadata,
     )
 
 
+def _has_duplicate_row_entries(indptr: np.ndarray, indices: np.ndarray) -> bool:
+    """Vectorised check that no CSR row lists the same column twice."""
+    if indices.size == 0:
+        return False
+    counts = np.diff(indptr.astype(np.int64))
+    rows = np.repeat(np.arange(counts.size, dtype=np.int64), counts)
+    keys = rows * (int(indices.max()) + 1) + indices.astype(np.int64)
+    return int(np.unique(keys).size) != int(keys.size)
+
+
 def _validate_biadjacency_consistency(instance: MaxCoverInstance) -> None:
+    if _has_duplicate_row_entries(instance.ij_indptr, instance.ij_indices):
+        raise ValueError("ij rows contain duplicate facility ids")
+    if _has_duplicate_row_entries(instance.ji_indptr, instance.ji_indices):
+        raise ValueError("ji rows contain duplicate demand ids")
     facility_sets = [
         set(int(demand) for demand in instance.demand_of(facility))
         for facility in range(instance.n_facilities)

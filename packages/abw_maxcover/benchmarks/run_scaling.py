@@ -47,7 +47,7 @@ def build_case(case: ScalingCase):
         ij,
         ji,
         name=case.name,
-        assume_unique_sorted=True,
+        assume_unique=True,
         validate_consistency=False,
         metadata={"generator": asdict(case)},
     )

@@ -31,6 +31,11 @@ All notable changes to `abw-maxcover` are recorded here.
   example fixed facilities exceeding the budget): solutions are loaded only
   when one exists, and the result reports the termination condition with no
   incumbent, matching the Gurobi path.
+- Rename `assume_unique_sorted` to `assume_unique` on `build_instance` and
+  `build_instance_from_facility_map`: rows never needed to be sorted, only free
+  of duplicates. The old keyword still works with a `DeprecationWarning`.
+  `validate_consistency=True` and `validate_instance` now also reject rows with
+  duplicate entries, which would otherwise double-count weights in gains.
 
 ## 0.2.0 - 2026-07-19
 
