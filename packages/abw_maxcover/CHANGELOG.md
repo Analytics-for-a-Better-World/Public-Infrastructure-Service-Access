@@ -12,6 +12,9 @@ All notable changes to `abw-maxcover` are recorded here.
   certificate on integer coverage and can no longer sit below the incumbent.
 - Add exact-solver regression tests that run when `gurobipy` or Pyomo with
   HiGHS is available and are skipped otherwise.
+- Fix `greedy_deployment_sequence` dropping pool facilities that add no
+  coverage: they now follow the greedy order with a zero marginal gain, so the
+  final step lists the whole pool and marginal gains sum to the objective.
 
 ## 0.2.0 - 2026-07-19
 

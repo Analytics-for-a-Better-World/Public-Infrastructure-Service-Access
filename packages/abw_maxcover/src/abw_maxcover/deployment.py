@@ -8,7 +8,11 @@ from typing import Any, Literal
 import numpy as np
 
 from ._budgets import normalise_budget_order
-from ._incremental_core import _deduplicate_solution, prefix_result, select_by_marginal_gain
+from ._incremental_core import (
+    _deduplicate_solution,
+    compute_coverage_and_objective,
+    select_by_marginal_gain,
+)
 from .exact import GurobiConfig, PyomoConfig
 from .instance import MaxCoverInstance
 from .results import MaxCoverCurve, MaxCoverResult
@@ -52,22 +56,33 @@ def greedy_deployment_sequence(
     requested = clipped_requested
 
     ordered = select_by_marginal_gain(instance, source_pool_size, candidate_pool=pool)
+    # Greedy stops as soon as no remaining pool facility adds coverage. Those
+    # facilities still belong to the deployment, so they follow in pool order
+    # with a zero marginal gain; the final step then lists the whole pool.
+    ordered_set = set(int(facility) for facility in ordered.solution)
+    sequence = [int(facility) for facility in ordered.solution]
+    sequence.extend(int(facility) for facility in pool if int(facility) not in ordered_set)
+    objectives = [int(value) for value in ordered.objectives]
+    times = [float(value) for value in ordered.times]
+    while len(objectives) < len(sequence) + 1:
+        objectives.append(objectives[-1])
+        times.append(times[-1])
     result_by_budget: dict[int, MaxCoverResult] = {}
 
     for step in requested:
-        prefix = prefix_result(instance, ordered, step)
-        objective = int(prefix.objective)
-        idx = min(int(step), len(ordered.objectives) - 1)
-        previous_objective = int(ordered.objectives[idx - 1]) if idx > 0 else 0
-        marginal_gain = objective - previous_objective
-        elapsed = float(ordered.times[min(step, len(ordered.times) - 1)])
+        prefix_solution = sequence[:step]
+        coverage, objective = compute_coverage_and_objective(instance, prefix_solution)
+        if int(objective) != objectives[step]:
+            raise RuntimeError("deployment prefix objective does not match the greedy trace")
+        marginal_gain = objectives[step] - objectives[step - 1] if step > 0 else 0
+        elapsed = times[step]
         result_by_budget[step] = MaxCoverResult(
             budget=step,
             method=method,
-            objective=objective,
-            solution=list(prefix.solution),
+            objective=int(objective),
+            solution=list(prefix_solution),
             status="ok",
-            coverage=prefix.coverage.copy(),
+            coverage=coverage,
             solve_seconds=elapsed,
             total_seconds=elapsed,
             metadata={
