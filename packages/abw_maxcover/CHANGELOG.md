@@ -53,6 +53,9 @@ All notable changes to `abw-maxcover` are recorded here.
 - Read the distribution version from `abw_maxcover.__version__` instead of
   duplicating it in `pyproject.toml`, and add tests that `CITATION.cff` and the
   changelog agree with it.
+- Change the default `PyomoConfig.solver` from `"gurobi"` to `"appsi_highs"`,
+  the solver the `[pyomo]` extra installs. Pass `solver="gurobi"` explicitly to
+  keep the previous behaviour.
 
 ## 0.2.0 - 2026-07-19
 

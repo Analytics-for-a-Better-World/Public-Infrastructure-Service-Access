@@ -67,7 +67,7 @@ def _highs_available() -> bool:
     try:
         import pyomo.environ as pyo
 
-        return bool(pyo.SolverFactory("appsi_highs").available(exception_flag=False))
+        return bool(pyo.SolverFactory(mc.PyomoConfig().solver).available(exception_flag=False))
     except Exception:
         return False
 
@@ -84,12 +84,17 @@ def _solve(solver: str, instance: mc.MaxCoverInstance, budgets: list[int], *, pa
             solver="gurobi",
             gurobi_config=mc.GurobiConfig(parsimonious=parsimonious, warm_start=False),
         )
+    # The default PyomoConfig solver must be the one the [pyomo] extra installs.
     return mc.exact_pareto_curve(
         instance,
         budgets,
         solver="pyomo",
-        pyomo_config=mc.PyomoConfig(solver="appsi_highs", parsimonious=parsimonious),
+        pyomo_config=mc.PyomoConfig(parsimonious=parsimonious),
     )
+
+
+def test_default_pyomo_solver_is_the_one_the_extra_installs() -> None:
+    assert "highs" in mc.PyomoConfig().solver
 
 
 def _check_parsimonious_solution_is_compact(solver: str) -> None:
@@ -119,9 +124,7 @@ def _infeasible_config(solver: str):
         return mc.GurobiConfig(
             fixed_facilities=(0, 1), fixed_count_against_budget=True, warm_start=False
         )
-    return mc.PyomoConfig(
-        solver="appsi_highs", fixed_facilities=(0, 1), fixed_count_against_budget=True
-    )
+    return mc.PyomoConfig(fixed_facilities=(0, 1), fixed_count_against_budget=True)
 
 
 def _check_infeasible_solve_reports_no_incumbent(solver: str) -> None:
@@ -233,7 +236,6 @@ def test_pyomo_callback_checkpoints_every_budget_in_execution_order() -> None:
         instance,
         [3, 1, 2],
         solver="pyomo",
-        pyomo_config=mc.PyomoConfig(solver="appsi_highs"),
         result_callback=lambda result: checkpoints.append((result.budget, result.objective)),
     )
 

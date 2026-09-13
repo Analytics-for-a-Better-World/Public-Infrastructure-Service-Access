@@ -33,7 +33,14 @@ class GurobiConfig:
 
 @dataclass(slots=True)
 class PyomoConfig:
-    solver: str = "gurobi"
+    """Configuration for :func:`solve_pyomo_curve`.
+
+    ``solver`` is any Pyomo solver name. The default is HiGHS through the
+    APPSI interface, which is what the ``[pyomo]`` extra installs; pass
+    ``"gurobi"``, ``"cplex"``, or ``"cbc"`` to use those through Pyomo.
+    """
+
+    solver: str = "appsi_highs"
     time_limit_seconds: float = 300.0
     mip_gap: float = 1e-8
     trace: bool = False
