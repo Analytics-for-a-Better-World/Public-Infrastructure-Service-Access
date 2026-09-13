@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "abw-maxcover"
-version = "0.2.0"
+dynamic = ["version"]
 description = "Sparse exact and heuristic algorithms for maximum-covering frontiers."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -61,6 +61,9 @@ dev = [
   "ruff>=0.6",
   "line_profiler>=4",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "abw_maxcover.__version__"}
 
 [tool.setuptools.packages.find]
 where = ["src"]

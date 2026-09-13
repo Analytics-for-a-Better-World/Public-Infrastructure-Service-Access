@@ -50,6 +50,9 @@ All notable changes to `abw-maxcover` are recorded here.
 - Fix `prefix_result` slicing the objective and time traces by prefix length
   even when the construction started from an initial solution, which has no
   trace entries of its own. The prefix objective itself was always correct.
+- Read the distribution version from `abw_maxcover.__version__` instead of
+  duplicating it in `pyproject.toml`, and add tests that `CITATION.cff` and the
+  changelog agree with it.
 
 ## 0.2.0 - 2026-07-19
 
