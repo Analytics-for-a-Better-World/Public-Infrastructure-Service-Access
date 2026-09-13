@@ -84,6 +84,45 @@ def _gurobi_status_name(gb_module: Any, status: int) -> str:
     return mapping.get(status, f"unknown_{status}")
 
 
+def _parsimony_penalty(max_budget: int, fixed_count: int, parsimonious: bool) -> float:
+    """Per-facility objective penalty that never changes the optimal coverage.
+
+    The total penalty over at most ``max_budget + fixed_count`` open facilities
+    stays strictly below one, so with integer weights the coverage-maximal
+    solution remains optimal and ties are broken toward fewer facilities.
+    """
+    if not parsimonious:
+        return 0.0
+    return 1.0 / (int(max_budget) + int(fixed_count) + 1)
+
+
+def _coverage_upper_bound(
+    bound: Any,
+    *,
+    penalty: float,
+    max_open: int,
+    objective: int | None,
+) -> float | None:
+    """Convert a solver bound on the (possibly penalised) objective to a coverage bound.
+
+    The solver bounds ``coverage - penalty * n_open``. Adding back the largest
+    penalty any feasible solution can pay yields a valid bound on integer
+    coverage, which is then floored with a small tolerance against floating
+    point noise. A known feasible objective is never exceeded by the bound
+    from below, since the true optimum is at least that objective.
+    """
+    if bound is None:
+        return None
+    value = float(bound)
+    if not isfinite(value):
+        return None
+    value += float(penalty) * int(max_open)
+    upper = float(floor(value + 1e-6 + 1e-9 * abs(value)))
+    if objective is not None:
+        upper = max(upper, float(objective))
+    return upper
+
+
 def solve_gurobi_curve(
     instance: MaxCoverInstance,
     budgets: list[int],
@@ -120,8 +159,8 @@ def solve_gurobi_curve(
         model.Params.LogFile = str(cfg.log_file)
 
     max_budget = max(execution_budgets) if execution_budgets else 0
-    x_obj = -1.0 / (max_budget + len(cfg.fixed_facilities) + 1) if cfg.parsimonious else 0.0
-    x = model.addVars(instance.n_facilities, obj=x_obj, vtype=gb.GRB.BINARY, name="x")
+    penalty = _parsimony_penalty(max_budget, len(cfg.fixed_facilities), cfg.parsimonious)
+    x = model.addVars(instance.n_facilities, vtype=gb.GRB.BINARY, name="x")
     y = model.addVars(target_demand.tolist(), vtype=gb.GRB.BINARY, name="y")
 
     for facility in cfg.fixed_facilities:
@@ -139,12 +178,15 @@ def solve_gurobi_curve(
         )
 
     budget_constr = model.addConstr(x.sum() <= 0, name="budget")
-    model.setObjective(
-        gb.quicksum(
-            float(instance.weights[int(demand)]) * y[int(demand)] for demand in target_demand
-        ),
-        gb.GRB.MAXIMIZE,
+    # ``setObjective`` replaces the whole linear objective, so the parsimony
+    # penalty must be part of this expression rather than set through
+    # ``addVars(obj=...)``, which it would silently discard.
+    objective_expr = gb.quicksum(
+        float(instance.weights[int(demand)]) * y[int(demand)] for demand in target_demand
     )
+    if penalty:
+        objective_expr = objective_expr - penalty * x.sum()
+    model.setObjective(objective_expr, gb.GRB.MAXIMIZE)
     model.update()
     model_seconds = float(perf_counter() - model_start)
 
@@ -192,9 +234,12 @@ def solve_gurobi_curve(
             coverage = None
             objective = None
 
-        upper_bound = None
-        if getattr(model, "ObjBound", None) is not None and isfinite(float(model.ObjBound)):
-            upper_bound = float(floor(model.ObjBound))
+        upper_bound = _coverage_upper_bound(
+            getattr(model, "ObjBound", None),
+            penalty=penalty,
+            max_open=rhs,
+            objective=objective,
+        )
 
         result = MaxCoverResult(
             budget=int(budget),
@@ -295,11 +340,11 @@ def solve_pyomo_curve(
         return pyo.quicksum(float(instance.weights[i]) * m.Y[i] for i in m.I)
 
     max_budget = max(execution_budgets) if execution_budgets else 0
-    coef_x = -1.0 / (max_budget + len(cfg.fixed_facilities) + 1) if cfg.parsimonious else 0.0
+    penalty = _parsimony_penalty(max_budget, len(cfg.fixed_facilities), cfg.parsimonious)
 
     @model.Objective(sense=pyo.maximize)
     def objective(m):
-        return m.weighted_coverage + coef_x * m.n_open
+        return m.weighted_coverage - penalty * m.n_open
 
     @model.Constraint(model.I)
     def cover_if_open(m, demand):
@@ -319,24 +364,30 @@ def solve_pyomo_curve(
     model_seconds = float(perf_counter() - model_start)
     result_by_budget: dict[int, MaxCoverResult] = {}
     for budget in progress(execution_budgets):
-        model.budget.set_value(
+        rhs = (
             int(budget)
             if cfg.fixed_count_against_budget
             else int(budget) + len(cfg.fixed_facilities)
         )
+        model.budget.set_value(rhs)
         solve_start = perf_counter()
         solver_result = solver.solve(model, tee=cfg.trace)
         solve_seconds = float(perf_counter() - solve_start)
         solution = [j for j in facilities if pyo.value(model.X[j]) >= 0.5]
         coverage, objective_value = compute_coverage_and_objective(instance, solution)
-        upper_bound = getattr(solver_result.problem, "upper_bound", None)
+        upper_bound = _coverage_upper_bound(
+            getattr(solver_result.problem, "upper_bound", None),
+            penalty=penalty,
+            max_open=rhs,
+            objective=int(objective_value),
+        )
         result_by_budget[int(budget)] = MaxCoverResult(
             budget=int(budget),
             method=f"pyomo_{cfg.solver}_exact",
             objective=int(objective_value),
             solution=solution,
             status=str(solver_result.solver.termination_condition),
-            upper_bound=None if upper_bound is None else float(upper_bound),
+            upper_bound=upper_bound,
             coverage=coverage,
             model_seconds=model_seconds,
             solve_seconds=solve_seconds,

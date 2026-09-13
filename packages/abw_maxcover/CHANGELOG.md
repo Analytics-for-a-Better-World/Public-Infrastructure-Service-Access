@@ -2,6 +2,17 @@
 
 All notable changes to `abw-maxcover` are recorded here.
 
+## Unreleased
+
+- Fix `parsimonious=True` being silently discarded on the Gurobi path: the
+  per-facility penalty was set through `addVars(obj=...)` and then overwritten
+  by `setObjective`, so saturating budgets returned redundant facilities.
+- Fix `upper_bound` on parsimonious exact solves: both solver paths now add the
+  worst-case penalty back before flooring, so the reported bound is a valid
+  certificate on integer coverage and can no longer sit below the incumbent.
+- Add exact-solver regression tests that run when `gurobipy` or Pyomo with
+  HiGHS is available and are skipped otherwise.
+
 ## 0.2.0 - 2026-07-19
 
 - Promote the package from `Research-Sandbox` to `packages/abw_maxcover`.
