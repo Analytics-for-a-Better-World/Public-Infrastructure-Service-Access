@@ -250,7 +250,13 @@ def prefix_result(
 ) -> HeuristicResult:
     solution = list(result.solution[: max(0, int(budget))])
     coverage, objective = compute_coverage_and_objective(instance, solution)
-    idx = min(len(solution), len(result.times) - 1)
+    # ``objectives[0]`` describes the state before the first recorded
+    # construction step. That state may already hold an initial solution,
+    # whose facilities have no trace entry of their own, so the trace index
+    # of a prefix is its length minus the number of initial facilities.
+    steps_recorded = max(0, len(result.objectives) - 1)
+    initial_count = max(0, len(result.solution) - steps_recorded)
+    idx = min(max(0, len(solution) - initial_count), len(result.times) - 1)
     return HeuristicResult(
         solution=solution,
         objective=int(objective),

@@ -47,6 +47,9 @@ All notable changes to `abw-maxcover` are recorded here.
   powers the sparse local search. The core is NumPy-only.
 - Remove an unreachable second checkpoint pass in `run_heuristics`; the
   budget callback fires exactly once per execution budget inside the loop.
+- Fix `prefix_result` slicing the objective and time traces by prefix length
+  even when the construction started from an initial solution, which has no
+  trace entries of its own. The prefix objective itself was always correct.
 
 ## 0.2.0 - 2026-07-19
 
