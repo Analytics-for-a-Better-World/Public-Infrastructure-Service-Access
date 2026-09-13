@@ -60,8 +60,16 @@ def _heuristic_to_result(
     repeat: int | None = None,
     metadata: dict[str, Any] | None = None,
     extra_seconds: float = 0.0,
-    local_search_moves: int | None = None,
+    local_search_moves: int,
 ) -> MaxCoverResult:
+    """Convert an internal heuristic result to the public record.
+
+    ``local_search_moves`` is always the number of accepted local-search swaps
+    that contributed to ``result``. Callers pass it explicitly because
+    ``result.objectives`` traces different things for different stages
+    (construction steps, swaps, or compaction drops) and must not be counted
+    as moves by default.
+    """
     search_seconds = float(result.total_time + extra_seconds)
     total_seconds = search_seconds
     if construction is not None:
@@ -77,15 +85,18 @@ def _heuristic_to_result(
         total_seconds=total_seconds,
         construction_objective=None if construction is None else int(construction.objective),
         construction_seconds=None if construction is None else float(construction.total_time),
-        local_search_moves=(
-            max(0, len(result.objectives) - 1)
-            if local_search_moves is None
-            else max(0, int(local_search_moves))
-        ),
+        local_search_moves=max(0, int(local_search_moves)),
         seed=seed,
         repeat=repeat,
         metadata=dict(metadata or {}),
     )
+
+
+def _moves(local_search_result: HeuristicResult | None) -> int:
+    """Number of accepted swaps recorded by a local-search stage."""
+    if local_search_result is None:
+        return 0
+    return max(0, len(local_search_result.objectives) - 1)
 
 
 def _deterministic_budget_results(
@@ -107,6 +118,7 @@ def _deterministic_budget_results(
                 method="greedy",
                 result=prefix,
                 seed=config.seed,
+                local_search_moves=0,
             )
         )
 
@@ -127,6 +139,7 @@ def _deterministic_budget_results(
                     result=improved,
                     construction=prefix,
                     seed=config.seed,
+                    local_search_moves=_moves(improved),
                 )
             )
 
@@ -155,6 +168,7 @@ def _deterministic_budget_results(
                     construction=prefix,
                     seed=config.seed,
                     extra_seconds=improved.total_time,
+                    local_search_moves=_moves(improved),
                     metadata={"compacted_selected_count": len(compacted.solution)},
                 )
             )
@@ -194,6 +208,7 @@ def _deterministic_budget_results(
                     + refilled.total_time
                     + regreedy_improved.total_time
                 ),
+                local_search_moves=_moves(improved) + _moves(regreedy_improved),
                 metadata={
                     "compacted_selected_count": len(compacted.solution),
                     "refilled_selected_count": len(refilled.solution),

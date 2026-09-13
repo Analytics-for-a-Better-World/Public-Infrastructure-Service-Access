@@ -18,6 +18,11 @@ All notable changes to `abw-maxcover` are recorded here.
 - Fix `exact_pareto_curve(solver="pyomo")` silently dropping `result_callback`:
   `solve_pyomo_curve` now accepts the callback and invokes it after every
   solved budget, matching the Gurobi path.
+- Fix `local_search_moves` meaning different things per method: it now always
+  counts accepted local-search swaps. The plain greedy record reports zero
+  instead of its construction step count, compact records report the swaps of
+  the search they compacted instead of the number of dropped facilities, and
+  regreedy records report the swaps of both local-search phases.
 
 ## 0.2.0 - 2026-07-19
 
