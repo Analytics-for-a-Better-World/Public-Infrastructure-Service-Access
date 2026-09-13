@@ -2,7 +2,11 @@
 
 All notable changes to `abw-maxcover` are recorded here.
 
-## Unreleased
+## 0.2.1 - 2026-09-13
+
+Bug-fix release closing all fifteen findings of the September 2026 package
+audit. Two behaviour changes: `PyomoConfig.solver` now defaults to HiGHS, and
+`HeuristicConfig(randomized_repeats=0)` now runs no randomized constructor.
 
 - Fix `parsimonious=True` being silently discarded on the Gurobi path: the
   per-facility penalty was set through `addVars(obj=...)` and then overwritten

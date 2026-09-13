@@ -4,8 +4,8 @@ message: >-
   used to generate your results.
 title: abw-maxcover
 type: software
-version: 0.2.0
-date-released: 2026-07-19
+version: 0.2.1
+date-released: 2026-09-13
 authors:
   - family-names: Krishnakumari
     given-names: Parvathy K.

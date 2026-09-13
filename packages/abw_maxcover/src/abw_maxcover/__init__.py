@@ -18,7 +18,7 @@ from .instance import MaxCoverInstance, build_instance, build_instance_from_faci
 from .pareto import approximate_pareto_curve, best_by_budget, compare_curves, exact_pareto_curve
 from .results import CurveComparison, HeuristicResult, MaxCoverCurve, MaxCoverResult
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 
 __all__ = [
     "CurveComparison",
