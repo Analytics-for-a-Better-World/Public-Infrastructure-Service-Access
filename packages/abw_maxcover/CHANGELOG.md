@@ -36,6 +36,9 @@ All notable changes to `abw-maxcover` are recorded here.
   of duplicates. The old keyword still works with a `DeprecationWarning`.
   `validate_consistency=True` and `validate_instance` now also reject rows with
   duplicate entries, which would otherwise double-count weights in gains.
+- Reject negative demand weights when constructing `MaxCoverInstance`. The
+  greedy guarantee and the positive-gain filters assume nonnegative weights;
+  the algorithm note previously described weights as signed.
 
 ## 0.2.0 - 2026-07-19
 

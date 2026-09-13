@@ -55,6 +55,22 @@ def test_assume_unique_sorted_alias_is_deprecated_but_equivalent() -> None:
         mc.build_instance_from_facility_map({0: [0, 1]}, [1, 2], assume_unique_sorted=True)
 
 
+def test_negative_weights_are_rejected() -> None:
+    with pytest.raises(ValueError, match="nonnegative"):
+        mc.build_instance([-5, 10], [[0], [0]], [[0, 1]])
+    with pytest.raises(ValueError, match="nonnegative"):
+        mc.MaxCoverInstance(
+            weights=np.array([1, -1]),
+            ij_indptr=np.array([0, 1, 2]),
+            ij_indices=np.array([0, 0]),
+            ji_indptr=np.array([0, 2]),
+            ji_indices=np.array([0, 1]),
+        )
+    # Zero weights remain valid: they simply never contribute coverage.
+    instance = mc.build_instance([0, 10], [[0], [0]], [[0, 1]])
+    assert mc.compute_coverage_and_objective(instance, [0])[1] == 10
+
+
 def test_duplicate_row_entry_check_is_per_row() -> None:
     indptr = np.array([0, 2, 4], dtype=np.int32)
     # The same column in two different rows is fine.

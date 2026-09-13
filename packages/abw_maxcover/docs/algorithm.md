@@ -22,7 +22,7 @@ arrays:
 
 - demand-to-facility: `ij_indptr`, `ij_indices`;
 - facility-to-demand: `ji_indptr`, `ji_indices`;
-- demand weights: signed 64-bit integers.
+- demand weights: nonnegative 64-bit integers.
 
 For a selected set `S`, the incremental state maintains a coverage count for
 each demand point. Adding or removing a facility touches only its incidence

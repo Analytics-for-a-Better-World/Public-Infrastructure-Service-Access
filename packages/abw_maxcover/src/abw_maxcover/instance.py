@@ -115,6 +115,11 @@ class MaxCoverInstance:
 
         if self.weights.ndim != 1:
             raise ValueError("weights must be one-dimensional")
+        if self.weights.size and int(self.weights.min()) < 0:
+            # The coverage function is monotone submodular, and the greedy
+            # guarantee holds, only for nonnegative weights. Negative weights
+            # also break the ``gain > 0`` filters in the constructors.
+            raise ValueError("weights must be nonnegative")
         if self.ij_indptr.ndim != 1 or self.ji_indptr.ndim != 1:
             raise ValueError("indptr arrays must be one-dimensional")
         if self.ij_indices.ndim != 1 or self.ji_indices.ndim != 1:
