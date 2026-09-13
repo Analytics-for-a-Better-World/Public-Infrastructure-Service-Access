@@ -31,7 +31,13 @@ def exact_pareto_curve(
             result_callback=result_callback,
         )
     if solver == "pyomo":
-        return solve_pyomo_curve(instance, budgets, config=pyomo_config, progress=progress)
+        return solve_pyomo_curve(
+            instance,
+            budgets,
+            config=pyomo_config,
+            progress=progress,
+            result_callback=result_callback,
+        )
     raise ValueError(f"unsupported solver: {solver}")
 
 

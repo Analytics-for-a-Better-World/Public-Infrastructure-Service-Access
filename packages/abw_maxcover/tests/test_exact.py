@@ -145,6 +145,51 @@ def test_pyomo_upper_bound_certifies_optimum() -> None:
     _check_bound_certifies_optimum("pyomo")
 
 
+def test_exact_pareto_curve_forwards_callback_to_both_solvers(monkeypatch) -> None:
+    """The dispatcher must hand ``result_callback`` to whichever solver runs."""
+    import abw_maxcover.pareto as pareto
+
+    seen: dict[str, object] = {}
+
+    def fake_gurobi(instance, budgets, *, config=None, progress=None, result_callback=None):
+        seen["gurobi"] = result_callback
+        return mc.MaxCoverCurve(instance_name=instance.name, kind="exact", results=[])
+
+    def fake_pyomo(instance, budgets, *, config=None, progress=None, result_callback=None):
+        seen["pyomo"] = result_callback
+        return mc.MaxCoverCurve(instance_name=instance.name, kind="exact", results=[])
+
+    monkeypatch.setattr(pareto, "solve_gurobi_curve", fake_gurobi)
+    monkeypatch.setattr(pareto, "solve_pyomo_curve", fake_pyomo)
+    instance = instance_with_redundant_facility()
+
+    def callback(result: mc.MaxCoverResult) -> None:
+        pass
+
+    mc.exact_pareto_curve(instance, [1], solver="gurobi", result_callback=callback)
+    mc.exact_pareto_curve(instance, [1], solver="pyomo", result_callback=callback)
+    assert seen == {"gurobi": callback, "pyomo": callback}
+
+
+@needs_highs
+def test_pyomo_callback_checkpoints_every_budget_in_execution_order() -> None:
+    instance = instance_with_redundant_facility()
+    checkpoints: list[tuple[int, int | None]] = []
+
+    curve = mc.exact_pareto_curve(
+        instance,
+        [3, 1, 2],
+        solver="pyomo",
+        pyomo_config=mc.PyomoConfig(solver="appsi_highs"),
+        result_callback=lambda result: checkpoints.append((result.budget, result.objective)),
+    )
+
+    assert [budget for budget, _ in checkpoints] == [1, 2, 3]
+    assert curve.budgets() == [3, 1, 2]
+    by_budget = {result.budget: result.objective for result in curve.results}
+    assert checkpoints == [(budget, by_budget[budget]) for budget in (1, 2, 3)]
+
+
 def test_parsimony_penalty_total_stays_below_one() -> None:
     from abw_maxcover.exact import _parsimony_penalty
 

@@ -15,6 +15,9 @@ All notable changes to `abw-maxcover` are recorded here.
 - Fix `greedy_deployment_sequence` dropping pool facilities that add no
   coverage: they now follow the greedy order with a zero marginal gain, so the
   final step lists the whole pool and marginal gains sum to the objective.
+- Fix `exact_pareto_curve(solver="pyomo")` silently dropping `result_callback`:
+  `solve_pyomo_curve` now accepts the callback and invokes it after every
+  solved budget, matching the Gurobi path.
 
 ## 0.2.0 - 2026-07-19
 

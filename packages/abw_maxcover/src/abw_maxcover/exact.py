@@ -309,8 +309,13 @@ def solve_pyomo_curve(
     *,
     config: PyomoConfig | None = None,
     progress: Callable[[Any], Any] = lambda iterable: iterable,
+    result_callback: Callable[[MaxCoverResult], Any] | None = None,
 ) -> MaxCoverCurve:
-    """Solve an exact curve through Pyomo using the same result schema."""
+    """Solve an exact curve through Pyomo using the same result schema.
+
+    ``result_callback`` is invoked after every solved budget, in execution
+    (ascending) order, so long curves can be checkpointed as they progress.
+    """
     cfg = config or PyomoConfig()
     import pyomo.environ as pyo
 
@@ -381,7 +386,7 @@ def solve_pyomo_curve(
             max_open=rhs,
             objective=int(objective_value),
         )
-        result_by_budget[int(budget)] = MaxCoverResult(
+        result = MaxCoverResult(
             budget=int(budget),
             method=f"pyomo_{cfg.solver}_exact",
             objective=int(objective_value),
@@ -393,6 +398,9 @@ def solve_pyomo_curve(
             solve_seconds=solve_seconds,
             total_seconds=model_seconds + solve_seconds,
         )
+        result_by_budget[int(budget)] = result
+        if result_callback is not None:
+            result_callback(result)
 
     return MaxCoverCurve(
         instance_name=instance.name,
