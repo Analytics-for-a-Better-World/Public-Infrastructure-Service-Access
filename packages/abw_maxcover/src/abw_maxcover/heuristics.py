@@ -260,7 +260,6 @@ def run_heuristics(
 
     randomized_constructors = tuple(c for c in constructors if c in RANDOMIZED_CONSTRUCTORS)
     stable_constructor_offset = {"randomized": 101, "sample": 211, "random_plus": 307}
-    callback_budgets: set[int] = set()
     for budget in progress(execution_budgets):
         if greedy is not None:
             results.extend(
@@ -354,15 +353,8 @@ def run_heuristics(
                     )
                 )
         if budget_callback is not None:
-            budget_results = [result for result in results if int(result.budget) == int(budget)]
-            if budget_results:
-                budget_callback(int(budget), budget_results)
-                callback_budgets.add(int(budget))
-
-    if budget_callback is not None:
-        for budget in execution_budgets:
-            if int(budget) in callback_budgets:
-                continue
+            # Results are only ever appended for the budget being iterated,
+            # so this is the one place a budget can be checkpointed.
             budget_results = [result for result in results if int(result.budget) == int(budget)]
             if budget_results:
                 budget_callback(int(budget), budget_results)

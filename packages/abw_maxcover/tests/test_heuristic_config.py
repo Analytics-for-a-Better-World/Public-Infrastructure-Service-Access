@@ -35,6 +35,26 @@ def test_randomized_repeats_controls_run_count_per_constructor() -> None:
     assert len(_randomized_curve(3).results) == 6
 
 
+def test_budget_callback_fires_once_per_execution_budget_in_ascending_order() -> None:
+    calls: list[tuple[int, int]] = []
+    config = mc.HeuristicConfig(
+        constructors=("greedy", "compact", "randomized"),
+        randomized_repeats=2,
+        local_search="none",
+        use_path_relinking=False,
+    )
+    curve = mc.run_heuristics(
+        toy_instance(),
+        [3, 1, 3, 2, -1],
+        config=config,
+        budget_callback=lambda budget, results: calls.append((budget, len(results))),
+    )
+    assert [budget for budget, _ in calls] == [1, 2, 3]
+    # greedy, greedy_none, greedy_none_compact plus two randomized repeats.
+    assert all(count == 5 for _, count in calls)
+    assert curve.metadata["requested_budgets"] == [3, 1, 2]
+
+
 def test_zero_repeats_with_deterministic_constructors_still_reports_them() -> None:
     config = mc.HeuristicConfig(
         constructors=("greedy", "randomized"),

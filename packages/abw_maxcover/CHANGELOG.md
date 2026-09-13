@@ -45,6 +45,8 @@ All notable changes to `abw-maxcover` are recorded here.
   the always-`None` `household_facility_matrix` argument of
   `SparseSwapLocalSearch`, and the claim in the packaged README that SciPy
   powers the sparse local search. The core is NumPy-only.
+- Remove an unreachable second checkpoint pass in `run_heuristics`; the
+  budget callback fires exactly once per execution budget inside the loop.
 
 ## 0.2.0 - 2026-07-19
 
