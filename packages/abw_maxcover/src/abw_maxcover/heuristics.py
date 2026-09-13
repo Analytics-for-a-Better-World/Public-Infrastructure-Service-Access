@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 from typing import Any
 
 from ._budgets import normalise_budget_order
@@ -249,10 +249,7 @@ def run_heuristics(
     results: list[MaxCoverResult] = []
     sparse_local_search: SparseSwapLocalSearch | None = None
     if cfg.local_search == "first_sparse":
-        try:
-            sparse_local_search = SparseSwapLocalSearch.from_instance(instance)
-        except ModuleNotFoundError:
-            cfg = replace(cfg, local_search="first")
+        sparse_local_search = SparseSwapLocalSearch.from_instance(instance)
 
     deterministic_requested = any(c in DETERMINISTIC_CONSTRUCTORS for c in constructors)
     greedy = (

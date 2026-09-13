@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Sequence
 from time import perf_counter
-from typing import Any, Literal
+from typing import Literal
 
 import numpy as np
 
@@ -428,12 +428,10 @@ class SparseSwapLocalSearch:
     def __init__(
         self,
         instance: MaxCoverInstance,
-        household_facility_matrix: Any,
         base_gain: np.ndarray,
         facility_demand: tuple[np.ndarray, ...] | None,
     ) -> None:
         self.instance = instance
-        self.household_facility_matrix = household_facility_matrix
         self.base_gain = base_gain
         self.facility_demand = facility_demand
 
@@ -448,7 +446,6 @@ class SparseSwapLocalSearch:
             cache_facility_demand = instance.n_facilities <= 50_000
         return cls(
             instance=instance,
-            household_facility_matrix=None,
             base_gain=_initial_gain(instance),
             facility_demand=(
                 tuple(

@@ -29,7 +29,7 @@ late, inside the functions that need them:
 
 - `gurobipy` is imported only by Gurobi exact solves.
 - `pyomo` is imported only by Pyomo exact solves.
-- SciPy is optional and used only by the sparse local-search accelerator.
+- SciPy is not used. The sparse local search runs on the raw CSR arrays with NumPy only.
 - pandas is not used by the optimization core. Results expose dataclasses and
   primitive records; analysis scripts may convert those records to DataFrames.
 

@@ -41,6 +41,10 @@ All notable changes to `abw-maxcover` are recorded here.
   the algorithm note previously described weights as signed.
 - Honour `HeuristicConfig(randomized_repeats=0)`: randomized constructors are
   now skipped instead of silently running once.
+- Remove SciPy remnants: the unreachable SciPy fallback in `run_heuristics`,
+  the always-`None` `household_facility_matrix` argument of
+  `SparseSwapLocalSearch`, and the claim in the packaged README that SciPy
+  powers the sparse local search. The core is NumPy-only.
 
 ## 0.2.0 - 2026-07-19
 
