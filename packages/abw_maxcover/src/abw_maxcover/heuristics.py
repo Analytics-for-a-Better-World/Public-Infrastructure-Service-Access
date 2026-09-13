@@ -27,6 +27,13 @@ from .results import HeuristicResult, MaxCoverCurve, MaxCoverResult
 
 @dataclass(slots=True)
 class HeuristicConfig:
+    """Portfolio configuration for :func:`run_heuristics`.
+
+    ``randomized_repeats`` is the number of seeded runs per randomized
+    constructor; zero disables the randomized constructors even when they
+    are listed in ``constructors``.
+    """
+
     constructors: tuple[ConstructorName, ...] = (
         "greedy",
         "compact",
@@ -271,7 +278,9 @@ def run_heuristics(
             )
         pool: list[HeuristicResult] = []
         for constructor in randomized_constructors:
-            for repeat in range(max(1, int(cfg.randomized_repeats))):
+            # Zero repeats means the randomized constructor is listed but not
+            # run; it is not silently promoted to one repeat.
+            for repeat in range(max(0, int(cfg.randomized_repeats))):
                 seed = (
                     int(cfg.seed)
                     + 1009 * repeat

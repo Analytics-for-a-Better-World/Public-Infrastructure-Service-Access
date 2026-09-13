@@ -39,6 +39,8 @@ All notable changes to `abw-maxcover` are recorded here.
 - Reject negative demand weights when constructing `MaxCoverInstance`. The
   greedy guarantee and the positive-gain filters assume nonnegative weights;
   the algorithm note previously described weights as signed.
+- Honour `HeuristicConfig(randomized_repeats=0)`: randomized constructors are
+  now skipped instead of silently running once.
 
 ## 0.2.0 - 2026-07-19
 
