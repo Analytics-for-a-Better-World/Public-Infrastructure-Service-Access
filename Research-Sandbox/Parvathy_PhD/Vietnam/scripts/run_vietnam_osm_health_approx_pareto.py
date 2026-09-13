@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import math
+import importlib.util
 import sys
 from pathlib import Path
 from time import perf_counter
@@ -32,13 +33,20 @@ def default_abw_maxcover_src(script_path: Path) -> Path:
 
 ROOT = Path(__file__).resolve().parents[1]
 ABW_MAXCOVER_SRC = default_abw_maxcover_src(Path(__file__))
-if str(ABW_MAXCOVER_SRC) not in sys.path:
+# Prefer an installed abw-maxcover; fall back to the repository source tree only when absent.
+if importlib.util.find_spec("abw_maxcover") is None and str(ABW_MAXCOVER_SRC) not in sys.path:
     sys.path.insert(0, str(ABW_MAXCOVER_SRC))
 
 RUN_OUTPUT = ROOT / "runs" / "vietnam_170_agg5_20260624_s20" / "vietnam_data" / "outputs"
 OUT = ROOT / "outputs" / "vietnam_osm_health_approx_pareto_20260630"
 THRESHOLD_M = 5_000.0
 BUDGETS = [0, 10, 25, 50, 100, 250, 500, 1000, 2000, 5000, 10000, 15000, 20000, 25000, 30000, 35000, 40000]
+
+
+def _abw_maxcover_location() -> str:
+    """Record where abw_maxcover was actually imported from for the run manifest."""
+    spec = importlib.util.find_spec("abw_maxcover")
+    return str(Path(spec.origin).parent) if spec is not None and spec.origin else "not found"
 
 
 def clock_ms(seconds: float) -> str:
@@ -190,15 +198,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--abw-maxcover-src",
         type=Path,
-        default=ABW_MAXCOVER_SRC,
-        help="Directory that contains the abw_maxcover package, or the package src directory.",
+        default=None,
+        help=(
+            "Directory that contains the abw_maxcover package, or the package src directory. "
+            "By default an installed abw-maxcover is used, falling back to the repository source tree."
+        ),
     )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
-    if str(args.abw_maxcover_src) not in sys.path:
+    if args.abw_maxcover_src is not None and str(args.abw_maxcover_src) not in sys.path:
         sys.path.insert(0, str(args.abw_maxcover_src))
     run_output = args.run_output.resolve()
     output_root = args.output_root.resolve()
@@ -248,7 +259,7 @@ def main() -> int:
         "output_root": str(output_root),
         "spacings": spacings,
         "budgets": budgets,
-        "abw_maxcover_src": str(args.abw_maxcover_src),
+        "abw_maxcover_src": _abw_maxcover_location(),
         "baseline_matrix_path": str(baseline_matrix_path),
         "population_path": str(population_path),
         "baseline_covered_population": baseline_weight,

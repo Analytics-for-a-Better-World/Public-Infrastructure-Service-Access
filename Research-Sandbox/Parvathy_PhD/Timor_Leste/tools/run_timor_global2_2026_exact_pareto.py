@@ -7,6 +7,7 @@ import json
 import os
 import platform
 import subprocess
+import importlib.util
 import sys
 from dataclasses import dataclass
 from datetime import datetime
@@ -53,7 +54,9 @@ OUT = Path(
 )
 WEIGHT_SCALE = 1_000
 
-sys.path.insert(0, str(ABW_SRC))
+# Prefer an installed abw-maxcover; fall back to the repository source tree only when absent.
+if importlib.util.find_spec("abw_maxcover") is None:
+    sys.path.insert(0, str(ABW_SRC))
 
 from abw_maxcover import (  # noqa: E402
     GurobiConfig,

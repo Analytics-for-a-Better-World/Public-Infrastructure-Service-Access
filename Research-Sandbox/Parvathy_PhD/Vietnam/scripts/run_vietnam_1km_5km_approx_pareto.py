@@ -4,6 +4,7 @@ import csv
 import json
 import math
 from pathlib import Path
+import importlib.util
 import sys
 from time import perf_counter
 
@@ -16,7 +17,9 @@ import pyarrow.parquet as pq
 ROOT = Path(__file__).resolve().parents[1]
 REPOSITORY = Path(__file__).resolve().parents[4]
 ABW_SRC = REPOSITORY / "packages" / "abw_maxcover" / "src"
-sys.path.insert(0, str(ABW_SRC))
+# Prefer an installed abw-maxcover; fall back to the repository source tree only when absent.
+if importlib.util.find_spec("abw_maxcover") is None:
+    sys.path.insert(0, str(ABW_SRC))
 
 from abw_maxcover import MaxCoverInstance  # noqa: E402
 from abw_maxcover._incremental_core import (  # noqa: E402

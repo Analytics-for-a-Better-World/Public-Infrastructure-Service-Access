@@ -5,6 +5,7 @@ import csv
 import json
 import math
 import subprocess
+import importlib.util
 import sys
 from dataclasses import asdict
 from pathlib import Path
@@ -18,7 +19,8 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[4]
 ABW_MAXCOVER_SRC = REPO_ROOT / "packages" / "abw_maxcover" / "src"
-if str(ABW_MAXCOVER_SRC) not in sys.path:
+# Prefer an installed abw-maxcover; fall back to the repository source tree only when absent.
+if importlib.util.find_spec("abw_maxcover") is None and str(ABW_MAXCOVER_SRC) not in sys.path:
     sys.path.insert(0, str(ABW_MAXCOVER_SRC))
 
 from abw_maxcover import (  # noqa: E402

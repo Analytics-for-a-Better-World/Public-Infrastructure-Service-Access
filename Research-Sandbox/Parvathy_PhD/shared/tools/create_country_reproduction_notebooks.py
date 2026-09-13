@@ -30,6 +30,7 @@ COMMON_CODE = r'''
 from __future__ import annotations
 
 import json
+import importlib.util
 import os
 import platform
 import re
@@ -221,6 +222,8 @@ LOCAL_TOOLS = next(
 )
 
 for p in [DISTANCE_PIPELINE, ABW_MAXCOVER_SRC, PARVATHY]:
+    if p == ABW_MAXCOVER_SRC and importlib.util.find_spec("abw_maxcover") is not None:
+        continue  # an installed abw-maxcover takes precedence over the source tree
     if p.exists() and str(p) not in sys.path:
         sys.path.insert(0, str(p))
 
@@ -446,7 +449,6 @@ vietnam_analysis_commands = [
         "--run-output", VIETNAM_PIPELINE_OUTPUT,
         "--output-root", VIETNAM_APPROX_ROOT,
         "--threshold-m", "5000",
-        "--abw-maxcover-src", ABW_MAXCOVER_SRC,
     ], WORK_ROOT),
 ]
 
