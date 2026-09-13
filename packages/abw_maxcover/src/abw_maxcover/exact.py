@@ -123,6 +123,25 @@ def _coverage_upper_bound(
     return upper
 
 
+def _relative_gap(objective: int | None, upper_bound: float | None) -> float | None:
+    """Relative optimality gap ``(upper_bound - objective) / objective`` on coverage.
+
+    Both solver paths use this one definition so their gaps are comparable.
+    ``None`` means the gap is undefined: no incumbent, no bound, or a zero
+    incumbent with a positive bound. A bound below the incumbent is numerical
+    noise and reports a zero gap rather than a negative one.
+    """
+    if objective is None or upper_bound is None:
+        return None
+    incumbent = float(objective)
+    bound = float(upper_bound)
+    if not isfinite(bound):
+        return None
+    if incumbent <= 0.0:
+        return 0.0 if bound <= 0.0 else None
+    return max(0.0, (bound - incumbent) / incumbent)
+
+
 def solve_gurobi_curve(
     instance: MaxCoverInstance,
     budgets: list[int],
@@ -248,7 +267,7 @@ def solve_gurobi_curve(
             solution=solution,
             status=status,
             upper_bound=upper_bound,
-            mip_gap=None if model.MIPGap == gb.GRB.INFINITY else float(model.MIPGap),
+            mip_gap=_relative_gap(objective, upper_bound),
             coverage=coverage,
             model_seconds=model_seconds,
             solve_seconds=solve_seconds,
@@ -258,6 +277,9 @@ def solve_gurobi_curve(
                 "warm_start_objective": start_objective,
                 "warm_start_selected_count": len(start_solution),
                 "target_demand_count": int(target_demand.size),
+                # Gurobi's own gap is relative to the (possibly penalised)
+                # solver objective; ``mip_gap`` above is on coverage.
+                "solver_mip_gap": float(model.MIPGap) if isfinite(float(model.MIPGap)) else None,
             },
         )
         result_by_budget[int(budget)] = result
@@ -376,27 +398,44 @@ def solve_pyomo_curve(
         )
         model.budget.set_value(rhs)
         solve_start = perf_counter()
-        solver_result = solver.solve(model, tee=cfg.trace)
+        # Load the solution ourselves: with the default ``load_solutions=True``
+        # Pyomo raises when the solver found no feasible point, which is a
+        # legitimate outcome (for example fixed facilities exceeding the budget).
+        solver_result = solver.solve(model, tee=cfg.trace, load_solutions=False)
         solve_seconds = float(perf_counter() - solve_start)
-        solution = [j for j in facilities if pyo.value(model.X[j]) >= 0.5]
-        coverage, objective_value = compute_coverage_and_objective(instance, solution)
+        has_incumbent = len(getattr(solver_result, "solution", ())) > 0
+        objective_value: int | None
+        if has_incumbent:
+            model.solutions.load_from(solver_result)
+            solution = [j for j in facilities if float(model.X[j].value or 0.0) >= 0.5]
+            coverage, objective_value = compute_coverage_and_objective(instance, solution)
+        else:
+            solution = []
+            coverage = None
+            objective_value = None
         upper_bound = _coverage_upper_bound(
             getattr(solver_result.problem, "upper_bound", None),
             penalty=penalty,
             max_open=rhs,
-            objective=int(objective_value),
+            objective=objective_value,
         )
         result = MaxCoverResult(
             budget=int(budget),
             method=f"pyomo_{cfg.solver}_exact",
-            objective=int(objective_value),
+            objective=None if objective_value is None else int(objective_value),
             solution=solution,
             status=str(solver_result.solver.termination_condition),
             upper_bound=upper_bound,
+            mip_gap=_relative_gap(objective_value, upper_bound),
             coverage=coverage,
             model_seconds=model_seconds,
             solve_seconds=solve_seconds,
             total_seconds=model_seconds + solve_seconds,
+            metadata={
+                "solver_status": str(solver_result.solver.status),
+                "termination_condition": str(solver_result.solver.termination_condition),
+                "target_demand_count": len(target_demand),
+            },
         )
         result_by_budget[int(budget)] = result
         if result_callback is not None:

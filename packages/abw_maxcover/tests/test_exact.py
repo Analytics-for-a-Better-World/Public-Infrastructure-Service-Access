@@ -104,11 +104,64 @@ def _check_parsimonious_solution_is_compact(solver: str) -> None:
     assert result.upper_bound is not None
     assert result.upper_bound >= result.objective
     assert result.upper_bound == float(instance.total_weight)
+    assert result.mip_gap == 0.0
 
     plain = _solve(solver, instance, [5], parsimonious=False).results[0]
     assert plain.objective == instance.total_weight
     assert plain.upper_bound is not None
     assert plain.upper_bound >= plain.objective
+    assert plain.mip_gap == 0.0
+
+
+def _infeasible_config(solver: str):
+    # Two fixed facilities counted against a budget of one: no feasible point.
+    if solver == "gurobi":
+        return mc.GurobiConfig(
+            fixed_facilities=(0, 1), fixed_count_against_budget=True, warm_start=False
+        )
+    return mc.PyomoConfig(
+        solver="appsi_highs", fixed_facilities=(0, 1), fixed_count_against_budget=True
+    )
+
+
+def _check_infeasible_solve_reports_no_incumbent(solver: str) -> None:
+    instance = instance_with_redundant_facility()
+    config = _infeasible_config(solver)
+    if solver == "gurobi":
+        curve = mc.exact_pareto_curve(instance, [1], solver="gurobi", gurobi_config=config)
+    else:
+        curve = mc.exact_pareto_curve(instance, [1], solver="pyomo", pyomo_config=config)
+    result = curve.results[0]
+    assert result.status == "infeasible"
+    assert result.objective is None
+    assert result.solution == []
+    assert result.coverage is None
+    assert result.upper_bound is None
+    # No incumbent means no gap, never ``inf`` in a results table.
+    assert result.mip_gap is None
+
+
+@needs_gurobi
+def test_gurobi_infeasible_solve_reports_no_incumbent() -> None:
+    _check_infeasible_solve_reports_no_incumbent("gurobi")
+
+
+@needs_highs
+def test_pyomo_infeasible_solve_reports_no_incumbent() -> None:
+    _check_infeasible_solve_reports_no_incumbent("pyomo")
+
+
+def test_relative_gap_definition() -> None:
+    from abw_maxcover.exact import _relative_gap
+
+    assert _relative_gap(None, 10.0) is None
+    assert _relative_gap(10, None) is None
+    assert _relative_gap(26, 26.0) == 0.0
+    assert _relative_gap(20, 26.0) == 0.3
+    # A bound below the incumbent can only be noise; never report a negative gap.
+    assert _relative_gap(26, 25.0) == 0.0
+    assert _relative_gap(0, 0.0) == 0.0
+    assert _relative_gap(0, 5.0) is None
 
 
 def _check_bound_certifies_optimum(solver: str) -> None:

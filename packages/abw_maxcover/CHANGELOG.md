@@ -23,6 +23,14 @@ All notable changes to `abw-maxcover` are recorded here.
   instead of its construction step count, compact records report the swaps of
   the search they compacted instead of the number of dropped facilities, and
   regreedy records report the swaps of both local-search phases.
+- Fix `mip_gap` reporting: both exact paths now derive it from the coverage
+  objective and coverage upper bound with one definition, and report `None`
+  instead of `inf` when there is no incumbent. Gurobi's own gap is kept in
+  `metadata["solver_mip_gap"]`.
+- Fix the Pyomo path raising when the solver finds no feasible solution (for
+  example fixed facilities exceeding the budget): solutions are loaded only
+  when one exists, and the result reports the termination condition with no
+  incumbent, matching the Gurobi path.
 
 ## 0.2.0 - 2026-07-19
 
