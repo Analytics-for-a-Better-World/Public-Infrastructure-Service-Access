@@ -1599,6 +1599,53 @@ def add_component_labels(
     return result
 
 
+def summarize_layer_retention(
+    original: pd.DataFrame | None,
+    retained: pd.DataFrame | None,
+    *,
+    weight_col: str | None = None,
+) -> dict[str, int | float | str | None]:
+    '''Summarize rows and optional weight retained after pipeline filtering.'''
+    input_rows = 0 if original is None else len(original)
+    retained_rows = 0 if retained is None else len(retained)
+    summary: dict[str, int | float | str | None] = {
+        'input_rows': input_rows,
+        'retained_rows': retained_rows,
+        'excluded_rows': max(input_rows - retained_rows, 0),
+    }
+
+    if weight_col is not None:
+        input_weight = (
+            0.0
+            if original is None or weight_col not in original.columns
+            else float(
+                pd.to_numeric(original[weight_col], errors='coerce')
+                .fillna(0)
+                .sum()
+            )
+        )
+        retained_weight = (
+            0.0
+            if retained is None or weight_col not in retained.columns
+            else float(
+                pd.to_numeric(retained[weight_col], errors='coerce')
+                .fillna(0)
+                .sum()
+            )
+        )
+        summary.update(
+            {
+                'weight_column': weight_col,
+                'input_weight': input_weight,
+                'retained_weight': retained_weight,
+                'excluded_weight': max(input_weight - retained_weight, 0.0),
+                'coverage_denominator_weight': input_weight,
+            }
+        )
+
+    return summary
+
+
 def filter_nodes_to_components(
     nodes: gpd.GeoDataFrame,
     component_ids: pd.Series,
@@ -2245,6 +2292,7 @@ def main(
     source_parts: list[pd.DataFrame] = []
     fixed_source_parts: list[pd.DataFrame] = []
     target_parts: list[pd.DataFrame] = []
+    retained_layers: dict[str, pd.DataFrame] = {}
     population = None
 
     if 'population' in destination_layers:
@@ -2268,6 +2316,7 @@ def main(
             ),
         )
         population = with_prefixed_ids(population, 'target_population')
+        retained_layers.setdefault('population', population)
         target_parts.append(
             with_target_type(
                 prepare_points_as_targets(population, id_prefix='target'),
@@ -2296,6 +2345,7 @@ def main(
             ),
         )
         source_population = with_prefixed_ids(source_population, 'source_population')
+        retained_layers.setdefault('population', source_population)
         source_population = prepare_points_as_sources(
             source_population,
             source_type='population',
@@ -2321,6 +2371,7 @@ def main(
             ),
         )
         target_amenities = with_prefixed_ids(target_amenities, 'target_amenities')
+        retained_layers.setdefault('amenities', target_amenities)
         target_parts.append(
             with_target_type(
                 prepare_points_as_targets(target_amenities, id_prefix='target'),
@@ -2345,6 +2396,7 @@ def main(
             ),
         )
         source_amenities = with_prefixed_ids(source_amenities, 'source_amenities')
+        retained_layers.setdefault('amenities', source_amenities)
         source_amenities = prepare_points_as_sources(
             source_amenities,
             source_type='amenities',
@@ -2439,6 +2491,9 @@ def main(
         )
         source_parts.append(source_candidates)
 
+    if candidate_sites_snapped is not None:
+        retained_layers['candidates'] = candidate_sites_snapped
+
     targets = concat_layers(target_parts, label='destination')
     sources = concat_layers(source_parts, label='source')
     existing_sources = (
@@ -2450,12 +2505,12 @@ def main(
     if population is None:
         population = targets
 
-    if settings.diagnose_connectivity and component_ids is not None:
+    if component_ids is not None:
         targets = add_component_labels(targets, component_ids)
         sources = add_component_labels(sources, component_ids)
         existing_sources = add_component_labels(existing_sources, component_ids)
         population = add_component_labels(population, component_ids)
-        if settings.verbose:
+        if settings.verbose and settings.diagnose_connectivity:
             target_components = targets['component_id'].value_counts().sort_index()
             source_components = sources['component_id'].value_counts().sort_index()
             logging.info(
@@ -2920,6 +2975,48 @@ def main(
 
     population_points = filter_to_bbox(population_points, settings.bbox)
 
+    requested_layers = set(source_layers) | set(destination_layers)
+    layer_diagnostics: dict[str, dict[str, object]] = {}
+    if 'population' in requested_layers:
+        layer_diagnostics['population'] = summarize_layer_retention(
+            population_points,
+            retained_layers.get('population'),
+            weight_col='population',
+        )
+    if 'amenities' in requested_layers:
+        layer_diagnostics['amenities'] = summarize_layer_retention(
+            amenity_points,
+            retained_layers.get('amenities'),
+        )
+    if 'candidates' in requested_layers:
+        layer_diagnostics['candidates'] = summarize_layer_retention(
+            candidate_sites,
+            retained_layers.get('candidates'),
+        )
+    scientific_policy = {
+        'routing_graph_scope': 'full_loaded_network',
+        'snapping_node_scope': (
+            'selected_weak_components'
+            if settings.snap_components is not None
+            else 'full_loaded_network'
+        ),
+        'selected_snap_components': settings.snap_components,
+        'component_labels_attached': component_ids is not None,
+        'cross_component_od_pairs': (
+            'discarded_before_routing'
+            if component_ids is not None
+            else 'handled_by_the_routing_engine'
+        ),
+        'network_simplified': settings.simplify_network,
+        'network_profile': settings.network_profile,
+        'network_impedance': settings.network_impedance,
+        'population_coverage_denominator': (
+            'input population mass after configured source filtering, '
+            'aggregation, and bounding-box selection; later exclusions remain '
+            'in the denominator'
+        ),
+    }
+
     population.to_parquet(population_path, index=False)
     targets.to_parquet(targets_path, index=False)
     existing_sources.to_parquet(existing_sources_path, index=False)
@@ -2946,6 +3043,20 @@ def main(
             has_candidates=candidate_sites_snapped is not None,
             output_paths=output_paths,
             repo_dir=Path(__file__).resolve().parent,
+            scientific_policy=scientific_policy,
+            diagnostics={
+                'layers': layer_diagnostics,
+                'network': {
+                    'routing_node_count': len(route_nodes),
+                    'routing_edge_count': len(route_edges),
+                    'snapping_node_count': len(snap_nodes),
+                    'weak_component_count': (
+                        None
+                        if component_ids is None
+                        else int(component_ids.nunique())
+                    ),
+                },
+            },
         ),
         manifest_path,
     )

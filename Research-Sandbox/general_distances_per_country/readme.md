@@ -585,6 +585,8 @@ Diagnostic runs add a `_connectivity` suffix to the output run tag so the labele
 
 Component IDs are ordered by size, so `component_id = 0` is the largest road-network component. A source and destination being in different weak components means no road path can exist between them. Being in the same weak component is necessary but not always sufficient for directed routing, because one-way restrictions can still affect reachability.
 
+Component labels are also attached automatically when `--snap-components` is used, even if diagnostic file output is disabled. This lets the sparse matrix builder discard impossible cross-component OD pairs before asking the routing engine. `--diagnose-connectivity` controls the additional component report; it does not control routing correctness.
+
 ```powershell
 --snap-components COMPONENTS
 ```
@@ -610,6 +612,8 @@ py run_pipeline.py vietnam `
 ```
 
 Component-restricted snapping changes snapped nearest nodes, so the selected components are included in snapped-table caches, matrix caches, output filenames, and the run manifest. The full road graph is still used for routing after snapping.
+
+The run manifest records this distinction explicitly under `parameters.scientific_policy`: the routing graph scope, snapping-node scope, selected components, simplification mode, profile, and impedance. `diagnostics.layers` reports input, retained, and excluded rows for requested population, amenity, and candidate layers. Population diagnostics also report input, retained, and excluded mass; the full input mass after configured source filtering, aggregation, and bounding-box selection remains the documented coverage denominator.
 
 Small diagnostic example:
 

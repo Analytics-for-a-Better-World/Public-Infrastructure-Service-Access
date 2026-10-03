@@ -210,6 +210,8 @@ def build_run_manifest(
     has_candidates: bool,
     output_paths: dict[str, str | Path],
     repo_dir: str | Path,
+    scientific_policy: dict[str, Any] | None = None,
+    diagnostics: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Build a YAML-serializable manifest for a pipeline run."""
     input_files: dict[str, dict[str, Any]] = {
@@ -290,10 +292,11 @@ def build_run_manifest(
         'parameters': {
             'runtime_settings': runtime_settings,
             'resolved': resolved_parameters,
+            'scientific_policy': scientific_policy or {},
         },
         'intermediate_artifacts': {},
         'outputs': outputs,
-        'diagnostics': {},
+        'diagnostics': diagnostics or {},
         # Legacy aliases kept for current downstream consumers and older notebooks.
         'legacy_schema_version': LEGACY_MANIFEST_SCHEMA_VERSION,
         'pipeline_git_commit': git_commit,
