@@ -1,4 +1,15 @@
 Traceback (most recent call last):
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 778, in _async_poll_for_reply
+    msg = await ensure_async(self.kc.shell_channel.get_msg(timeout=new_timeout))
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/jupyter_core/utils/__init__.py", line 198, in ensure_async
+    result = await obj
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/jupyter_client/channels.py", line 313, in get_msg
+    raise Empty
+_queue.Empty
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
   File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/jupyter_cache/executors/utils.py", line 58, in single_nb_execution
     executenb(
   File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 1305, in execute
@@ -9,12 +20,16 @@ Traceback (most recent call last):
     return future.result()
   File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 705, in async_execute
     await self.async_execute_cell(
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 1058, in async_execute_cell
-    await self._check_raise_for_error(cell, cell_index, exec_reply)
-  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 914, in _check_raise_for_error
-    raise CellExecutionError.from_cell_and_msg(cell, exec_reply_content)
-nbclient.exceptions.CellExecutionError: An error occurred while executing the following cell:
-------------------
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 1001, in async_execute_cell
+    exec_reply = await self.task_poll_for_reply
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 802, in _async_poll_for_reply
+    error_on_timeout_execute_reply = await self._async_handle_timeout(timeout, cell)
+  File "/home/runner/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/nbclient/client.py", line 852, in _async_handle_timeout
+    raise CellTimeoutError.error_from_timeout_and_cell(
+nbclient.exceptions.CellTimeoutError: A cell timed out while it was being executed, after 30 seconds.
+The message was: Cell execution timed out.
+Here is a preview of the cell contents:
+-------------------
 # Suppress user warning about geometry in geographic CRS. Centroid is calculated over a single facility (e.g. a hospital),
 # so distances are very small and projection isn't necessary
 warnings.filterwarnings(
@@ -24,130 +39,5 @@ warnings.filterwarnings(
 )
 
 hospitals_df = Facilities(admin_area_boundaries=baucau).get_existing_facilities()
-------------------
-
------ stderr -----
-INFO:pisa.facilities:Retrieving existing facilities with tags {'amenity': 'hospital', 'building': 'hospital'} using OSM.
-------------------
-
-[0;31m---------------------------------------------------------------------------[0m
-[0;31mJSONDecodeError[0m                           Traceback (most recent call last)
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/requests/models.py:974[0m, in [0;36mResponse.json[0;34m(self, **kwargs)[0m
-[1;32m    973[0m [38;5;28;01mtry[39;00m:
-[0;32m--> 974[0m     [38;5;28;01mreturn[39;00m [43mcomplexjson[49m[38;5;241;43m.[39;49m[43mloads[49m[43m([49m[38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43mtext[49m[43m,[49m[43m [49m[38;5;241;43m*[39;49m[38;5;241;43m*[39;49m[43mkwargs[49m[43m)[49m
-[1;32m    975[0m [38;5;28;01mexcept[39;00m JSONDecodeError [38;5;28;01mas[39;00m e:
-[1;32m    976[0m     [38;5;66;03m# Catch JSON-related errors and raise as requests.JSONDecodeError[39;00m
-[1;32m    977[0m     [38;5;66;03m# This aliases json.JSONDecodeError and simplejson.JSONDecodeError[39;00m
-
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/simplejson/__init__.py:514[0m, in [0;36mloads[0;34m(s, encoding, cls, object_hook, parse_float, parse_int, parse_constant, object_pairs_hook, use_decimal, allow_nan, **kw)[0m
-[1;32m    510[0m [38;5;28;01mif[39;00m ([38;5;28mcls[39m [38;5;129;01mis[39;00m [38;5;28;01mNone[39;00m [38;5;129;01mand[39;00m encoding [38;5;129;01mis[39;00m [38;5;28;01mNone[39;00m [38;5;129;01mand[39;00m object_hook [38;5;129;01mis[39;00m [38;5;28;01mNone[39;00m [38;5;129;01mand[39;00m
-[1;32m    511[0m         parse_int [38;5;129;01mis[39;00m [38;5;28;01mNone[39;00m [38;5;129;01mand[39;00m parse_float [38;5;129;01mis[39;00m [38;5;28;01mNone[39;00m [38;5;129;01mand[39;00m
-[1;32m    512[0m         parse_constant [38;5;129;01mis[39;00m [38;5;28;01mNone[39;00m [38;5;129;01mand[39;00m object_pairs_hook [38;5;129;01mis[39;00m [38;5;28;01mNone[39;00m
-[1;32m    513[0m         [38;5;129;01mand[39;00m [38;5;129;01mnot[39;00m use_decimal [38;5;129;01mand[39;00m [38;5;129;01mnot[39;00m allow_nan [38;5;129;01mand[39;00m [38;5;129;01mnot[39;00m kw):
-[0;32m--> 514[0m     [38;5;28;01mreturn[39;00m [43m_default_decoder[49m[38;5;241;43m.[39;49m[43mdecode[49m[43m([49m[43ms[49m[43m)[49m
-[1;32m    515[0m [38;5;28;01mif[39;00m [38;5;28mcls[39m [38;5;129;01mis[39;00m [38;5;28;01mNone[39;00m:
-
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/simplejson/decoder.py:386[0m, in [0;36mJSONDecoder.decode[0;34m(self, s, _w, _PY3)[0m
-[1;32m    385[0m     s [38;5;241m=[39m [38;5;28mstr[39m(s, [38;5;28mself[39m[38;5;241m.[39mencoding)
-[0;32m--> 386[0m obj, end [38;5;241m=[39m [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43mraw_decode[49m[43m([49m[43ms[49m[43m)[49m
-[1;32m    387[0m end [38;5;241m=[39m _w(s, end)[38;5;241m.[39mend()
-
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/simplejson/decoder.py:416[0m, in [0;36mJSONDecoder.raw_decode[0;34m(self, s, idx, _w, _PY3)[0m
-[1;32m    415[0m         idx [38;5;241m+[39m[38;5;241m=[39m [38;5;241m3[39m
-[0;32m--> 416[0m [38;5;28;01mreturn[39;00m [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43mscan_once[49m[43m([49m[43ms[49m[43m,[49m[43m [49m[43midx[49m[38;5;241;43m=[39;49m[43m_w[49m[43m([49m[43ms[49m[43m,[49m[43m [49m[43midx[49m[43m)[49m[38;5;241;43m.[39;49m[43mend[49m[43m([49m[43m)[49m[43m)[49m
-
-[0;31mJSONDecodeError[0m: Expecting value: line 1 column 1 (char 0)
-
-During handling of the above exception, another exception occurred:
-
-[0;31mJSONDecodeError[0m                           Traceback (most recent call last)
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/osmnx/_http.py:320[0m, in [0;36m_parse_response[0;34m(response)[0m
-[1;32m    319[0m [38;5;28;01mtry[39;00m:
-[0;32m--> 320[0m     response_json: [38;5;28mdict[39m[[38;5;28mstr[39m, Any] [38;5;241m|[39m [38;5;28mlist[39m[[38;5;28mdict[39m[[38;5;28mstr[39m, Any]] [38;5;241m=[39m [43mresponse[49m[38;5;241;43m.[39;49m[43mjson[49m[43m([49m[43m)[49m
-[1;32m    321[0m [38;5;28;01mexcept[39;00m JSONDecodeError [38;5;28;01mas[39;00m e:  [38;5;66;03m# pragma: no cover[39;00m
-
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/requests/models.py:978[0m, in [0;36mResponse.json[0;34m(self, **kwargs)[0m
-[1;32m    975[0m [38;5;28;01mexcept[39;00m JSONDecodeError [38;5;28;01mas[39;00m e:
-[1;32m    976[0m     [38;5;66;03m# Catch JSON-related errors and raise as requests.JSONDecodeError[39;00m
-[1;32m    977[0m     [38;5;66;03m# This aliases json.JSONDecodeError and simplejson.JSONDecodeError[39;00m
-[0;32m--> 978[0m     [38;5;28;01mraise[39;00m RequestsJSONDecodeError(e[38;5;241m.[39mmsg, e[38;5;241m.[39mdoc, e[38;5;241m.[39mpos)
-
-[0;31mJSONDecodeError[0m: Expecting value: line 1 column 1 (char 0)
-
-The above exception was the direct cause of the following exception:
-
-[0;31mResponseStatusCodeError[0m                   Traceback (most recent call last)
-Cell [0;32mIn[5], line 9[0m
-[1;32m      1[0m [38;5;66;03m# Suppress user warning about geometry in geographic CRS. Centroid is calculated over a single facility (e.g. a hospital),[39;00m
-[1;32m      2[0m [38;5;66;03m# so distances are very small and projection isn't necessary[39;00m
-[1;32m      3[0m warnings[38;5;241m.[39mfilterwarnings(
-[1;32m      4[0m     [38;5;124m"[39m[38;5;124mignore[39m[38;5;124m"[39m,
-[1;32m      5[0m     message[38;5;241m=[39m[38;5;124m"[39m[38;5;124mGeometry is in a geographic CRS. Results from [39m[38;5;124m'[39m[38;5;124mcentroid[39m[38;5;124m'[39m[38;5;124m are likely incorrect[39m[38;5;124m"[39m,
-[1;32m      6[0m     category[38;5;241m=[39m[38;5;167;01mUserWarning[39;00m,
-[1;32m      7[0m )
-[0;32m----> 9[0m hospitals_df [38;5;241m=[39m [43mFacilities[49m[43m([49m[43madmin_area_boundaries[49m[38;5;241;43m=[39;49m[43mbaucau[49m[43m)[49m[38;5;241;43m.[39;49m[43mget_existing_facilities[49m[43m([49m[43m)[49m
-
-File [0;32m~/work/Public-Infrastructure-Service-Access/Public-Infrastructure-Service-Access/pisa/facilities.py:135[0m, in [0;36mFacilities.get_existing_facilities[0;34m(self)[0m
-[1;32m    110[0m [38;5;250m[39m[38;5;124;03m"""Retrieve existing facilities from the specified data source.[39;00m
-[1;32m    111[0m 
-[1;32m    112[0m [38;5;124;03mThis method acts as a dispatcher that calls the appropriate data source-specific method based on the `data_src`[39;00m
-[0;32m   (...)[0m
-[1;32m    132[0m [38;5;124;03mimplement new methods and update this dispatcher method accordingly, or refactor to use an abstract base class.[39;00m
-[1;32m    133[0m [38;5;124;03m"""[39;00m
-[1;32m    134[0m [38;5;28;01mif[39;00m [38;5;28mself[39m[38;5;241m.[39mdata_src [38;5;241m==[39m [38;5;124m"[39m[38;5;124mosm[39m[38;5;124m"[39m:
-[0;32m--> 135[0m     [38;5;28;01mreturn[39;00m [38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43m_get_existing_facilities_osm[49m[43m([49m
-[1;32m    136[0m [43m        [49m[43madmin_area_boundaries[49m[38;5;241;43m=[39;49m[38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43madmin_area_boundaries[49m[43m,[49m[43m [49m[43mosm_tags[49m[38;5;241;43m=[39;49m[38;5;28;43mself[39;49m[38;5;241;43m.[39;49m[43mosm_tags[49m
-[1;32m    137[0m [43m    [49m[43m)[49m
-[1;32m    138[0m [38;5;28;01mraise[39;00m [38;5;167;01mNotImplementedError[39;00m([38;5;124mf[39m[38;5;124m"[39m[38;5;124mData source [39m[38;5;124m'[39m[38;5;132;01m{[39;00m[38;5;28mself[39m[38;5;241m.[39mdata_src[38;5;132;01m}[39;00m[38;5;124m'[39m[38;5;124m not implemented[39m[38;5;124m"[39m)
-
-File [0;32m~/work/Public-Infrastructure-Service-Access/Public-Infrastructure-Service-Access/pisa/facilities.py:169[0m, in [0;36mFacilities._get_existing_facilities_osm[0;34m(osm_tags, admin_area_boundaries)[0m
-[1;32m    167[0m [38;5;66;03m# retrieves facilities GeodataFrame from osm[39;00m
-[1;32m    168[0m [38;5;28;01mtry[39;00m:
-[0;32m--> 169[0m     facilities_gdf [38;5;241m=[39m [43mox[49m[38;5;241;43m.[39;49m[43mfeatures_from_polygon[49m[43m([49m[43mpolygon[49m[38;5;241;43m=[39;49m[43madmin_area_boundaries[49m[43m,[49m[43m [49m[43mtags[49m[38;5;241;43m=[39;49m[43mosm_tags[49m[43m)[49m
-[1;32m    170[0m [38;5;28;01mexcept[39;00m InsufficientResponseError:
-[1;32m    171[0m     facilities_gdf [38;5;241m=[39m gpd[38;5;241m.[39mGeoDataFrame(
-[1;32m    172[0m         pd[38;5;241m.[39mDataFrame(columns[38;5;241m=[39m[[38;5;124m"[39m[38;5;124mid[39m[38;5;124m"[39m, [38;5;124m"[39m[38;5;124melement[39m[38;5;124m"[39m, [38;5;124m"[39m[38;5;124mamenity[39m[38;5;124m"[39m, [38;5;124m"[39m[38;5;124mgeometry[39m[38;5;124m"[39m]),
-[1;32m    173[0m         geometry[38;5;241m=[39m[],
-[1;32m    174[0m         crs[38;5;241m=[39m[38;5;124m"[39m[38;5;124mEPSG:4326[39m[38;5;124m"[39m,
-[1;32m    175[0m     )
-
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/osmnx/features.py:332[0m, in [0;36mfeatures_from_polygon[0;34m(polygon, tags)[0m
-[1;32m    330[0m [38;5;66;03m# retrieve the data from Overpass then turn it into a GeoDataFrame[39;00m
-[1;32m    331[0m response_jsons [38;5;241m=[39m _overpass[38;5;241m.[39m_download_overpass_features(polygon, tags)
-[0;32m--> 332[0m [38;5;28;01mreturn[39;00m [43m_create_gdf[49m[43m([49m[43mresponse_jsons[49m[43m,[49m[43m [49m[43mpolygon[49m[43m,[49m[43m [49m[43mtags[49m[43m)[49m
-
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/osmnx/features.py:406[0m, in [0;36m_create_gdf[0;34m(response_jsons, polygon, tags)[0m
-[1;32m    404[0m elements [38;5;241m=[39m []
-[1;32m    405[0m response_count [38;5;241m=[39m [38;5;241m0[39m
-[0;32m--> 406[0m [38;5;28;01mfor[39;00m response_json [38;5;129;01min[39;00m response_jsons:
-[1;32m    407[0m     response_count [38;5;241m+[39m[38;5;241m=[39m [38;5;241m1[39m
-[1;32m    408[0m     [38;5;28;01mif[39;00m [38;5;129;01mnot[39;00m settings[38;5;241m.[39mcache_only_mode:
-
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/osmnx/_overpass.py:427[0m, in [0;36m_download_overpass_features[0;34m(polygon, tags)[0m
-[1;32m    425[0m [38;5;28;01mfor[39;00m polygon_coord_str [38;5;129;01min[39;00m polygon_coord_strs:
-[1;32m    426[0m     query_str [38;5;241m=[39m _create_overpass_features_query(polygon_coord_str, tags)
-[0;32m--> 427[0m     [38;5;28;01myield[39;00m [43m_overpass_request[49m[43m([49m[43mOrderedDict[49m[43m([49m[43mdata[49m[38;5;241;43m=[39;49m[43mquery_str[49m[43m)[49m[43m)[49m
-
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/osmnx/_overpass.py:494[0m, in [0;36m_overpass_request[0;34m(data, pause, error_pause)[0m
-[1;32m    491[0m     time[38;5;241m.[39msleep(this_pause)
-[1;32m    492[0m     [38;5;28;01mreturn[39;00m _overpass_request(data, pause[38;5;241m=[39mpause, error_pause[38;5;241m=[39merror_pause)
-[0;32m--> 494[0m response_json [38;5;241m=[39m [43m_http[49m[38;5;241;43m.[39;49m[43m_parse_response[49m[43m([49m[43mresponse[49m[43m)[49m
-[1;32m    495[0m [38;5;28;01mif[39;00m [38;5;129;01mnot[39;00m [38;5;28misinstance[39m(response_json, [38;5;28mdict[39m):  [38;5;66;03m# pragma: no cover[39;00m
-[1;32m    496[0m     msg [38;5;241m=[39m [38;5;124m"[39m[38;5;124mOverpass API did not return a dict of results.[39m[38;5;124m"[39m
-
-File [0;32m~/.cache/pypoetry/virtualenvs/pisa-abw-OIyr1Vno-py3.10/lib/python3.10/site-packages/osmnx/_http.py:326[0m, in [0;36m_parse_response[0;34m(response)[0m
-[1;32m    324[0m     [38;5;28;01mif[39;00m response[38;5;241m.[39mok:
-[1;32m    325[0m         [38;5;28;01mraise[39;00m InsufficientResponseError(msg) [38;5;28;01mfrom[39;00m[38;5;250m [39m[38;5;21;01me[39;00m
-[0;32m--> 326[0m     [38;5;28;01mraise[39;00m ResponseStatusCodeError(msg) [38;5;28;01mfrom[39;00m[38;5;250m [39m[38;5;21;01me[39;00m
-[1;32m    328[0m [38;5;66;03m# log any remarks if they exist[39;00m
-[1;32m    329[0m [38;5;28;01mif[39;00m [38;5;28misinstance[39m(response_json, [38;5;28mdict[39m) [38;5;129;01mand[39;00m [38;5;124m"[39m[38;5;124mremark[39m[38;5;124m"[39m [38;5;129;01min[39;00m response_json:  [38;5;66;03m# pragma: no cover[39;00m
-
-[0;31mResponseStatusCodeError[0m: 'overpass-api.de' responded: 502 Bad Gateway <html>
-<head><title>502 Bad Gateway</title></head>
-<body>
-<center><h1>502 Bad Gateway</h1></center>
-<hr><center>nginx/1.22.1</center>
-</body>
-</html>
-
+-------------------
 
