@@ -540,6 +540,13 @@ class SparseSwapLocalSearch:
             ):
                 break
             modified = False
+            # Gains against current coverage; recomputed only after an accepted swap.
+            counts = instance.ji_indptr[1:] - instance.ji_indptr[:-1]
+            nonempty = counts > 0
+            gains = np.zeros(instance.n_facilities, dtype=np.int64)
+            gains[nonempty] = np.add.reduceat(
+                uncovered_weight[instance.ji_indices], instance.ji_indptr[:-1][nonempty]
+            )
             for position, removed in enumerate(sol):
                 removed_i = int(removed)
                 removed_cover = self.demand_of(removed_i)
@@ -560,14 +567,20 @@ class SparseSwapLocalSearch:
                 )
 
                 accepted = False
-                for candidate in candidates:
+                # Removing a site only increases gains for newly uncovered demand.
+                bonus = np.zeros(instance.n_facilities, dtype=np.int64)
+                if newly_uncovered.size:
+                    starts = instance.ij_indptr[newly_uncovered]
+                    lengths = instance.ij_indptr[newly_uncovered + 1] - starts
+                    offsets = np.cumsum(lengths, dtype=np.int64) - lengths
+                    positions = np.arange(int(lengths.sum()), dtype=np.int64) + np.repeat(starts - offsets, lengths)
+                    np.add.at(bonus, instance.ij_indices[positions], np.repeat(weights[newly_uncovered], lengths))
+                improving = np.flatnonzero(gains[candidates] + bonus[candidates] > loss)
+                # Preserve the original first-improving candidate order exactly.
+                for candidate in candidates[improving[:1]]:
                     candidate_i = int(candidate)
                     candidate_cover = self.demand_of(candidate_i)
-                    if not candidate_cover.size:
-                        continue
-                    gain_in = int(uncovered_weight[candidate_cover].sum())
-                    if gain_in <= loss:
-                        continue
+                    gain_in = int(gains[candidate_i] + bonus[candidate_i])
                     sol[position] = candidate_i
                     open_mask[removed_i] = False
                     open_mask[candidate_i] = True
