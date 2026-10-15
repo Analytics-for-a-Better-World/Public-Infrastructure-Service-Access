@@ -573,8 +573,14 @@ class SparseSwapLocalSearch:
                     starts = instance.ij_indptr[newly_uncovered]
                     lengths = instance.ij_indptr[newly_uncovered + 1] - starts
                     offsets = np.cumsum(lengths, dtype=np.int64) - lengths
-                    positions = np.arange(int(lengths.sum()), dtype=np.int64) + np.repeat(starts - offsets, lengths)
-                    np.add.at(bonus, instance.ij_indices[positions], np.repeat(weights[newly_uncovered], lengths))
+                    positions = np.arange(int(lengths.sum()), dtype=np.int64) + np.repeat(
+                        starts - offsets, lengths
+                    )
+                    np.add.at(
+                        bonus,
+                        instance.ij_indices[positions],
+                        np.repeat(weights[newly_uncovered], lengths),
+                    )
                 improving = np.flatnonzero(gains[candidates] + bonus[candidates] > loss)
                 # Preserve the original first-improving candidate order exactly.
                 for candidate in candidates[improving[:1]]:

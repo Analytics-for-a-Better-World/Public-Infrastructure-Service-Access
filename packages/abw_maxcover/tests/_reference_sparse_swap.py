@@ -1,14 +1,26 @@
 from __future__ import annotations
-import numpy as np
+
 from time import perf_counter
+
+import numpy as np
+
 from abw_maxcover._incremental_core import _deduplicate_solution, compute_coverage_and_objective
 from abw_maxcover.results import HeuristicResult
 
-def reference_improve(self, solution: list[int], coverage: np.ndarray | None=None, objective: int | None=None, *, max_moves: int | None=None, time_limit_seconds: float | None=None) -> HeuristicResult:
+
+def reference_improve(
+    self,
+    solution: list[int],
+    coverage: np.ndarray | None = None,
+    objective: int | None = None,
+    *,
+    max_moves: int | None = None,
+    time_limit_seconds: float | None = None,
+) -> HeuristicResult:
     if max_moves is not None and int(max_moves) < 0:
-        raise ValueError('max_moves must be nonnegative or None')
+        raise ValueError("max_moves must be nonnegative or None")
     if time_limit_seconds is not None and float(time_limit_seconds) < 0:
-        raise ValueError('time_limit_seconds must be nonnegative or None')
+        raise ValueError("time_limit_seconds must be nonnegative or None")
     instance = self.instance
     weights = instance.weights
     sol = _deduplicate_solution(solution)
@@ -74,4 +86,11 @@ def reference_improve(self, solution: list[int], coverage: np.ndarray | None=Non
                 uncovered_weight[newly_uncovered] = 0
         if not modified:
             break
-    return HeuristicResult(solution=sol, objective=int(obj), coverage=cov, objectives=objectives, times=times, total_time=float(perf_counter() - start))
+    return HeuristicResult(
+        solution=sol,
+        objective=int(obj),
+        coverage=cov,
+        objectives=objectives,
+        times=times,
+        total_time=float(perf_counter() - start),
+    )

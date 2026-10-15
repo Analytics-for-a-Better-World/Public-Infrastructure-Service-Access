@@ -32,7 +32,10 @@ def test_iterated_fixed_work_seed_and_feasibility(perturb, adaptive):
         np.testing.assert_array_equal(cov, a.coverage)
         assert len(set(a.solution)) == len(a.solution) <= 3
         assert all(t["pool_size"] <= 3 for t in trace)
-        assert all(x["best_objective"] <= y["best_objective"] for x, y in zip(trace, trace[1:], strict=False))
+        assert all(
+            x["best_objective"] <= y["best_objective"]
+            for x, y in zip(trace, trace[1:], strict=False)
+        )
 
 
 def test_elite_capacity_duplicates_and_best_preserved():

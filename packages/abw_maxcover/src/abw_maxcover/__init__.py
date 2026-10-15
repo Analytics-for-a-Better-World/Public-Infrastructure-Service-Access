@@ -14,8 +14,8 @@ from ._incremental_core import (
 from .deployment import greedy_deployment_sequence, optimize_then_greedy_deployment
 from .exact import GurobiConfig, PyomoConfig, solve_gurobi_curve, solve_pyomo_curve
 from .heuristics import HeuristicConfig, run_heuristics
-from .iterated import IteratedSearchConfig, run_iterated_search
 from .instance import MaxCoverInstance, build_instance, build_instance_from_facility_map
+from .iterated import IteratedSearchConfig, run_iterated_search
 from .pareto import approximate_pareto_curve, best_by_budget, compare_curves, exact_pareto_curve
 from .results import CurveComparison, HeuristicResult, MaxCoverCurve, MaxCoverResult
 
