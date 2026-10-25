@@ -2,6 +2,17 @@
 
 All notable changes to `abw-maxcover` are recorded here.
 
+## Unreleased
+
+- Add an opt-in eight-start ILS preset with faithful local descent, dynamic
+  path relinking and component recombination; retain existing strategy defaults.
+- Add protected near-neutral fixed-pool repair, regional preparation/proof
+  caching, and experimental resumable CEM/beam primitives with changed-elite
+  fitting. Search requires NumPy, not a solver or Java runtime.
+- Document scoped Kings results, source provenance and limitations. Add frozen
+  trace, exhaustive neighborhood/bound, cache and deadline regression tests;
+  exercise NumPy 1.23.5 compatibility on Python 3.10 in CI.
+
 ## 0.2.1 - 2026-09-13
 
 Bug-fix release closing all fifteen findings of the September 2026 package
