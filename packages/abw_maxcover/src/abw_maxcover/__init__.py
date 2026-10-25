@@ -16,6 +16,7 @@ from .exact import GurobiConfig, PyomoConfig, solve_gurobi_curve, solve_pyomo_cu
 from .heuristics import HeuristicConfig, run_heuristics
 from .instance import MaxCoverInstance, build_instance, build_instance_from_facility_map
 from .pareto import approximate_pareto_curve, best_by_budget, compare_curves, exact_pareto_curve
+from .research_search import ResearchSearchConfig, repair_saved_solution, run_research_search
 from .results import CurveComparison, HeuristicResult, MaxCoverCurve, MaxCoverResult
 
 __version__ = "0.2.1"
@@ -29,6 +30,7 @@ __all__ = [
     "MaxCoverInstance",
     "MaxCoverResult",
     "PyomoConfig",
+    "ResearchSearchConfig",
     "SparseSwapLocalSearch",
     "add_delta",
     "approximate_pareto_curve",
@@ -45,6 +47,8 @@ __all__ = [
     "optimize_then_greedy_deployment",
     "path_relink_fast",
     "run_heuristics",
+    "repair_saved_solution",
+    "run_research_search",
     "select_by_marginal_gain",
     "solve_gurobi_curve",
     "solve_pyomo_curve",

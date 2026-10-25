@@ -1,0 +1,62 @@
+{
+  "java_ils.py": {
+    "source": "focus-Kings-p80-20261024\\curated-seeding-source\\abw_maxcover\\java_ils.py",
+    "sha256": "d642e4844b523dd39a44fbac5036501787811d68eca0f5431278aa538c4124fe",
+    "port_sha256": "91e5d996fb2d38d1dbced270d1375d6f4a4f1129b5a7225fd56226743aa32d79",
+    "port_hash_normalization": "LF"
+  },
+  "faithful_local.py": {
+    "source": "focus-Kings-p80-20261024\\curated-seeding-source\\abw_maxcover\\faithful_local.py",
+    "sha256": "e40851acdc7780ef2c55fe6776932db8b1c6ff55d8bcf8600ac016f51eb9d23e",
+    "port_sha256": "61d9caca59177ae4358dd58031ff251c9c2e8c92c7ea6793eb4b1db3d0a0b124",
+    "port_hash_normalization": "LF"
+  },
+  "component_recombine.py": {
+    "source": "focus-Kings-p80-20261024\\curated-seeding-source\\abw_maxcover\\component_recombine.py",
+    "sha256": "60c10b01b8ee7891dcca204344e1e772cd73786d647c023e6a68839d3b0c9879",
+    "port_sha256": "03a916a68ef183b0a544cecb47555d50be259536167f83b001dd7d372399040d",
+    "port_hash_normalization": "LF"
+  },
+  "large_component_menus.py": {
+    "source": "focus-Kings-p80-20261024\\curated-seeding-source\\abw_maxcover\\large_component_menus.py",
+    "sha256": "adaf3b61d3b812f3692664161705212d2d45f7ea2d537949a6db58ffa08f3bf1",
+    "port_sha256": "33328b6420ddad182d8737999a36c0210393254d4f7526126671d3652e57ea84",
+    "port_hash_normalization": "LF"
+  },
+  "exclusion_neighborhood.py": {
+    "source": "focus-Kings-p80-20261024\\neutral-pool-source\\abw_maxcover\\exclusion_neighborhood.py",
+    "sha256": "cb255798e4a374756217340c4846ecdca2b039128f71e0e46e05dd429f5f0860",
+    "port_sha256": "68e8a406ef86f0383867fcf77c6f93e83c18a6ebe62faf5565e9d19b753b0e12",
+    "port_hash_normalization": "LF"
+  },
+  "exclusion_menu.py": {
+    "source": "focus-Kings-p80-20261024\\neutral-pool-source\\abw_maxcover\\exclusion_menu.py",
+    "sha256": "63e55b10f8415cdb9c1f40f363f9a622d361f6c8d801d44b86455099bf39a0ea",
+    "port_sha256": "05f861253001b4b389e1a1185f98ce196dd657c7e747516b9bddc0dc65f8669d",
+    "port_hash_normalization": "LF"
+  },
+  "swap_matrix.py": {
+    "source": "focus-Kings-p80-20261024\\neutral-pool-source\\abw_maxcover\\swap_matrix.py",
+    "sha256": "2e341abb15b46e24e83a1b6d2e6f201a180350c0a1beebe2bd8d196272f07ce2",
+    "port_sha256": "88dbb4bcde9e034aa84d79fbda01a0c21a206c07987159807ec4a85ce6973914",
+    "port_hash_normalization": "LF"
+  },
+  "beam_dp.py": {
+    "source": "focus-Kings-p80-20261024\\bounded_beam_dp_prototype.py",
+    "sha256": "c10e60dec99326f3b6dd19b1e67c73a058a9aa29328ab0a8e388e6e4a2ab6ef7",
+    "port_sha256": "890fefb41dc6829ec51e730a4e9a1f2d734bbe36bf70de02ec1757360bc75f26",
+    "port_hash_normalization": "LF"
+  },
+  "regional_repair.py": {
+    "source": "focus-Kings-p80-20261024\\elite_beam_repair.py",
+    "sha256": "d5b85ecc2681b73a2a4d0540bdb9a818cd917a5fb88df021bfb27cc3c1761a61",
+    "port_sha256": "7b924d8bb396b11adfcd747c8bca70a28a50bd73ea6654042779907dac8219b0",
+    "port_hash_normalization": "LF"
+  },
+  "cem_beam.py": {
+    "source": "focus-Kings-p80-20261024\\cem_resumable_beam_v2.py",
+    "sha256": "75e0f580cb00cfd4a8b1b6f8e415c6511de88032d951ad529632c25b0b25906c",
+    "port_sha256": "bd6e9e190868eb962e8567d92a400ea42e2d548f712eabf846fcae1e93dd302c",
+    "port_hash_normalization": "LF"
+  }
+}

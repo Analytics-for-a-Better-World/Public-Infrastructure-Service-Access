@@ -190,6 +190,14 @@ harnesses. Paper-specific campaigns should record the package version, Git
 commit, instance hashes, random seeds, solver status, incumbent, upper bound,
 and stage timings. See [the reproducibility guide](docs/reproducibility.md).
 
+## Optional research heuristics
+
+The solver-free eight-start ILS/path-relinking preset, optional near-neutral
+candidate-pool repair, regional preparation cache, and CEM/beam tools are
+documented in [research strategies](docs/research-strategies.md). Existing search
+defaults are unchanged. The published evidence distinguishes fresh timed runs
+from extra-time diagnostics; these options are not general benchmark winners.
+
 ## Citation
 
 The preferred software citation is maintained in [`CITATION.cff`](CITATION.cff).
